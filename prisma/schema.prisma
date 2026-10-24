@@ -1,0 +1,119 @@
+// Prisma Schema untuk AMPERA-BBPOM
+// Portal Pelayanan Publik & Pengujian Cepat BBPOM di Palembang
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+enum StatusPengajuan {
+  MENUNGGU_VERIFIKASI
+  DIPROSES
+  SELESAI
+  DITOLAK
+}
+
+enum RoleAdmin {
+  SUPERADMIN
+  OPERATOR
+}
+
+// Model Data Tamu / Pemohon (Kunci integrasi dengan Buku Tamu via NIK)
+model Tamu {
+  id           Int                @id @default(autoincrement())
+  nik          String             @unique // 16 digit NIK KTP
+  nama         String
+  email        String?
+  telepon      String?            // Nomor WhatsApp
+  alamat       String?            // Domisili pemohon
+  asalInstansi String?            // Nama Instansi / Kampus / Asal Organisasi (Layanan 1)
+  umur         Int?               // Usia pemohon (Layanan 1)
+
+  pengajuan    PengajuanLayanan[]
+  createdAt    DateTime           @default(now())
+  updatedAt    DateTime           @updatedAt
+
+  @@index([nik])
+  @@index([telepon])
+}
+
+// Master 4 Layanan Resmi Ampera-BBPOM
+// 1. INFO: Layanan Permintaan Informasi
+// 2. UJI_CEPAT: Layanan Pengujian Cepat Ampera
+// 3. ADUAN: Layanan Pengaduan
+// 4. KIP: Layanan Keterbukaan Informasi Publik
+model Layanan {
+  id          Int                @id @default(autoincrement())
+  kode        String             @unique // "INFO", "UJI_CEPAT", "ADUAN", "KIP"
+  nama        String             @unique
+  deskripsi   String?
+  isAktif     Boolean            @default(true)
+
+  pengajuan   PengajuanLayanan[]
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+}
+
+// Transaksi Pengajuan Layanan Masyarakat
+model PengajuanLayanan {
+  id                  Int             @id @default(autoincrement())
+  kodePengajuan       String          @unique // Cth: "AMP-INF-202610-0001", "AMP-UJI-202610-0001"
+  
+  tamuId              Int
+  tamu                Tamu            @relation(fields: [tamuId], references: [id], onDelete: Cascade)
+  
+  layananId           Int
+  layanan             Layanan         @relation(fields: [layananId], references: [id])
+  
+  status              StatusPengajuan @default(MENUNGGU_VERIFIKASI)
+  catatanPetugas      String?         // Tanggapan atau hasil pemeriksaan dari petugas BBPOM
+  
+  // Field Spesifik Layanan 1 (Permintaan Informasi)
+  informasiDibutuhkan String?         @db.Text
+  
+  // Field Spesifik Layanan 2 (Pengujian Cepat Ampera)
+  // Menyimpan jenis produk yang dicurigai: "Pempek, tekwan, model", "Tahu", "Mie basah", dsb.
+  produkDicurigai     String?         // Dapat menyimpan nilai terpilih atau format JSON array
+  produkLainnya       String?         // Isian jika memilih "Yang lain"
+  alasanKecurigaan    String?         // "Produk tahan lama", "Perbedaan tekstur/rasa/bau", dsb.
+  alasanLainnya       String?         // Isian jika memilih "Yang lain"
+  rincianProduk       String?         @db.Text // Lokasi pasar, warung, penjual, tanggal pembelian
+  
+  // Field Spesifik Layanan 3 (Pengaduan)
+  isiPengaduan        String?         @db.Text
+  buktiFotoUrl        String?         // URL foto bukti di Supabase storage
+  
+  // Field Spesifik Layanan 4 (Keterbukaan Informasi Publik)
+  rincianInformasiKip String?         @db.Text
+  tujuanPenggunaanKip String?         @db.Text
+  
+  // Petugas yang memverifikasi
+  verifikatorId       Int?
+  verifikator         Admin?          @relation(fields: [verifikatorId], references: [id])
+
+  createdAt           DateTime        @default(now())
+  updatedAt           DateTime        @updatedAt
+
+  @@index([kodePengajuan])
+  @@index([tamuId])
+  @@index([layananId])
+}
+
+// Akun Admin & Operator Petugas BBPOM
+model Admin {
+  id          Int                @id @default(autoincrement())
+  username    String             @unique
+  nama        String
+  password    String             // Hashed password (bcrypt)
+  role        RoleAdmin          @default(OPERATOR)
+  isAktif     Boolean            @default(true)
+  
+  verifikasi  PengajuanLayanan[]
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+}
