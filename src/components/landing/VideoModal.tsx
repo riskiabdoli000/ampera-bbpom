@@ -9,6 +9,12 @@ interface VideoModalProps {
   onClose: () => void;
 }
 
+const INFO_ITEMS = [
+  { icon: Building2, label: "Balai Besar Pengawas Obat & Makanan" },
+  { icon: MapPin, label: "Jakabaring, Palembang, Sumsel" },
+  { icon: Award, label: "Pelayanan Prima & Akreditasi ISO" },
+];
+
 export function VideoModal({ isOpen, onClose }: VideoModalProps) {
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -29,77 +35,108 @@ export function VideoModal({ isOpen, onClose }: VideoModalProps) {
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      {/* Backdrop */}
+    <div
+      className="fixed inset-0 z-[60] flex items-center justify-center p-4 sm:p-6"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="video-modal-title"
+    >
+      {/* Backdrop navy */}
       <div
-        className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm transition-opacity"
+        className="fixed inset-0 bg-navy-900/70 backdrop-blur-md"
         onClick={onClose}
+        aria-hidden="true"
       />
 
-      {/* Modal Dialog */}
-      <div className="relative w-full max-w-3xl bg-slate-900 rounded-3xl shadow-2xl border border-slate-800 overflow-hidden z-10 animate-in fade-in zoom-in-95 duration-200 text-white">
+      {/* Dekorasi blob oranye */}
+      <div
+        aria-hidden="true"
+        className="pointer-events-none fixed -bottom-24 -left-24 w-72 h-72 rounded-full bg-gradient-to-tr from-[#ff8a1f] to-[#f26a0f] opacity-80 blur-sm hidden sm:block"
+      />
+
+      {/* Dialog */}
+      <div className="relative z-10 w-full max-w-3xl max-h-[92vh] overflow-y-auto rounded-3xl bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl shadow-[0_30px_80px_-20px_rgb(11_42_107/0.55)] border border-white/70 dark:border-slate-800 animate-fade-up">
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-800 bg-slate-950/50">
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-full bg-teal-500/20 text-teal-400 flex items-center justify-center">
-              <Play className="w-4 h-4 fill-current" />
+        <div className="flex items-start justify-between gap-4 px-5 sm:px-7 pt-5 sm:pt-6 pb-4">
+          <div className="flex items-start gap-3 min-w-0">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#ff8a1f] to-[#f26a0f] text-white flex items-center justify-center shrink-0 shadow-cta">
+              <Play className="w-4 h-4 fill-current ml-0.5" />
             </div>
-            <div>
-              <h3 className="font-bold text-sm sm:text-base text-white">Profil Balai Besar POM di Palembang</h3>
-              <p className="text-xs text-slate-400">Sumatera Selatan — Integritas, Profesional, Melayani</p>
+            <div className="min-w-0">
+              <div className="flex items-center gap-1.5 text-[11px] font-semibold text-ink-soft dark:text-slate-400">
+                <span className="w-1.5 h-1.5 rounded-full bg-brand-orange" />
+                Info Terbaru
+              </div>
+              <h3
+                id="video-modal-title"
+                className="font-brand font-extrabold text-base sm:text-xl text-navy-900 dark:text-white leading-tight tracking-tight"
+              >
+                Profil Balai Besar POM di Palembang
+              </h3>
+              <p className="text-xs sm:text-sm text-ink-soft dark:text-slate-400 mt-0.5">
+                Sumatera Selatan — Integritas, Profesional, Melayani
+              </p>
             </div>
           </div>
           <button
+            type="button"
             onClick={onClose}
-            className="p-1.5 rounded-full text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+            className="w-10 h-10 rounded-full bg-sky-200/60 dark:bg-slate-800 text-navy-900 dark:text-white hover:bg-orange-tint hover:text-brand-orange-600 flex items-center justify-center shrink-0 transition-all active:scale-95 cursor-pointer focus-visible:outline-2 focus-visible:outline-brand-orange"
             aria-label="Tutup video profil"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
-        {/* Video Player Area */}
-        <div className="relative aspect-video w-full bg-slate-950 flex items-center justify-center overflow-hidden group">
-          {/* Official BPOM Building as Background */}
-          <Image
-            src="/assets-landingpage/hero1.png"
-            alt="Gedung Balai Besar POM di Palembang"
-            fill
-            className="object-cover opacity-60 group-hover:scale-105 transition-transform duration-700"
-          />
-          <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/40 to-transparent" />
+        {/* Area Video */}
+        <div className="px-3 sm:px-5">
+          <div className="relative aspect-video w-full rounded-2xl sm:rounded-3xl overflow-hidden bg-navy-900 group">
+            <Image
+              src="/assets-landingpage/hero1.png"
+              alt="Gedung Balai Besar POM di Palembang"
+              fill
+              sizes="(max-width: 768px) 100vw, 768px"
+              className="object-cover group-hover:scale-105 transition-transform duration-700"
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-navy-900/85 via-navy-900/25 to-transparent" />
 
-          {/* YouTube Video Embed or Interactive Overlay */}
-          <div className="relative z-10 text-center px-4 max-w-lg">
-            <div className="w-16 h-16 sm:w-20 sm:h-20 mx-auto rounded-full bg-teal-600/90 hover:bg-teal-500 text-white flex items-center justify-center shadow-xl shadow-teal-500/30 cursor-pointer transform hover:scale-110 transition-all duration-300 mb-4">
-              <Play className="w-8 h-8 fill-current ml-1" />
+            <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-5">
+              <button
+                type="button"
+                className="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-gradient-to-br from-[#ff8a1f] to-[#f26a0f] text-white flex items-center justify-center shadow-cta ring-8 ring-white/30 cursor-pointer transition-transform duration-300 hover:scale-110 active:scale-95 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white"
+                aria-label="Putar video"
+              >
+                <Play className="w-7 h-7 sm:w-8 sm:h-8 fill-current ml-1" />
+              </button>
             </div>
-            <span className="inline-block text-xs uppercase tracking-wider font-semibold text-teal-400 mb-1">
-              Video Resmi Profil Institusi
-            </span>
-            <h4 className="text-lg sm:text-xl font-bold text-white mb-2">
-              BBPOM di Palembang: Garda Terdepan Perlindungan Obat & Makanan
-            </h4>
-            <p className="text-xs sm:text-sm text-slate-300 line-clamp-2">
-              Mengenal lebih dekat dedikasi pengawasan laboratorium, layanan sertifikasi UMKM, dan pengawalan pangan sehat di Bumi Sriwijaya.
-            </p>
+
+            <div className="absolute bottom-0 inset-x-0 p-4 sm:p-6 text-white">
+              <span className="inline-block text-[10px] sm:text-xs uppercase tracking-wider font-bold text-orange-300 mb-1">
+                Video Resmi Profil Institusi
+              </span>
+              <h4 className="font-brand font-bold text-sm sm:text-lg leading-snug max-w-xl">
+                BBPOM di Palembang: Garda Terdepan Perlindungan Obat &amp; Makanan
+              </h4>
+              <p className="hidden sm:block text-xs sm:text-sm text-white/80 mt-1 max-w-xl line-clamp-2">
+                Mengenal lebih dekat pengawasan laboratorium, layanan sertifikasi UMKM, dan pengawalan pangan sehat di Bumi Sriwijaya.
+              </p>
+            </div>
           </div>
         </div>
 
-        {/* Footer Details */}
-        <div className="px-6 py-4 bg-slate-950/90 border-t border-slate-800/80 grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs text-slate-300">
-          <div className="flex items-center gap-2">
-            <Building2 className="w-4 h-4 text-teal-400 shrink-0" />
-            <span>Balai Besar Pengawas Obat & Makanan</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <MapPin className="w-4 h-4 text-emerald-400 shrink-0" />
-            <span>Jakabaring, Palembang, Sumsel</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <Award className="w-4 h-4 text-amber-400 shrink-0" />
-            <span>Standar Pelayanan Prima & Akreditasi ISO</span>
-          </div>
+        {/* Footer Info */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 sm:gap-3 px-3 sm:px-5 pt-4 pb-5 sm:pb-6">
+          {INFO_ITEMS.map(({ icon: Icon, label }) => (
+            <div
+              key={label}
+              className="flex items-center gap-2.5 rounded-2xl bg-sky-50 dark:bg-slate-800/70 border border-sky-200/60 dark:border-slate-700 px-3.5 py-2.5 text-xs font-semibold text-navy-900 dark:text-slate-200"
+            >
+              <span className="w-8 h-8 rounded-lg bg-orange-tint dark:bg-orange-500/20 text-brand-orange-600 dark:text-orange-300 flex items-center justify-center shrink-0">
+                <Icon className="w-4 h-4" />
+              </span>
+              <span className="leading-snug">{label}</span>
+            </div>
+          ))}
         </div>
       </div>
     </div>
