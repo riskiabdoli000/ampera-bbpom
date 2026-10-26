@@ -24,7 +24,7 @@ export default function PengujianCepatPage() {
           {/* Breadcrumb Navigasi */}
           <nav
             aria-label="Breadcrumb"
-            className="flex items-center gap-2 text-xs sm:text-sm text-ink-soft dark:text-slate-400 mb-8 animate-fade-up"
+            className="flex items-center justify-center gap-2 text-xs sm:text-sm text-ink-soft dark:text-slate-400 mb-8 animate-fade-up"
           >
             <Link
               href="/"
@@ -47,7 +47,7 @@ export default function PengujianCepatPage() {
           </nav>
 
           {/* Header Section (Judul & Deskripsi Langsung Form) */}
-          <div className="relative mb-8 sm:mb-10 max-w-3xl animate-fade-up">
+          <div className="relative mb-8 sm:mb-10 max-w-3xl mx-auto text-center animate-fade-up">
             <span className="inline-block text-xs sm:text-sm font-extrabold uppercase tracking-[0.2em] text-brand-orange dark:text-orange-400 mb-2">
               LAYANAN AMPERA
             </span>
@@ -55,7 +55,7 @@ export default function PengujianCepatPage() {
               Formulir{" "}
               <span className="text-brand-orange">Pengujian Cepat</span>
             </h1>
-            <p className="mt-3 text-sm sm:text-base text-ink-soft dark:text-slate-300 leading-relaxed max-w-2xl">
+            <p className="mt-3 text-sm sm:text-base text-ink-soft dark:text-slate-300 leading-relaxed max-w-2xl mx-auto">
               Lengkapi data berikut untuk mengajukan layanan pengujian cepat di BBPOM Palembang.
             </p>
           </div>
