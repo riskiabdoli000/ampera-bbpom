@@ -166,11 +166,11 @@ export function Navbar() {
           {/* Kanan: CTA (desktop) / Hamburger (mobile) */}
           <div className="flex items-center gap-3 z-20">
             <a
-              href="#layanan"
-              onClick={() => setActiveSection("#layanan")}
+              href=""
+              onClick={() => setActiveSection("")}
               className={`${ctaClass} max-lg:hidden`}
             >
-              <span>Akses Layanan</span>
+              <span>Cindo</span>
               <ArrowRight className="w-4 h-4 transition-transform duration-200 group-hover:translate-x-1" />
             </a>
 
@@ -214,14 +214,14 @@ export function Navbar() {
             </nav>
 
             <a
-              href="#layanan"
+              href=""
               onClick={() => {
-                setActiveSection("#layanan");
+                setActiveSection("");
                 setMobileMenuOpen(false);
               }}
               className={`${ctaClass} w-full justify-center mt-4`}
             >
-              <span>Akses Layanan</span>
+              <span>Cindo</span>
               <ArrowRight className="w-4 h-4" />
             </a>
 

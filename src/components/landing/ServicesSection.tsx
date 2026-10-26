@@ -2,6 +2,7 @@
 
 import React from "react";
 import Image from "next/image";
+import Link from "next/link";
 import {
   HelpCircle,
   FlaskConical,
@@ -38,7 +39,7 @@ const SERVICES: ServiceItem[] = [
       "Inovasi uji laboratorium cepat untuk mendeteksi bahan kimia berbahaya pada sampel pangan dan farmasi.",
     icon: FlaskConical,
     image: "/assets-landingpage/layanan/2.jpg",
-    href: "#layanan",
+    href: "/pengujian-cepat",
     actionText: "Uji Sekarang",
   },
   {
@@ -146,13 +147,13 @@ export function ServicesSection() {
 
                   {/* Action Link dengan Panah */}
                   <div className="pt-5">
-                    <a
+                    <Link
                       href={service.href}
                       className="inline-flex items-center gap-1.5 text-xs sm:text-sm font-bold text-brand-orange hover:text-brand-orange-600 transition-colors group/link"
                     >
                       <span>{service.actionText}</span>
                       <ArrowRight className="w-4 h-4 transition-transform duration-200 group-hover/link:translate-x-1" />
-                    </a>
+                    </Link>
                   </div>
                 </div>
               </div>
