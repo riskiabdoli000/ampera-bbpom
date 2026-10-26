@@ -29,7 +29,7 @@ const SERVICES: ServiceItem[] = [
       "Layanan konsultasi regulasi, perizinan edar, dan sertifikasi obat & makanan untuk masyarakat dan UMKM.",
     icon: HelpCircle,
     image: "/assets-landingpage/layanan/1.jpg",
-    href: "#layanan",
+    href: "/permintaan-informasi",
     actionText: "Akses Layanan",
   },
   {
@@ -49,7 +49,7 @@ const SERVICES: ServiceItem[] = [
       "Kanal resmi pelaporan dugaan peredaran obat dan makanan ilegal, palsu, rusak, atau kedaluwarsa.",
     icon: ShieldAlert,
     image: "/assets-landingpage/layanan/3.jpg",
-    href: "#layanan",
+    href: "/pengaduan",
     actionText: "Buat Pengaduan",
   },
   {
@@ -59,7 +59,7 @@ const SERVICES: ServiceItem[] = [
       "Akses transparan terhadap dokumen resmi publik, SOP pengawasan, anggaran, dan laporan kinerja PPID.",
     icon: FileText,
     image: "/assets-landingpage/layanan/4.jpg",
-    href: "#layanan",
+    href: "/keterbukaan-informasi",
     actionText: "Lihat Dokumen",
   },
 ];
