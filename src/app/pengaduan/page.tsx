@@ -21,30 +21,8 @@ export default function PengaduanPage() {
       {/* 2. Container Halaman Utama */}
       <div className="flex-1 w-full pt-28 sm:pt-32 pb-16 sm:pb-24">
         <div className="max-w-[1440px] mx-auto px-5 sm:px-10 lg:px-14">
-          {/* Breadcrumb Navigasi */}
-          <nav
-            aria-label="Breadcrumb"
-            className="flex items-center justify-center gap-2 text-xs sm:text-sm text-ink-soft dark:text-slate-400 mb-8 animate-fade-up"
-          >
-            <Link
-              href="/"
-              className="inline-flex items-center gap-1.5 hover:text-brand-orange transition-colors"
-            >
-              <Home className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-brand-orange" />
-              <span>Beranda</span>
-            </Link>
-            <ChevronRight className="w-3.5 h-3.5 text-slate-300 dark:text-slate-600" />
-            <Link
-              href="/#layanan"
-              className="hover:text-brand-orange transition-colors"
-            >
-              Layanan
-            </Link>
-            <ChevronRight className="w-3.5 h-3.5 text-slate-300 dark:text-slate-600" />
-            <span className="font-semibold text-navy-900 dark:text-white">
-              Layanan Pengaduan
-            </span>
-          </nav>
+        
+          
 
           {/* Header Section (Judul & Deskripsi Langsung Form) */}
           <div className="relative mb-8 sm:mb-10 max-w-3xl mx-auto text-center animate-fade-up">

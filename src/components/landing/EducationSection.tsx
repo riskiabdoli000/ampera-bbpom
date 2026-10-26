@@ -54,11 +54,11 @@ export function EducationSection() {
       id="edukasi"
       className="relative w-full pt-14 sm:pt-20 pb-6 sm:pb-10 bg-gradient-to-b from-white via-sky-50/30 to-white dark:from-slate-950 dark:via-[#06122e]/20 dark:to-slate-950 transition-colors duration-300 overflow-hidden scroll-mt-20"
     >
-      <div className="relative max-w-[1440px] mx-auto px-5 sm:px-10 lg:px-14">
+      <div className="relative max-w-[1440px] mx-auto px-4 sm:px-10 lg:px-14">
         {/* ========================================================= */}
         {/* BANNER ATAS: Teks di Kiri + Foto hero2.png di Kanan       */}
         {/* ========================================================= */}
-        <div className="relative w-full rounded-3xl min-h-[360px] sm:min-h-[420px] lg:min-h-[450px] pb-24 sm:pb-32 lg:pb-36 flex items-start overflow-hidden">
+        <div className="relative w-full rounded-3xl min-h-[390px] sm:min-h-[420px] lg:min-h-[450px] pb-28 sm:pb-32 lg:pb-36 flex items-start overflow-hidden">
           {/* Foto hero2.png di Sisi Kanan menyatu langsung di belakang kartu */}
           <div className="absolute right-0 top-0 w-full sm:w-[65%] lg:w-[58%] h-full z-0 select-none">
             <Image
@@ -73,15 +73,15 @@ export function EducationSection() {
           </div>
 
           {/* Konten Teks di Sisi Kiri */}
-          <div className="relative z-10 max-w-xl pt-6 sm:pt-10 lg:pt-12 px-2 sm:px-0">
-            <span className="block text-xs sm:text-sm font-extrabold uppercase tracking-[0.2em] text-brand-orange-600 dark:text-orange-400 mb-3">
+          <div className="relative z-10 max-w-xl pt-18 sm:pt-14 lg:pt-14 px-2 sm:px-0">
+            <span className="block text-[11px] sm:text-xs md:text-sm font-extrabold uppercase tracking-wider sm:tracking-[0.2em] text-brand-orange-600 dark:text-orange-400 mb-1.5 sm:mb-3">
               Pusat Literasi Konsumen
             </span>
-            <h2 className="font-brand font-extrabold text-navy-900 dark:text-white text-3xl sm:text-4xl lg:text-[46px] leading-[1.12] tracking-tight">
+            <h2 className="font-brand font-extrabold text-navy-900 dark:text-white text-2xl sm:text-3xl md:text-4xl lg:text-[46px] leading-tight sm:leading-[1.12] tracking-tight">
               Pusat Edukasi{" "}
               <span className="block text-brand-orange">Informasi &amp; Pembelajaran</span>
             </h2>
-            <p className="mt-4 text-sm sm:text-base text-ink-soft dark:text-slate-300 leading-relaxed max-w-lg">
+            <p className="mt-2.5 sm:mt-4 text-xs sm:text-base text-ink-soft dark:text-slate-300 leading-relaxed max-w-lg">
               Akses berbagai informasi edukatif yang bermanfaat serta sumber belajar terpercaya untuk mendukung pemahaman masyarakat terhadap produk obat dan makanan yang aman.
             </p>
           </div>

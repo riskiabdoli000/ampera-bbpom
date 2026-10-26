@@ -22,7 +22,7 @@ export default function PermintaanInformasiPage() {
       <div className="flex-1 w-full pt-28 sm:pt-32 pb-16 sm:pb-24">
         <div className="max-w-[1440px] mx-auto px-5 sm:px-10 lg:px-14">
           {/* Breadcrumb Navigasi */}
-          <nav
+          {/* <nav
             aria-label="Breadcrumb"
             className="flex items-center justify-center gap-2 text-xs sm:text-sm text-ink-soft dark:text-slate-400 mb-8 animate-fade-up"
           >
@@ -44,7 +44,7 @@ export default function PermintaanInformasiPage() {
             <span className="font-semibold text-navy-900 dark:text-white">
               Permintaan Informasi
             </span>
-          </nav>
+          </nav> */}
 
           {/* Header Section (Judul & Deskripsi Form) */}
           <div className="relative mb-8 sm:mb-10 max-w-3xl mx-auto text-center animate-fade-up">
