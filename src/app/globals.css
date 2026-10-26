@@ -22,6 +22,7 @@
   --animate-fade-up: fade-up 0.7s cubic-bezier(0.22, 1, 0.36, 1) both;
   --animate-slide-left: slide-left 0.8s cubic-bezier(0.22, 1, 0.36, 1) both;
   --animate-slide-right: slide-right 1.3s cubic-bezier(0.22, 1, 0.36, 1) both;
+  --animate-hero-slide: hero-slide 1.3s cubic-bezier(0.22, 1, 0.36, 1) both;
   --animate-draw: draw 1.6s ease-out 0.4s both;
 
   @keyframes fade-up {
@@ -33,7 +34,12 @@
     to { opacity: 1; transform: translateX(0); }
   }
   @keyframes slide-right {
-    from { opacity: 0; transform: translateX(-45%); }
+    from { opacity: 0; transform: translateX(35%); }
+    60% { opacity: 1; }
+    to { opacity: 1; transform: translateX(0); }
+  }
+  @keyframes hero-slide {
+    from { opacity: 0; transform: translateX(35%); }
     60% { opacity: 1; }
     to { opacity: 1; transform: translateX(0); }
   }

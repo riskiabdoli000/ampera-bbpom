@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import Image from "next/image";
-import { ArrowRight, ShieldCheck, Play } from "lucide-react";
+import { ArrowRight, ShieldCheck, Play, ChevronLeft, ChevronRight } from "lucide-react";
 import { VideoModal } from "./VideoModal";
 
 const HERO_SLIDES = [
@@ -40,9 +40,18 @@ export function HeroSection() {
     return () => clearInterval(timer);
   }, [isPaused]);
 
+  const handlePrevSlide = () => {
+    setCurrentSlide((prev) => (prev - 1 + HERO_SLIDES.length) % HERO_SLIDES.length);
+  };
+
+  const handleNextSlide = () => {
+    setCurrentSlide((prev) => (prev + 1) % HERO_SLIDES.length);
+  };
+
   return (
     <>
       <section
+        id="beranda"
         className="relative w-full lg:min-h-screen flex flex-col overflow-hidden bg-gradient-to-r from-white via-sky-50 to-sky-200/70 dark:from-slate-950 dark:via-[#06122e] dark:to-[#0b1f4d]"
         onMouseEnter={() => setIsPaused(true)}
         onMouseLeave={() => setIsPaused(false)}
@@ -162,15 +171,27 @@ export function HeroSection() {
             </div>
           </div>
 
-          {/* Kartu #2 (mobile): strip di bawah foto */}
-          <div className="lg:hidden mt-4 w-full max-w-xl mx-auto">
+          {/* Slider Controls + Kartu Video (mobile) */}
+          <div className="lg:hidden mt-4 w-full max-w-xl mx-auto flex flex-col gap-2.5">
+            <SlideControls
+              currentSlide={currentSlide}
+              onSelectSlide={setCurrentSlide}
+              onPrev={handlePrevSlide}
+              onNext={handleNextSlide}
+            />
             <VideoCard onOpen={() => setVideoOpen(true)} />
           </div>
         </div>
 
-        {/* Kartu #2 (desktop, kanan bawah) */}
-        <div className="hidden lg:block absolute bottom-[14%] right-12 xl:right-16 z-20 w-[360px] animate-slide-left [animation-delay:450ms]">
+        {/* Kartu #2 + Slider Controls (desktop, kanan bawah) */}
+        <div className="hidden lg:flex flex-col gap-2.5 absolute bottom-[7%] right-12 xl:right-16 z-20 w-[360px] animate-slide-left [animation-delay:450ms]">
           <VideoCard onOpen={() => setVideoOpen(true)} />
+          <SlideControls
+            currentSlide={currentSlide}
+            onSelectSlide={setCurrentSlide}
+            onPrev={handlePrevSlide}
+            onNext={handleNextSlide}
+          />
         </div>
       </section>
 
@@ -217,5 +238,63 @@ function VideoCard({ onOpen }: { onOpen: () => void }) {
         </p>
       </div>
     </button>
+  );
+}
+
+function SlideControls({
+  currentSlide,
+  onSelectSlide,
+  onPrev,
+  onNext,
+}: {
+  currentSlide: number;
+  onSelectSlide: (idx: number) => void;
+  onPrev: () => void;
+  onNext: () => void;
+}) {
+  return (
+    <div className="flex items-center justify-between px-3.5 py-2 rounded-2xl bg-white/85 dark:bg-slate-900/80 backdrop-blur-xl border border-white/70 dark:border-slate-800 shadow-card">
+      {/* Indikator Titik & Judul Slide */}
+      <div className="flex items-center gap-2 min-w-0">
+        <div className="flex items-center gap-1.5 shrink-0">
+          {HERO_SLIDES.map((slide, idx) => (
+            <button
+              key={slide.id}
+              type="button"
+              onClick={() => onSelectSlide(idx)}
+              className={`h-2 rounded-full transition-all duration-300 cursor-pointer ${
+                idx === currentSlide
+                  ? "w-6 bg-brand-orange shadow-xs"
+                  : "w-2 bg-slate-300 dark:bg-slate-700 hover:bg-slate-400"
+              }`}
+              aria-label={`Pindah ke slide ${idx + 1}: ${slide.title}`}
+            />
+          ))}
+        </div>
+        <span className="text-[11px] font-semibold text-navy-900 dark:text-slate-200 ml-1 truncate max-w-[150px] sm:max-w-[170px]">
+          {HERO_SLIDES[currentSlide]?.title}
+        </span>
+      </div>
+
+      {/* Tombol Navigasi Prev & Next */}
+      <div className="flex items-center gap-1.5 shrink-0">
+        <button
+          type="button"
+          onClick={onPrev}
+          className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl bg-sky-50 dark:bg-slate-800 hover:bg-orange-tint dark:hover:bg-orange-500/20 text-navy-900 dark:text-white hover:text-brand-orange-600 flex items-center justify-center transition-all active:scale-90 cursor-pointer focus-visible:outline-2 focus-visible:outline-brand-orange"
+          aria-label="Slide sebelumnya"
+        >
+          <ChevronLeft className="w-4 h-4 stroke-[2.2]" />
+        </button>
+        <button
+          type="button"
+          onClick={onNext}
+          className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl bg-sky-50 dark:bg-slate-800 hover:bg-orange-tint dark:hover:bg-orange-500/20 text-navy-900 dark:text-white hover:text-brand-orange-600 flex items-center justify-center transition-all active:scale-90 cursor-pointer focus-visible:outline-2 focus-visible:outline-brand-orange"
+          aria-label="Slide berikutnya"
+        >
+          <ChevronRight className="w-4 h-4 stroke-[2.2]" />
+        </button>
+      </div>
+    </div>
   );
 }

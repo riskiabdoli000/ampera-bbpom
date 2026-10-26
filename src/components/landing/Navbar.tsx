@@ -8,11 +8,10 @@ import { Sun, Moon, Menu, X, Globe, ArrowRight } from "lucide-react";
 interface NavItem {
   label: string;
   href: string;
-  active?: boolean;
 }
 
 const NAV_ITEMS: NavItem[] = [
-  { label: "Beranda", href: "#", active: true },
+  { label: "Beranda", href: "#beranda" },
   { label: "Layanan", href: "#layanan" },
   { label: "Edukasi", href: "#edukasi" },
   { label: "Video", href: "#video" },
@@ -23,12 +22,51 @@ export function Navbar() {
   const [isScrolled, setIsScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [isDark, setIsDark] = useState(false);
+  const [activeSection, setActiveSection] = useState("#beranda");
 
   useEffect(() => {
+    // Sinkronkan activeSection dengan hash URL saat pertama kali dimuat
+    if (typeof window !== "undefined" && window.location.hash) {
+      const currentHash = window.location.hash;
+      if (NAV_ITEMS.some((item) => item.href === currentHash)) {
+        setActiveSection(currentHash);
+      }
+    }
+
+    const sectionIds = ["beranda", "layanan", "edukasi", "video", "kontak"];
+
     const handleScroll = () => {
       setIsScrolled(window.scrollY > 20);
+
+      // Cek jika sudah berada di dekat dasar halaman (section kontak)
+      const isAtBottom =
+        window.innerHeight + window.scrollY >=
+        document.documentElement.scrollHeight - 80;
+
+      if (isAtBottom) {
+        setActiveSection("#kontak");
+        return;
+      }
+
+      // Cek jika di paling atas halaman
+      if (window.scrollY < 120) {
+        setActiveSection("#beranda");
+        return;
+      }
+
+      // Deteksi section aktif berdasarkan posisi scroll
+      const scrollPosition = window.scrollY + 180;
+      for (let i = sectionIds.length - 1; i >= 0; i--) {
+        const el = document.getElementById(sectionIds[i]);
+        if (el && el.offsetTop <= scrollPosition) {
+          setActiveSection(`#${sectionIds[i]}`);
+          break;
+        }
+      }
     };
-    window.addEventListener("scroll", handleScroll);
+
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    handleScroll();
 
     const frame = requestAnimationFrame(() => {
       const savedTheme = localStorage.getItem("theme");
@@ -75,7 +113,8 @@ export function Navbar() {
         <div className="relative flex items-center justify-between">
           {/* Kiri: Logo */}
           <Link
-            href="/"
+            href="#beranda"
+            onClick={() => setActiveSection("#beranda")}
             className="flex items-center gap-3 group focus:outline-hidden z-20"
             aria-label="Portal Layanan AMPERA BBPOM Palembang"
           >
@@ -93,7 +132,7 @@ export function Navbar() {
               <span className="font-brand font-extrabold text-xl sm:text-2xl tracking-tight text-navy-900 dark:text-white">
                 BBPOM
               </span>
-              <span className="font-brand font-medium text-[11px] sm:text-xs text-ink-soft dark:text-slate-400 tracking-wide mt-0.5">
+              <span className="font-brand font-medium text-[11px] sm:text-xs text-brand-orange dark:text-orange-400 tracking-wide mt-0.5">
                 Palembang • Portal AMPERA
               </span>
             </div>
@@ -104,25 +143,33 @@ export function Navbar() {
             className="hidden lg:flex items-center gap-1 absolute left-1/2 -translate-x-1/2 z-10"
             aria-label="Navigasi utama"
           >
-            {NAV_ITEMS.map((item) => (
-              <a
-                key={item.label}
-                href={item.href}
-                aria-current={item.active ? "page" : undefined}
-                className={`font-brand rounded-full px-5 py-2 text-[13px] transition-colors duration-200 focus-visible:outline-2 focus-visible:outline-brand-orange ${
-                  item.active
-                    ? "bg-orange-tint text-brand-orange-600 font-bold dark:bg-orange-500/20 dark:text-orange-300"
-                    : "text-navy-900 dark:text-slate-200 font-semibold hover:text-brand-orange"
-                }`}
-              >
-                {item.label}
-              </a>
-            ))}
+            {NAV_ITEMS.map((item) => {
+              const isActive = activeSection === item.href;
+              return (
+                <a
+                  key={item.label}
+                  href={item.href}
+                  onClick={() => setActiveSection(item.href)}
+                  aria-current={isActive ? "page" : undefined}
+                  className={`font-brand rounded-full px-5 py-2 text-[13px] transition-colors duration-200 focus-visible:outline-2 focus-visible:outline-brand-orange ${
+                    isActive
+                      ? "bg-orange-tint text-brand-orange-600 font-bold dark:bg-orange-500/20 dark:text-orange-300 shadow-xs"
+                      : "text-navy-900 dark:text-slate-200 font-semibold hover:text-brand-orange"
+                  }`}
+                >
+                  {item.label}
+                </a>
+              );
+            })}
           </nav>
 
           {/* Kanan: CTA (desktop) / Hamburger (mobile) */}
           <div className="flex items-center gap-3 z-20">
-            <a href="#layanan" className={`${ctaClass} max-lg:hidden`}>
+            <a
+              href="#layanan"
+              onClick={() => setActiveSection("#layanan")}
+              className={`${ctaClass} max-lg:hidden`}
+            >
               <span>Akses Layanan</span>
               <ArrowRight className="w-4 h-4 transition-transform duration-200 group-hover:translate-x-1" />
             </a>
@@ -143,26 +190,35 @@ export function Navbar() {
         {mobileMenuOpen && (
           <div className="mt-3 lg:hidden rounded-3xl border border-slate-200/80 dark:border-slate-800 bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl p-5 shadow-2xl animate-fade-up relative z-50">
             <nav className="flex flex-col gap-1" aria-label="Navigasi mobile">
-              {NAV_ITEMS.map((item) => (
-                <a
-                  key={item.label}
-                  href={item.href}
-                  onClick={() => setMobileMenuOpen(false)}
-                  aria-current={item.active ? "page" : undefined}
-                  className={`font-brand px-4 py-2.5 rounded-full text-sm font-semibold transition-colors ${
-                    item.active
-                      ? "bg-orange-tint text-brand-orange-600 dark:bg-orange-500/20 dark:text-orange-300"
-                      : "text-navy-900 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800/60"
-                  }`}
-                >
-                  {item.label}
-                </a>
-              ))}
+              {NAV_ITEMS.map((item) => {
+                const isActive = activeSection === item.href;
+                return (
+                  <a
+                    key={item.label}
+                    href={item.href}
+                    onClick={() => {
+                      setActiveSection(item.href);
+                      setMobileMenuOpen(false);
+                    }}
+                    aria-current={isActive ? "page" : undefined}
+                    className={`font-brand px-4 py-2.5 rounded-full text-sm font-semibold transition-colors ${
+                      isActive
+                        ? "bg-orange-tint text-brand-orange-600 dark:bg-orange-500/20 dark:text-orange-300 font-bold"
+                        : "text-navy-900 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800/60"
+                    }`}
+                  >
+                    {item.label}
+                  </a>
+                );
+              })}
             </nav>
 
             <a
               href="#layanan"
-              onClick={() => setMobileMenuOpen(false)}
+              onClick={() => {
+                setActiveSection("#layanan");
+                setMobileMenuOpen(false);
+              }}
               className={`${ctaClass} w-full justify-center mt-4`}
             >
               <span>Akses Layanan</span>
