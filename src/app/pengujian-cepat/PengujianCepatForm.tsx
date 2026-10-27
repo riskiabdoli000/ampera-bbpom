@@ -376,13 +376,112 @@ export function PengujianCepatForm() {
   // =========================================================================
   return (
     <div className="w-full max-w-5xl mx-auto">
-      <div className="bg-white dark:bg-slate-900 rounded-[28px] sm:rounded-[36px] border border-slate-100 dark:border-slate-800/90 shadow-[0_20px_60px_-15px_rgba(11,42,107,0.1)] p-6 sm:p-10 lg:p-12 relative overflow-hidden transition-all duration-300">
+      <div className="bg-white dark:bg-slate-900 rounded-[28px] sm:rounded-[36px] border border-slate-100 dark:border-slate-800/90 shadow-[0_20px_60px_-15px_rgba(11,42,107,0.1)] p-5 sm:p-10 lg:p-12 relative overflow-hidden transition-all duration-300">
         
         {/* =================================================================== */}
-        {/* 1. STEPPER PROGRESS INDICATOR (Persis Sesuai Gambar Referensi)       */}
+        {/* 1. STEPPER PROGRESS INDICATOR (Responsive Mobile & Desktop)         */}
         {/* =================================================================== */}
-        <div className="relative mb-10 pb-8 border-b border-slate-100 dark:border-slate-800/80">
-          <div className="flex items-center justify-between max-w-3xl mx-auto relative">
+        <div className="relative mb-8 sm:mb-10 pb-6 sm:pb-8 border-b border-slate-100 dark:border-slate-800/80">
+          
+          {/* Mobile Stepper View (< sm) */}
+          <div className="sm:hidden relative">
+            {/* Progress Bar Behind Circles */}
+            <div className="absolute top-4 left-[16.67%] right-[16.67%] h-0.5 -translate-y-1/2 bg-slate-200 dark:bg-slate-800">
+              <div
+                className="h-full bg-brand-orange transition-all duration-500 rounded-full"
+                style={{
+                  width: currentStep === 1 ? "0%" : currentStep === 2 ? "50%" : "100%",
+                }}
+              />
+            </div>
+
+            <div className="grid grid-cols-3 relative">
+              {/* Step 1: Data Pemohon */}
+              <button
+                type="button"
+                onClick={() => handleStepClick(1)}
+                className="flex flex-col items-center group focus:outline-hidden cursor-pointer relative z-10"
+              >
+                <div
+                  className={`w-8 h-8 rounded-full flex items-center justify-center font-brand font-bold text-xs transition-all duration-300 ring-4 ring-white dark:ring-slate-900 ${
+                    currentStep >= 1
+                      ? "bg-brand-orange text-white shadow-[0_4px_14px_rgba(255,122,26,0.4)]"
+                      : "bg-slate-100 text-slate-400 dark:bg-slate-800"
+                  }`}
+                >
+                  01
+                </div>
+                <span
+                  className={`mt-1.5 font-brand text-[11px] font-bold text-center leading-tight transition-colors line-clamp-2 px-1 ${
+                    currentStep === 1
+                      ? "text-brand-orange dark:text-orange-400"
+                      : currentStep > 1
+                      ? "text-navy-900 dark:text-white"
+                      : "text-slate-400 dark:text-slate-500"
+                  }`}
+                >
+                  Data Pemohon
+                </span>
+              </button>
+
+              {/* Step 2: Detail Sampel */}
+              <button
+                type="button"
+                onClick={() => handleStepClick(2)}
+                className="flex flex-col items-center group focus:outline-hidden cursor-pointer relative z-10"
+              >
+                <div
+                  className={`w-8 h-8 rounded-full flex items-center justify-center font-brand font-bold text-xs transition-all duration-300 ring-4 ring-white dark:ring-slate-900 ${
+                    currentStep >= 2
+                      ? "bg-brand-orange text-white shadow-[0_4px_14px_rgba(255,122,26,0.4)]"
+                      : "bg-sky-50 text-sky-700 dark:bg-slate-800 dark:text-slate-400 border border-sky-200 dark:border-slate-700"
+                  }`}
+                >
+                  02
+                </div>
+                <span
+                  className={`mt-1.5 font-brand text-[11px] font-bold text-center leading-tight transition-colors line-clamp-2 px-1 ${
+                    currentStep === 2
+                      ? "text-brand-orange dark:text-orange-400"
+                      : currentStep > 2
+                      ? "text-navy-900 dark:text-white"
+                      : "text-slate-400 dark:text-slate-500"
+                  }`}
+                >
+                  Detail Sampel
+                </span>
+              </button>
+
+              {/* Step 3: Konfirmasi */}
+              <button
+                type="button"
+                onClick={() => handleStepClick(3)}
+                className="flex flex-col items-center group focus:outline-hidden cursor-pointer relative z-10"
+              >
+                <div
+                  className={`w-8 h-8 rounded-full flex items-center justify-center font-brand font-bold text-xs transition-all duration-300 ring-4 ring-white dark:ring-slate-900 ${
+                    currentStep === 3
+                      ? "bg-brand-orange text-white shadow-[0_4px_14px_rgba(255,122,26,0.4)]"
+                      : "bg-slate-100 text-slate-400 dark:bg-slate-800"
+                  }`}
+                >
+                  03
+                </div>
+                <span
+                  className={`mt-1.5 font-brand text-[11px] font-bold text-center leading-tight transition-colors line-clamp-2 px-1 ${
+                    currentStep === 3
+                      ? "text-brand-orange dark:text-orange-400"
+                      : "text-slate-400 dark:text-slate-500"
+                  }`}
+                >
+                  Konfirmasi
+                </span>
+              </button>
+            </div>
+          </div>
+
+          {/* Desktop Stepper View (>= sm) */}
+          <div className="hidden sm:flex items-center justify-between max-w-3xl mx-auto relative">
             
             {/* Step 1: Data Pemohon */}
             <button
@@ -731,12 +830,17 @@ export function PengujianCepatForm() {
 
                 {/* Field: Rincian Produk yang Dicurigai (Textarea Spanning 2 Columns) */}
                 <div className="md:col-span-2">
-                  <label
-                    htmlFor="rincianProduk"
-                    className="block text-xs sm:text-[13px] font-bold text-navy-900 dark:text-slate-200 mb-1"
-                  >
-                    Rincian Produk yang Dicurigai <span className="text-red-500">*</span>
-                  </label>
+                  <div className="flex items-center justify-between mb-1">
+                    <label
+                      htmlFor="rincianProduk"
+                      className="block text-xs sm:text-[13px] font-bold text-navy-900 dark:text-slate-200"
+                    >
+                      Rincian Produk yang Dicurigai <span className="text-red-500">*</span>
+                    </label>
+                    <span className="text-[11px] text-ink-soft dark:text-slate-400">
+                      {formData.rincianProduk.length} karakter (min. 10)
+                    </span>
+                  </div>
                   {/* Deskripsi Tambahan Sesuai Permintaan Prompt */}
                   <p className="text-xs text-ink-soft dark:text-slate-400 mb-2">
                     Sebutkan tempat/pasar/penjual dan informasi penting lainnya

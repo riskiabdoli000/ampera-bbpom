@@ -169,14 +169,28 @@ export function Navbar() {
             <button
               type="button"
               onClick={toggleTheme}
-              className="group hidden lg:flex w-11 h-11 rounded-full bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 text-navy-900 dark:text-yellow-400 items-center justify-center shadow-xs hover:scale-105 active:scale-95 transition-all duration-200 cursor-pointer focus-visible:outline-2 focus-visible:outline-brand-orange"
+              className="group hidden lg:flex items-center gap-3 px-3.5 py-2 rounded-xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200/80 dark:border-slate-700/80 text-navy-900 dark:text-slate-100 shadow-xs hover:border-brand-orange hover:scale-102 active:scale-98 transition-all duration-200 cursor-pointer focus-visible:outline-2 focus-visible:outline-brand-orange"
               aria-label={isDark ? "Beralih ke mode terang" : "Beralih ke mode gelap"}
             >
-              {isDark ? (
-                <Sun className="w-5 h-5 text-amber-400 transition-transform duration-200 group-hover:scale-115 group-hover:rotate-12" />
-              ) : (
-                <Moon className="w-5 h-5 text-navy-900 dark:text-slate-200 transition-transform duration-200 group-hover:scale-115 group-hover:-rotate-12" />
-              )}
+              <span className="flex items-center gap-2 text-xs font-semibold">
+                {isDark ? (
+                  <Sun className="w-4 h-4 text-amber-400 transition-transform duration-200 group-hover:scale-110 group-hover:rotate-12" />
+                ) : (
+                  <Moon className="w-4 h-4 text-slate-600 dark:text-slate-300 transition-transform duration-200 group-hover:scale-110 group-hover:-rotate-12" />
+                )}
+                <span>{isDark ? "Mode Terang" : "Mode Gelap"}</span>
+              </span>
+              <div
+                className={`w-9 h-5 flex items-center rounded-full p-0.5 transition-colors duration-200 ${
+                  isDark ? "bg-brand-orange" : "bg-slate-300 dark:bg-slate-600"
+                }`}
+              >
+                <div
+                  className={`w-4 h-4 rounded-full bg-white shadow-xs transition-transform duration-200 ${
+                    isDark ? "translate-x-4" : "translate-x-0"
+                  }`}
+                />
+              </div>
             </button>
 
             <a
@@ -239,14 +253,33 @@ export function Navbar() {
               <ArrowRight className="w-4 h-4" />
             </a>
 
-            <div className="mt-4 flex items-center gap-2 border-t border-slate-100 dark:border-slate-800 pt-4">
+            <div className="mt-4 border-t border-slate-100 dark:border-slate-800 pt-4">
+              {/* Night Mode Toggle */}
               <button
                 type="button"
                 onClick={toggleTheme}
-                className="w-9 h-9 rounded-full bg-slate-50 dark:bg-slate-800 flex items-center justify-center cursor-pointer active:scale-95"
+                className="w-full flex items-center justify-between px-4 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200/80 dark:border-slate-700/80 text-navy-900 dark:text-slate-100 transition-colors cursor-pointer hover:border-brand-orange"
                 aria-label={isDark ? "Beralih ke mode terang" : "Beralih ke mode gelap"}
               >
-                {isDark ? <Sun className="w-4 h-4 text-amber-400" /> : <Moon className="w-4 h-4 text-navy-900" />}
+                <span className="flex items-center gap-2.5 text-xs font-semibold">
+                  {isDark ? (
+                    <Sun className="w-4 h-4 text-amber-400" />
+                  ) : (
+                    <Moon className="w-4 h-4 text-slate-600 dark:text-slate-300" />
+                  )}
+                  <span>{isDark ? "Mode Terang" : "Mode Gelap"}</span>
+                </span>
+                <div
+                  className={`w-9 h-5 flex items-center rounded-full p-0.5 transition-colors duration-200 ${
+                    isDark ? "bg-brand-orange" : "bg-slate-300 dark:bg-slate-600"
+                  }`}
+                >
+                  <div
+                    className={`w-4 h-4 rounded-full bg-white shadow-xs transition-transform duration-200 ${
+                      isDark ? "translate-x-4" : "translate-x-0"
+                    }`}
+                  />
+                </div>
               </button>
             </div>
           </div>

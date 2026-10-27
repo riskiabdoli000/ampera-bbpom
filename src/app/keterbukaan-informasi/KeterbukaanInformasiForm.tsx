@@ -22,7 +22,6 @@ import {
   Eye,
   FileCheck2,
   Download,
-  ExternalLink,
   Info,
   FileCheck,
 } from "lucide-react";
@@ -34,7 +33,7 @@ import {
 
 const MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024; // 10MB
 const FORM_DOWNLOAD_URL =
-  "https://drive.google.com/file/d/1cFJC8ZItIAFbhYwch110NNPyXDa-unZ2/view?usp=sharing";
+  "/documents/Formulir-Permintaan-Informasi-Publik-PPID-BBPOM.pdf";
 
 const FORMULIR_ALLOWED_EXTS = [".pdf"];
 const FORMULIR_ALLOWED_TYPES = ["application/pdf"];
@@ -545,12 +544,111 @@ export function KeterbukaanInformasiForm() {
   // =========================================================================
   return (
     <div className="w-full max-w-5xl mx-auto">
-      <div className="bg-white dark:bg-slate-900 rounded-[28px] sm:rounded-[36px] border border-slate-100 dark:border-slate-800/90 shadow-[0_20px_60px_-15px_rgba(11,42,107,0.1)] p-6 sm:p-10 lg:p-12 relative overflow-hidden transition-all duration-300">
+      <div className="bg-white dark:bg-slate-900 rounded-[28px] sm:rounded-[36px] border border-slate-100 dark:border-slate-800/90 shadow-[0_20px_60px_-15px_rgba(11,42,107,0.1)] p-5 sm:p-10 lg:p-12 relative overflow-hidden transition-all duration-300">
         {/* =================================================================== */}
-        {/* 1. STEPPER PROGRESS INDICATOR (Persis Sesuai Desain Acuan)           */}
+        {/* 1. STEPPER PROGRESS INDICATOR (Responsive Mobile & Desktop)         */}
         {/* =================================================================== */}
-        <div className="relative mb-10 pb-8 border-b border-slate-100 dark:border-slate-800/80">
-          <div className="flex items-center justify-between max-w-3xl mx-auto relative">
+        <div className="relative mb-8 sm:mb-10 pb-6 sm:pb-8 border-b border-slate-100 dark:border-slate-800/80">
+          
+          {/* Mobile Stepper View (< sm) */}
+          <div className="sm:hidden relative">
+            {/* Progress Bar Behind Circles */}
+            <div className="absolute top-4 left-[16.67%] right-[16.67%] h-0.5 -translate-y-1/2 bg-slate-200 dark:bg-slate-800">
+              <div
+                className="h-full bg-brand-orange transition-all duration-500 rounded-full"
+                style={{
+                  width: currentStep === 1 ? "0%" : currentStep === 2 ? "50%" : "100%",
+                }}
+              />
+            </div>
+
+            <div className="grid grid-cols-3 relative">
+              {/* Step 1: Data Pemohon */}
+              <button
+                type="button"
+                onClick={() => handleStepClick(1)}
+                className="flex flex-col items-center group focus:outline-hidden cursor-pointer relative z-10"
+              >
+                <div
+                  className={`w-8 h-8 rounded-full flex items-center justify-center font-brand font-bold text-xs transition-all duration-300 ring-4 ring-white dark:ring-slate-900 ${
+                    currentStep >= 1
+                      ? "bg-brand-orange text-white shadow-[0_4px_14px_rgba(255,122,26,0.4)]"
+                      : "bg-slate-100 text-slate-400 dark:bg-slate-800"
+                  }`}
+                >
+                  01
+                </div>
+                <span
+                  className={`mt-1.5 font-brand text-[11px] font-bold text-center leading-tight transition-colors line-clamp-2 px-1 ${
+                    currentStep === 1
+                      ? "text-brand-orange dark:text-orange-400"
+                      : currentStep > 1
+                      ? "text-navy-900 dark:text-white"
+                      : "text-slate-400 dark:text-slate-500"
+                  }`}
+                >
+                  Data Pemohon
+                </span>
+              </button>
+
+              {/* Step 2: Dokumen Permohonan */}
+              <button
+                type="button"
+                onClick={() => handleStepClick(2)}
+                className="flex flex-col items-center group focus:outline-hidden cursor-pointer relative z-10"
+              >
+                <div
+                  className={`w-8 h-8 rounded-full flex items-center justify-center font-brand font-bold text-xs transition-all duration-300 ring-4 ring-white dark:ring-slate-900 ${
+                    currentStep >= 2
+                      ? "bg-brand-orange text-white shadow-[0_4px_14px_rgba(255,122,26,0.4)]"
+                      : "bg-sky-50 text-sky-700 dark:bg-slate-800 dark:text-slate-400 border border-sky-200 dark:border-slate-700"
+                  }`}
+                >
+                  02
+                </div>
+                <span
+                  className={`mt-1.5 font-brand text-[11px] font-bold text-center leading-tight transition-colors line-clamp-2 px-1 ${
+                    currentStep === 2
+                      ? "text-brand-orange dark:text-orange-400"
+                      : currentStep > 2
+                      ? "text-navy-900 dark:text-white"
+                      : "text-slate-400 dark:text-slate-500"
+                  }`}
+                >
+                  Dokumen Permohonan
+                </span>
+              </button>
+
+              {/* Step 3: Konfirmasi */}
+              <button
+                type="button"
+                onClick={() => handleStepClick(3)}
+                className="flex flex-col items-center group focus:outline-hidden cursor-pointer relative z-10"
+              >
+                <div
+                  className={`w-8 h-8 rounded-full flex items-center justify-center font-brand font-bold text-xs transition-all duration-300 ring-4 ring-white dark:ring-slate-900 ${
+                    currentStep === 3
+                      ? "bg-brand-orange text-white shadow-[0_4px_14px_rgba(255,122,26,0.4)]"
+                      : "bg-slate-100 text-slate-400 dark:bg-slate-800"
+                  }`}
+                >
+                  03
+                </div>
+                <span
+                  className={`mt-1.5 font-brand text-[11px] font-bold text-center leading-tight transition-colors line-clamp-2 px-1 ${
+                    currentStep === 3
+                      ? "text-brand-orange dark:text-orange-400"
+                      : "text-slate-400 dark:text-slate-500"
+                  }`}
+                >
+                  Konfirmasi
+                </span>
+              </button>
+            </div>
+          </div>
+
+          {/* Desktop Stepper View (>= sm) */}
+          <div className="hidden sm:flex items-center justify-between max-w-3xl mx-auto relative">
             {/* Step 1: Data Pemohon */}
             <button
               type="button"
@@ -835,13 +933,11 @@ export function KeterbukaanInformasiForm() {
 
                   <a
                     href={FORM_DOWNLOAD_URL}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-full bg-gradient-to-r from-[#ff8a1f] to-[#f26a0f] text-xs sm:text-sm font-bold text-white shadow-cta hover:shadow-lg transition-all duration-200 shrink-0 w-full md:w-auto"
+                    download="Formulir-Permintaan-Informasi-Publik-PPID-BBPOM.pdf"
+                    className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-full bg-gradient-to-r from-[#ff8a1f] to-[#f26a0f] text-xs sm:text-sm font-bold text-white shadow-cta hover:shadow-lg transition-all duration-200 shrink-0 w-full md:w-auto cursor-pointer"
                   >
                     <Download className="w-4 h-4" />
-                    <span>Unduh Formulir</span>
-                    <ExternalLink className="w-3.5 h-3.5 opacity-80" />
+                    <span>Unduh Formulir (PDF)</span>
                   </a>
                 </div>
               </div>

@@ -1,8 +1,9 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import Image from "next/image";
 import { BookOpen, GraduationCap, Lightbulb, Video, ArrowRight } from "lucide-react";
+import { EducationPdfModal } from "./EducationPdfModal";
 
 interface EducationCard {
   id: string;
@@ -11,6 +12,11 @@ interface EducationCard {
   icon: React.ElementType;
   actionText: string;
   href: string;
+  isPdf?: boolean;
+  pdfTitle?: string;
+  pdfBadge?: string;
+  pdfUrl?: string;
+  pdfFilename?: string;
 }
 
 const EDUCATION_CARDS: EducationCard[] = [
@@ -21,14 +27,24 @@ const EDUCATION_CARDS: EducationCard[] = [
     icon: BookOpen,
     actionText: "Baca Artikel",
     href: "#edukasi",
+    isPdf: true,
+    pdfTitle: "Edukasi Ketersediaan Farmasi & Obat Bahan Alam",
+    pdfBadge: "Materi Edukasi Farmasi",
+    pdfUrl: "/documents/materi-edukasi-bbpom.pdf",
+    pdfFilename: "Materi-Edukasi-Farmasi-BBPOM.pdf",
   },
   {
     id: "panduan",
     title: "Keamanan Pangan",
     description: "Pelajari panduan praktis cara Cek KLIK, izin edar, dan higienitas.",
     icon: GraduationCap,
-    actionText: "Lihat Panduan",
+    actionText: "Baca Artikel",
     href: "#edukasi",
+    isPdf: true,
+    pdfTitle: "Panduan Praktis Keamanan Pangan & Cek KLIK",
+    pdfBadge: "Panduan Keamanan Pangan",
+    pdfUrl: "/documents/materi-edukasi-bbpom.pdf",
+    pdfFilename: "Panduan-Keamanan-Pangan-BBPOM.pdf",
   },
   {
     id: "tips",
@@ -36,19 +52,21 @@ const EDUCATION_CARDS: EducationCard[] = [
     description: "Temukan tips cerdas memilih produk yang aman dan teruji bermutu.",
     icon: Lightbulb,
     actionText: "Pelajari Tips",
-    href: "#edukasi",
+    href: "https://cekbpom.pom.go.id",
   },
   {
     id: "video",
     title: "Informasi Umum",
-    description: "Belajar melalui konten visual menarik dan video animasi edukasi.",
+    description: "Dapatkan informasi terbaru dan siaran pers dari Badan POM RI",
     icon: Video,
-    actionText: "Tonton Video",
-    href: "#edukasi",
+    actionText: "Lihat Informasi",
+    href: "https://www.pom.go.id/siaran-pers",
   },
 ];
 
 export function EducationSection() {
+  const [selectedPdfCard, setSelectedPdfCard] = useState<EducationCard | null>(null);
+
   return (
     <section
       id="edukasi"
@@ -93,10 +111,15 @@ export function EducationSection() {
         <div className="relative z-20 -mt-20 sm:-mt-24 lg:-mt-28 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
           {EDUCATION_CARDS.map((card) => {
             const IconComponent = card.icon;
+            const isPdfCard = !!card.isPdf;
+
             return (
               <div
                 key={card.id}
-                className="group rounded-3xl bg-white dark:bg-slate-900/90 border border-slate-100 dark:border-slate-800 p-7 sm:p-8 flex flex-col items-center text-center shadow-[0_10px_35px_-15px_rgb(11_42_107/0.07)] hover:shadow-card hover:-translate-y-2 transition-all duration-300"
+                onClick={isPdfCard ? () => setSelectedPdfCard(card) : undefined}
+                className={`group rounded-3xl bg-white dark:bg-slate-900/90 border border-slate-100 dark:border-slate-800 p-7 sm:p-8 flex flex-col items-center text-center shadow-[0_10px_35px_-15px_rgb(11_42_107/0.07)] hover:shadow-card hover:-translate-y-2 transition-all duration-300 ${
+                  isPdfCard ? "cursor-pointer" : ""
+                }`}
               >
                 {/* Ikon Besar Berbingkai Lembut */}
                 <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-orange-50 dark:bg-orange-500/15 border border-orange-100/70 dark:border-orange-500/20 text-brand-orange dark:text-orange-400 flex items-center justify-center group-hover:bg-brand-orange group-hover:text-white group-hover:scale-110 transition-all duration-300 shadow-xs">
@@ -118,19 +141,45 @@ export function EducationSection() {
 
                 {/* Link Aksi dengan Panah Interaktif */}
                 <div className="mt-6">
-                  <a
-                    href={card.href}
-                    className="inline-flex items-center gap-1.5 text-xs sm:text-sm font-bold text-brand-orange hover:text-brand-orange-600 transition-colors group/link"
-                  >
-                    <span>{card.actionText}</span>
-                    <ArrowRight className="w-4 h-4 transition-transform duration-200 group-hover/link:translate-x-1" />
-                  </a>
+                  {isPdfCard ? (
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setSelectedPdfCard(card);
+                      }}
+                      className="inline-flex items-center gap-1.5 text-xs sm:text-sm font-bold text-brand-orange hover:text-brand-orange-600 transition-colors group/link cursor-pointer"
+                    >
+                      <span>{card.actionText}</span>
+                      <ArrowRight className="w-4 h-4 transition-transform duration-200 group-hover/link:translate-x-1" />
+                    </button>
+                  ) : (
+                    <a
+                      href={card.href}
+                      target={card.href.startsWith("http") ? "_blank" : undefined}
+                      rel={card.href.startsWith("http") ? "noopener noreferrer" : undefined}
+                      className="inline-flex items-center gap-1.5 text-xs sm:text-sm font-bold text-brand-orange hover:text-brand-orange-600 transition-colors group/link"
+                    >
+                      <span>{card.actionText}</span>
+                      <ArrowRight className="w-4 h-4 transition-transform duration-200 group-hover/link:translate-x-1" />
+                    </a>
+                  )}
                 </div>
               </div>
             );
           })}
         </div>
       </div>
+
+      {/* Modal Preview & Unduh Materi Edukasi PDF */}
+      <EducationPdfModal
+        isOpen={!!selectedPdfCard}
+        onClose={() => setSelectedPdfCard(null)}
+        title={selectedPdfCard?.pdfTitle}
+        badge={selectedPdfCard?.pdfBadge}
+        pdfUrl={selectedPdfCard?.pdfUrl}
+        filename={selectedPdfCard?.pdfFilename}
+      />
     </section>
   );
 }
