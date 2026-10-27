@@ -193,14 +193,14 @@ export function Navbar() {
               </div>
             </button>
 
-            <a
-              href=""
+            <Link
+              href="/cindo"
               onClick={() => setActiveSection("")}
               className={`${ctaClass} max-lg:hidden`}
             >
               <span>Cindo</span>
               <ArrowRight className="w-4 h-4 transition-transform duration-200 group-hover:translate-x-1" />
-            </a>
+            </Link>
 
             <button
               type="button"
@@ -241,8 +241,8 @@ export function Navbar() {
               })}
             </nav>
 
-            <a
-              href=""
+            <Link
+              href="/cindo"
               onClick={() => {
                 setActiveSection("");
                 setMobileMenuOpen(false);
@@ -251,7 +251,7 @@ export function Navbar() {
             >
               <span>Cindo</span>
               <ArrowRight className="w-4 h-4" />
-            </a>
+            </Link>
 
             <div className="mt-4 border-t border-slate-100 dark:border-slate-800 pt-4">
               {/* Night Mode Toggle */}

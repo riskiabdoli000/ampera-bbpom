@@ -1,0 +1,178 @@
+import { BabMateri } from "./cindoTypes";
+
+/**
+ * DAFTAR MATERI EDUKASI CINDO - BBPOM PALEMBANG
+ * 
+ * CATATAN PENGEMBANG:
+ * Untuk menambah bab baru atau menyunting bacaan, cukup edit atau tambahkan objek di array `DAFTAR_MATERI_CINDO`.
+ */
+export const DAFTAR_MATERI_CINDO: BabMateri[] = [
+  {
+    id: 1,
+    nomor: "Bab 1",
+    judul: "Pengenalan Tugas & Peran BBPOM Palembang",
+    subjudul: "Mengenal Garda Terdepan Perlindungan Konsumen di Sumatera Selatan",
+    deskripsiSingkat: "Memahami struktur tugas pengawasan obat, makanan, kosmetik, dan jamu di wilayah Sumatera Selatan.",
+    gambarThumbnail: "/assets-landingpage/layanan/1.jpg",
+    estimasiMenit: 3,
+    kontenPoin: [
+      "Visi BBPOM Palembang dalam menjamin produk beredar aman, bermutu, dan berkhasiat.",
+      "Ruang lingkup pengawasan pre-market (sebelum beredar) dan post-market (selama beredar di pasar).",
+      "Peran serta masyarakat dalam mendukung program pengawasan partisipatif bersama BBPOM.",
+    ],
+    bacaanLengkap: [
+      "Balai Besar Pengawas Obat dan Makanan (BBPOM) di Palembang merupakan unit pelaksana teknis di lingkungan Badan Pengawas Obat dan Makanan (Badan POM) yang bertugas melaksanakan kebijakan di bidang pengawasan obat dan makanan di wilayah Sumatera Selatan.",
+      "Cakupan komoditi yang diawasi meliputi: Obat, Narkotika, Psikotropika, Zat Adiktif, Obat Tradisional, Suplemen Kesehatan, Kosmetik, serta Pangan Olahan.",
+      "Dengan hadirnya inovasi platform AMPERA (Aplikasi Manajemen Pelayanan Elektronik dan Respon Aduan), BBPOM di Palembang semakin mendekatkan akses pelayanan publik kepada masyarakat luas secara transparan, mudah, dan akuntabel.",
+    ],
+    tipsPenting: "BBPOM hadir untuk melindungi masyarakat dari produk berbahaya dan mendukung UMKM lokal memproduksi produk yang sesuai standar.",
+  },
+  {
+    id: 2,
+    nomor: "Bab 2",
+    judul: "Formalin & Boraks pada Pangan Olahan",
+    subjudul: "Bahaya Kimiawi Pengawet Ilegal pada Tahu, Mie, dan Produk Daging",
+    deskripsiSingkat: "Mengenali ciri fisik pangan yang dicurigai mengandung pengawet mayat (formalin) dan pengenyal berbahaya (boraks).",
+    gambarThumbnail: "/assets-landingpage/layanan/2.jpg",
+    estimasiMenit: 4,
+    kontenPoin: [
+      "Formalin: Senyawa formaldehida yang seharusnya untuk pengawet mayat dan spesimen biologi.",
+      "Boraks (Bleng/Pijer): Garam natrium tetraborat untuk industri gelas/keramik yang disalahgunakan sebagai pengenyal.",
+      "Ciri-ciri fisik pangan berformalin: Tidak dihinggapi lalat, tidak mudah rusak/basi lebih dari 3 hari, kenyal kaku.",
+      "Ciri-ciri pangan berboraks: Sangat kenyal membal seperti karet, tidak mudah pecah, berasa getir di lidah.",
+    ],
+    bacaanLengkap: [
+      "Formalin sering kali disalahgunakan oleh pedagang yang tidak bertanggung jawab untuk mengawetkan tahu, mie basah, ikan asin, atau bakso agar tahan lama dalam suhu ruangan tanpa pendingin.",
+      "Dampak paparan formalin dalam jangka pendek dapat memicu mual, muntah darah, dan iritasi lambung akut. Sedangkan paparan jangka panjang bersifat karsinogenik (pemicu timbulnya kanker) serta kerusakan hati dan ginjal.",
+      "Sementara itu, Boraks disalahgunakan untuk membuat bakso, lontong, dan kerupuk menjadi renyah atau kenyal berlebihan. Konsumsi boraks secara terus-menerus akan terakumulasi di organ ginjal, otak, dan hati hingga mengakibatkan gagal ginjal kronis.",
+    ],
+    tipsPenting: "Pilihlah tahu yang bertekstur lembut alami dan mie basah yang memiliki masa simpan wajar (hanya 1-2 hari di suhu ruang).",
+  },
+  {
+    id: 3,
+    nomor: "Bab 3",
+    judul: "Bahaya Pewarna Tekstil: Rhodamin B & Metanil Yellow",
+    subjudul: "Mewaspadai Warna Mencolok Berbahaya pada Sirup, Gulali, dan Terasi",
+    deskripsiSingkat: "Mempelajari perbedaan pewarna makanan resmi (Food Grade) dengan pewarna tekstil yang mematikan.",
+    gambarThumbnail: "/assets-landingpage/layanan/3.jpg",
+    estimasiMenit: 3,
+    kontenPoin: [
+      "Rhodamin B menghasilkan warna merah menyala, berbinar / fluoresen, dan tidak merata.",
+      "Metanil Yellow menghasilkan warna kuning terang mencolok seperti cat kayu/kain.",
+      "Perbedaan mendasar zat warna tekstil: Tahan luntur saat terkena pakaian dan menimbulkan gatal di tenggorokan.",
+      "Dampak kesehatan: Kerusakan mukosa usus, hepatotoksik (racun bagi liver), serta kanker saluran pencernaan.",
+    ],
+    bacaanLengkap: [
+      "Pewarna tekstil seperti Rhodamin B dan Metanil Yellow masih sering ditemukan pada makanan jajanan anak sekolah (PJAS), kerupuk pasir, cendol merah, kue basah, hingga terasi oplosan.",
+      "Zat kimia ini tidak terurai di dalam tubuh dan terus menumpuk di saluran cerna dan hati. Dampak jangka panjang konsumsi zat warna industri ini sangat fatal bagi kesehatan anak-anak dan generasi muda.",
+      "BBPOM mengimbau para orang tua dan tenaga pendidik untuk selalu mengedukasi anak-anak agar menghindari jajanan dengan warna yang terlalu terang berpendar.",
+    ],
+    tipsPenting: "Waspadai makanan dengan titik-titik warna tidak merata dan berpendar di bawah cahaya lampu.",
+  },
+  {
+    id: 4,
+    nomor: "Bab 4",
+    judul: "Prinsip Cek KLIK: Kunci Konsumen Cerdas",
+    subjudul: "4 Langkah Mudah Memastikan Keamanan Produk Sebelum Membeli",
+    deskripsiSingkat: "Panduan lengkap memeriksa Kemasan, Label, Izin Edar, dan Kedaluwarsa.",
+    gambarThumbnail: "/assets-landingpage/layanan/4.jpg",
+    estimasiMenit: 4,
+    kontenPoin: [
+      "K (Kemasan): Pastikan kemasan utuh, tidak sobek, tidak berkarat, tidak bocor, dan kaleng tidak gembung.",
+      "L (Label): Baca komposisi bahan, klaim gizi, petunjuk penyimpanan, serta informasi alergen.",
+      "I (Izin Edar): Verifikasi izin edar BPOM RI (MD/ML), nomor izin kosmetik (NA/NB), atau P-IRT.",
+      "K (Kedaluwarsa): Pastikan tanggal 'Best Before' atau 'Expired Date' belum terlewati.",
+    ],
+    bacaanLengkap: [
+      "Cek KLIK adalah langkah preventif paling efektif yang dapat dilakukan setiap individu dalam kehidupan sehari-hari.",
+      "Cek Kemasan: Jangan pernah membeli makanan kaleng yang penyok atau menggembung. Kaleng cembung mengindikasikan aktivitas bakteri anaerob Clostridium botulinum yang menghasilkan toksin botulinum yang sangat berbahaya.",
+      "Cek Label & Izin Edar: Label wajib mencantumkan nama produk, daftar bahan, berat bersih, nama dan alamat produsen/distributor, nomor registrasi, serta kode produksi.",
+      "Cek Kedaluwarsa: Batas akhir produk dijamin mutunya dan aman dikonsumsi. Jangan tergoda diskon harga murah jika tanggal kedaluwarsa sudah dekat atau dicoret tangan.",
+    ],
+    tipsPenting: "Jadikan Cek KLIK sebagai kebiasaan wajib setiap berbelanja di pasar tradisional, minimarket, maupun toko online.",
+  },
+  {
+    id: 5,
+    nomor: "Bab 5",
+    judul: "Keamanan Jamu & Bahaya Bahan Kimia Obat (BKO)",
+    subjudul: "Menikmati Manfaat Herbal Asli Indonesia Tanpa Campuran Berbahaya",
+    deskripsiSingkat: "Mewaspadai jamu pegal linu instan dan obat kuat yang dicampur parasetamol, fenilbutazon, atau sildenafil.",
+    gambarThumbnail: "/assets-landingpage/layanan/1.jpg",
+    estimasiMenit: 3,
+    kontenPoin: [
+      "Ciri jamu yang mengandung BKO: Klaim khasiat 'cespleng' spontan seketika dalam hitungan jam.",
+      "Bahan Kimia Obat umum yang disalahgunakan: Parasetamol, Fenilbutazon, Deksametason, dan Sildenafil.",
+      "Dampak buruk BKO: 'Moon face' (muka bengkak membulat), osteoporosis dini, pendarahan lambung, dan henti jantung.",
+      "Registrasi resmi: Pastikan memilih jamu dengan nomor izin 'POM TR' atau fitofarmaka resmi.",
+    ],
+    bacaanLengkap: [
+      "Jamu tradisional adalah warisan leluhur nusantara yang khasiatnya bersifat holistik dan bertahap. Jika ada jamu yang memberikan efek sembuh instan dalam 30 menit, patut dicurigai mengandung Bahan Kimia Obat (BKO).",
+      "Pencampuran BKO ke dalam obat herbal sangat dilarang keras karena dosisnya tidak terstandarisasi dan interaksi senyawanya dapat merusak organ vital peminumnya.",
+      "BBPOM secara rutin melakukan penarikan (public warning) terhadap produk jamu berbahaya yang beredar tanpa izin.",
+    ],
+    tipsPenting: "Jamu aman tidak menimbulkan efek 'cespleng' berbahaya. Selalu periksa nomor registrasi POM TR di BPOM Mobile.",
+  },
+  {
+    id: 6,
+    nomor: "Bab 6",
+    judul: "Kosmetik Aman & Bahaya Merkuri",
+    subjudul: "Merawat Kecantikan Kulit Sehat Tanpa Tergiur Pemutih Instan",
+    deskripsiSingkat: "Mengenal bahaya merkuri, hidrokuinon tanpa resep, serta cara memeriksa nomor notifikasi NA BPOM.",
+    gambarThumbnail: "/assets-landingpage/layanan/2.jpg",
+    estimasiMenit: 3,
+    kontenPoin: [
+      "Merkuri (Hg): Logam berat beracun yang menghambat pembentukan melanin dan merusak lapisan kulit secara permanen.",
+      "Efek merkuri: Kulit terasa tipis, mudah memerah di bawah sinar matahari, memicu ochronosis (flek biru-hitam permanen).",
+      "Ciri fisik krim bermerkuri: Berwarna mengkilap keperakan, berbau logam/wangi menyengat menyamarkan logam.",
+      "Pastikan kosmetik memiliki nomor Notifikasi BPOM yang diawali dengan NA/NB/NC/ND.",
+    ],
+    bacaanLengkap: [
+      "Maraknya penjualan krim racikan tanpa etiket biru dan skincare tanpa izin edar di media sosial menjadi ancaman serius bagi masyarakat, khususnya kaum perempuan dan remaja.",
+      "Merkuri diserap langsung melalui kulit ke dalam aliran darah, beredar ke ginjal, sistem saraf, dan bahkan janin dalam kandungan yang dapat menyebabkan kecacatan janin.",
+      "Gunakanlah kosmetik yang telah teregistrasi resmi di Badan POM dan hindari produk yang menjanjikan kulit putih mulus instan dalam waktu 3 hari.",
+    ],
+    tipsPenting: "Kulit sehat berseri lebih berharga daripada kulit putih cepat namun merusak ginjal seumur hidup.",
+  },
+  {
+    id: 7,
+    nomor: "Bab 7",
+    judul: "Layanan Pengujian Cepat & Inovasi Ampera",
+    subjudul: "Fasilitas Publik BBPOM Palembang untuk Screening Keamanan Pangan",
+    deskripsiSingkat: "Mengenal tata cara mengajukan pengujian cepat sampel pangan melalui portal Ampera BBPOM.",
+    gambarThumbnail: "/assets-landingpage/pengujian-cepat-hero.jpg",
+    estimasiMenit: 3,
+    kontenPoin: [
+      "Layanan Pengujian Cepat Ampera menguji 4 parameter utama: Formalin, Boraks, Rhodamin B, dan Metanil Yellow.",
+      "Metode rapid test kit memungkinkan hasil screening awal diketahui dengan cepat dan terpercaya.",
+      "Pengajuan dapat dilakukan secara mandiri oleh masyarakat umum, pelaku usaha, maupun instansi melalui portal Ampera.",
+      "Gratis dan transparan untuk meningkatkan kesadaran keamanan pangan di pasar tradisional Palembang.",
+    ],
+    bacaanLengkap: [
+      "Melalui portal web AMPERA, masyarakat Kota Palembang dan sekitarnya dapat berpartisipasi aktif menjaga keamanan pangan lingkungan sekitar.",
+      "Jika Anda menemukan makanan olahan di pasar (seperti pempek, tahu, mie basah, atau kerupuk kemplang) yang dicurigai mengandung zat terlarang, Anda cukup mengisi formulir pada menu 'Pengujian Cepat Ampera'.",
+      "Petugas BBPOM Palembang akan memverifikasi permohonan dan melakukan uji kualitatif menggunakan test kit terstandar di laboratorium keliling atau kantor BBPOM.",
+    ],
+    tipsPenting: "Manfaatkan portal Ampera untuk melaporkan dan menguji produk makanan yang mencurigakan di lingkungan Anda.",
+  },
+  {
+    id: 8,
+    nomor: "Bab 8",
+    judul: "Rangkuman & Pengawasan Partisipatif",
+    subjudul: "Langkah Penutup Sebelum Melanjutkan ke Evaluasi Post-Test",
+    deskripsiSingkat: "Rangkuman menyeluruh materi pembelajaran dan komitmen bersama menjadi konsumen cerdas BBPOM.",
+    gambarThumbnail: "/assets-landingpage/hero1.png",
+    estimasiMenit: 2,
+    kontenPoin: [
+      "Konsumen cerdas mengutamakan kesehatan diri dan keluarga dengan selalu menerapkan Cek KLIK.",
+      "Tolak produk pangan dengan pewarna mencolok dan pengawet berbahaya.",
+      "Selalu gunakan aplikasi BPOM Mobile dan kanal layanan terpadu AMPERA BBPOM Palembang.",
+      "Anda kini siap mengikuti Post-Test untuk menguji peningkatan pemahaman Anda!",
+    ],
+    bacaanLengkap: [
+      "Selamat! Anda telah mempelajari seluruh rangkaian materi edukasi keamanan obat, makanan, dan produk konsumen bersama Balai Besar POM di Palembang.",
+      "Pengetahuan yang Anda miliki saat ini adalah modal berharga untuk melindungi keluarga tercinta dan lingkungan sekitar dari bahaya zat berbahaya.",
+      "Setelah menyelesaikan bab ini, silakan klik tombol 'Lanjut ke Post-Test' di bawah untuk mengerjakan evaluasi akhir. Nilai kelulusan minimal adalah 80. Semoga sukses!",
+    ],
+    tipsPenting: "Terapkan ilmu yang telah Anda pelajari dalam kehidupan sehari-hari dan bagikan informasi ini kepada kerabat terdekat.",
+  },
+];
