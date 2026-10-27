@@ -3,6 +3,7 @@
 import React from "react";
 import Link from "next/link";
 import Image from "next/image";
+import WaStatusBadge from "@/components/admin/WaStatusBadge";
 import {
   ClipboardList,
   Clock,
@@ -10,7 +11,6 @@ import {
   AlertCircle,
   ArrowUpRight,
   Sparkles,
-  BookOpen,
   Video,
   PhoneCall,
   ChevronRight,
@@ -92,9 +92,8 @@ export default function AdminDashboardPage() {
 
   const quickSettings = [
     { title: "Hero Banner", desc: "2 slide aktif", icon: Sparkles, href: "/admin/settings/hero", status: "Aktif" },
-    { title: "Edukasi Konsumen", desc: "3 artikel literasi", icon: BookOpen, href: "/admin/settings/edukasi", status: "3 Konten" },
     { title: "Video Profil", desc: "Embed YouTube resmi BBPOM", icon: Video, href: "/admin/settings/video", status: "Terkoneksi" },
-    { title: "Kontak & Lokasi", desc: "WhatsApp, alamat, jam layanan", icon: PhoneCall, href: "/admin/settings/kontak", status: "Updated" },
+    { title: "Kontak & Lokasi", desc: "WhatsApp, alamat, lokasi peta", icon: PhoneCall, href: "/admin/settings/kontak", status: "Updated" },
   ];
 
   const weekly = [
@@ -160,6 +159,8 @@ export default function AdminDashboardPage() {
             <p className="mt-1 text-sm text-[#5d6c8c] dark:text-slate-400">
               Pantau pengajuan layanan publik dan kelola konten landing page dengan mudah.
             </p>
+            {/* Status WhatsApp Gateway */}
+            <WaStatusBadge />
           </div>
 
           {/* Stat cards */}

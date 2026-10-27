@@ -1,10 +1,8 @@
-"use client";
-
 import React from "react";
 import Link from "next/link";
+import { prisma } from "@/lib/prisma";
 import {
   Sparkles,
-  BookOpen,
   Video,
   PhoneCall,
   ArrowRight,
@@ -12,38 +10,38 @@ import {
   ExternalLink,
 } from "lucide-react";
 
-export default function WebsiteSettingsIndexPage() {
+export const dynamic = "force-dynamic";
+
+export default async function WebsiteSettingsIndexPage() {
+  const [activeSlidesCount, videoProfil, kontakKantor] = await Promise.all([
+    prisma.heroSlide.count({ where: { isActive: true } }),
+    prisma.videoProfil.findUnique({ where: { id: 1 } }),
+    prisma.kontakKantor.findUnique({ where: { id: 1 } }),
+  ]);
+
   const sections = [
     {
       title: "Hero Content Banner",
-      desc: "Atur foto slider latar belakang, judul utama, deskripsi layanan, dan tombol CTA 'Mulai Pengujian Cepat'.",
+      desc: "Atur foto slider latar belakang, judul utama, deskripsi layanan, dan tombol CTA 'Akses Layanan AMPERA'.",
       icon: Sparkles,
       href: "/admin/settings/hero",
-      badge: "2 Slide Aktif",
+      badge: `${activeSlidesCount} Slide Aktif`,
       color: "from-amber-500 to-orange-600",
-    },
-    {
-      title: "Konten Edukasi Konsumen",
-      desc: "Kelola artikel dan tips edukasi keamanan obat, pangan, kosmetik, serta kampanye Cek KLIK.",
-      icon: BookOpen,
-      href: "/admin/settings/edukasi",
-      badge: "3 Materi Siap",
-      color: "from-blue-600 to-cyan-600",
     },
     {
       title: "Video Profil BBPOM",
       desc: "Kelola link video YouTube profil resmi Balai Besar POM di Palembang dan video panduan pengujian.",
       icon: Video,
       href: "/admin/settings/video",
-      badge: "YouTube Embed",
+      badge: videoProfil?.youtubeId ? `YouTube (${videoProfil.youtubeId})` : "Belum Ada Video",
       color: "from-red-600 to-rose-600",
     },
     {
       title: "Kontak & Lokasi Kantor",
-      desc: "Perbarui nomor WhatsApp pengaduan, hotline darurat, alamat Jl. Pangeran Ratu, dan jam operasional.",
+      desc: "Perbarui nomor WhatsApp pengaduan, alamat kantor, Google Maps, dan media sosial resmi.",
       icon: PhoneCall,
       href: "/admin/settings/kontak",
-      badge: "WhatsApp Hotline",
+      badge: kontakKantor?.whatsapp ? `WA: ${kontakKantor.whatsapp}` : "Maps & 6 Sosmed",
       color: "from-emerald-600 to-teal-600",
     },
   ];
@@ -61,7 +59,7 @@ export default function WebsiteSettingsIndexPage() {
             Pengaturan Konten Website
           </h1>
           <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1">
-            Pilih bagian landing page yang ingin Anda ubah atau perbarui tampilannya.
+            Kelola teks, foto slider, video profil, dan informasi kontak yang tersimpan di database.
           </p>
         </div>
 
@@ -75,8 +73,8 @@ export default function WebsiteSettingsIndexPage() {
         </Link>
       </div>
 
-      {/* Grid of 4 Modules */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      {/* Grid of 3 Modules */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {sections.map((section, idx) => {
           const Icon = section.icon;
           return (

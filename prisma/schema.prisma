@@ -55,6 +55,7 @@ model Layanan {
   isAktif     Boolean            @default(true)
 
   pengajuan   PengajuanLayanan[]
+  petugas     Petugas[]          // Daftar petugas yang ditugaskan pada layanan ini
   createdAt   DateTime           @default(now())
   updatedAt   DateTime           @updatedAt
 }
@@ -116,4 +117,109 @@ model Admin {
   verifikasi  PengajuanLayanan[]
   createdAt   DateTime           @default(now())
   updatedAt   DateTime           @updatedAt
+}
+
+// Master Data Petugas Pelayanan BBPOM di Palembang
+model Petugas {
+  id        Int      @id @default(autoincrement())
+  nip       String   @unique // Nomor Induk Pegawai (NIP)
+  nama      String   // Nama Lengkap Petugas
+  telepon   String?  // Nomor WhatsApp / Kontak
+  jabatan   String?  // Jabatan / Posisi / Unit Kerja
+  fotoUrl   String?  @db.Text // Foto Profil Petugas
+  fotoPath  String?  @db.Text // Path berkas di storage
+  isAktif   Boolean  @default(true)
+
+  layananId Int?     // Ditugaskan pada Layanan tertentu (opsional)
+  layanan   Layanan? @relation(fields: [layananId], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([nip])
+  @@index([nama])
+  @@index([layananId])
+}
+
+// ==========================================
+// PENGATURAN KONTEN WEBSITE (WEBSITE SETTINGS)
+// ==========================================
+
+// 1. Hero Content Banner
+model HeroKonten {
+  id               Int      @id @default(1)
+  judul            String   @db.Text
+  subjudul         String   @db.Text
+  ctaUtamaLabel    String
+  ctaSekunderLabel String?  @default("")
+  updatedAt        DateTime @updatedAt
+}
+
+model HeroSlide {
+  id        Int      @id @default(autoincrement())
+  title     String
+  alt       String
+  imageUrl  String   @db.Text // URL publik (Supabase Storage / local fallback)
+  imagePath String?  @db.Text // Path di Supabase Storage untuk kebutuhan hapus
+  isActive  Boolean  @default(true)
+  urutan    Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([urutan])
+}
+
+// 2. Video Profil BBPOM
+model VideoProfil {
+  id         Int      @id @default(1)
+  eyebrow    String   @default("VIDEO PROFIL")
+  judul      String   @db.Text
+  deskripsi  String   @db.Text
+  youtubeUrl String   @db.Text // URL asli dari YouTube
+  youtubeId  String   // ID hasil ekstraksi untuk embed
+  updatedAt  DateTime @updatedAt
+}
+
+// 3. Kontak & Lokasi Kantor (sesuai ContactSection)
+model KontakKantor {
+  id             Int      @id @default(1)
+  eyebrow        String   @default("CONTACT DETAIL")
+  judul          String   @default("Visit Our Office")
+  deskripsi      String   @db.Text
+  labelSosmed    String   @default("Media Sosial Resmi BBPOM Palembang:")
+
+  alamat         String   @db.Text
+  email1         String
+  email2         String?
+  telepon        String
+  whatsapp       String
+  whatsappPesan  String   @default("Halo Admin BBPOM Palembang, saya ingin berkonsultasi.") @db.Text
+
+  mapsEmbedUrl   String   @db.Text
+  mapsLinkUrl    String   @db.Text
+
+  instagramUrl   String?  @db.Text
+  facebookUrl    String?  @db.Text
+  tiktokUrl      String?  @db.Text
+  threadsUrl     String?  @db.Text
+  youtubeUrl     String?  @db.Text
+
+  updatedAt      DateTime @updatedAt
+}
+
+// 4. Konten Edukasi Konsumen
+model Edukasi {
+  id          Int      @id @default(autoincrement())
+  judul       String
+  kategori    String   // obat, pangan, kosmetik, cek_klik
+  ringkasan   String   @db.Text
+  konten      String?  @db.Text
+  imageUrl    String?  @db.Text
+  imagePath   String?  @db.Text
+  isPublished Boolean  @default(true)
+  urutan      Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([urutan])
 }

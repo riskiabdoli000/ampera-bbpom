@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
+import { usePathname } from "next/navigation";
 import { AdminSidebar } from "@/components/admin/AdminSidebar";
 import { AdminHeader } from "@/components/admin/AdminHeader";
 
@@ -10,6 +11,12 @@ export default function AdminLayout({
   children: React.ReactNode;
 }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const pathname = usePathname();
+
+  // Halaman login admin memiliki desain fullscreen tersendiri tanpa sidebar/header
+  if (pathname === "/admin/login") {
+    return <>{children}</>;
+  }
 
   return (
     <div className="min-h-screen bg-[#f7faff] dark:bg-[#060c1d] text-[#0f2257] dark:text-slate-100 font-brand antialiased transition-colors duration-300">
@@ -36,7 +43,7 @@ export default function AdminLayout({
               © {new Date().getFullYear()} <strong className="text-navy-900 dark:text-sky-300">AMPERA</strong> — Balai Besar Pengawas Obat dan Makanan di Palembang.
             </p>
             <div className="text-[11px] font-medium text-[#7b8aa8] dark:text-slate-400">
-              Created by <span className="font-semibold text-[#0f2257] dark:text-white">Riski Abdoli</span>
+              Created by <span className="font-semibold text-[#0f2257] dark:text-white">Riski Abdoli & Tea</span>
             </div>
           </div>
         </footer>
