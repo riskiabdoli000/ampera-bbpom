@@ -11,7 +11,6 @@ import {
   AlertCircle,
   ArrowUpRight,
   Sparkles,
-  BookOpen,
   Video,
   PhoneCall,
   ChevronRight,
@@ -93,9 +92,8 @@ export default function AdminDashboardPage() {
 
   const quickSettings = [
     { title: "Hero Banner", desc: "2 slide aktif", icon: Sparkles, href: "/admin/settings/hero", status: "Aktif" },
-    { title: "Edukasi Konsumen", desc: "3 artikel literasi", icon: BookOpen, href: "/admin/settings/edukasi", status: "3 Konten" },
     { title: "Video Profil", desc: "Embed YouTube resmi BBPOM", icon: Video, href: "/admin/settings/video", status: "Terkoneksi" },
-    { title: "Kontak & Lokasi", desc: "WhatsApp, alamat, jam layanan", icon: PhoneCall, href: "/admin/settings/kontak", status: "Updated" },
+    { title: "Kontak & Lokasi", desc: "WhatsApp, alamat, lokasi peta", icon: PhoneCall, href: "/admin/settings/kontak", status: "Updated" },
   ];
 
   const weekly = [

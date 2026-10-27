@@ -121,7 +121,7 @@ export async function compressImageToTarget(
  */
 export async function uploadImage(
   file: File,
-  folder: "hero" | "edukasi" = "hero"
+  folder: "hero" | "edukasi" | "petugas" = "hero"
 ): Promise<UploadResult> {
   const originalSize = file.size;
   const rawArrayBuffer = await file.arrayBuffer();

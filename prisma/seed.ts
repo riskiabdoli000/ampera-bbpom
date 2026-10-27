@@ -128,10 +128,10 @@ async function main() {
     update: {},
     create: {
       id: 1,
-      eyebrow: "VIDEO PROFIL",
-      judul: "Profil Balai Besar POM di Palembang",
+      eyebrow: "DEDIKASI, INTEGRITAS & PELAYANAN PUBLIK PRIMA",
+      judul: "Mengenal Lebih Dekat Dedikasi & Layanan BBPOM di Palembang",
       deskripsi:
-        "Mengenal lebih dekat dedikasi dan komitmen BBPOM di Palembang dalam melindungi masyarakat Sumatera Selatan dari obat dan makanan yang berisiko terhadap kesehatan.",
+        "Saksikan dokumentasi resmi mengenai fasilitas laboratorium modern teruji, pengawasan peredaran terpadu, serta komitmen seluruh insan BPOM dalam melindungi kesehatan masyarakat Sumatera Selatan.",
       youtubeUrl: "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
       youtubeId: "dQw4w9WgXcQ",
     },

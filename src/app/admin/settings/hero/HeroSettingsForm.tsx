@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useTransition, useRef } from "react";
+import React, { useState, useTransition, useRef, useEffect } from "react";
 import Image from "next/image";
 import {
   Sparkles,
@@ -21,6 +21,8 @@ import {
   Monitor,
   ChevronLeft,
   ChevronRight,
+  Check,
+  XCircle,
 } from "lucide-react";
 import {
   saveHeroKontenAction,
@@ -30,6 +32,7 @@ import {
   deleteHeroSlideAction,
 } from "@/app/actions/settings-hero";
 import { AddSlideModal } from "./AddSlideModal";
+import { DeleteSlideModal } from "./DeleteSlideModal";
 
 interface HeroSlideData {
   id: number;
@@ -74,11 +77,25 @@ export function HeroSettingsForm({
     message: string;
   } | null>(null);
 
+  // Auto-close feedback banner setelah 5 detik
+  useEffect(() => {
+    if (feedback) {
+      const timer = setTimeout(() => {
+        setFeedback(null);
+      }, 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [feedback]);
+
   const [isSavingKonten, startSaveKonten] = useTransition();
   const [isSlideActionPending, startSlideAction] = useTransition();
 
   // Modal Tambah Slide State (komponen terpisah)
   const [showAddModal, setShowAddModal] = useState(false);
+
+  // Modal Hapus Slide State
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [slideToDelete, setSlideToDelete] = useState<HeroSlideData | null>(null);
 
   // File input ref for replacing an existing slide's image
   const replaceFileInputRef = useRef<HTMLInputElement>(null);
@@ -180,28 +197,30 @@ export function HeroSettingsForm({
     });
   };
 
-  // Handle Hapus Slide
+  // Handle Buka Modal Hapus Slide
   const handleDeleteSlide = (slide: HeroSlideData) => {
-    if (slides.length <= 1) {
-      alert("Minimal harus ada 1 slide banner tersisa.");
-      return;
-    }
+    setSlideToDelete(slide);
+    setShowDeleteModal(true);
+  };
 
-    if (!confirm(`Apakah Anda yakin ingin menghapus slide "${slide.title}"?`)) {
-      return;
-    }
+  // Eksekusi Konfirmasi Hapus Slide
+  const handleConfirmDeleteSlide = async () => {
+    if (!slideToDelete) return;
+    const targetSlide = slideToDelete;
 
     setFeedback(null);
     startSlideAction(async () => {
-      const res = await deleteHeroSlideAction(slide.id);
+      const res = await deleteHeroSlideAction(targetSlide.id);
       if (res.success) {
-        setSlides((prev) => prev.filter((s) => s.id !== slide.id));
+        setSlides((prev) => prev.filter((s) => s.id !== targetSlide.id));
         if (activePreviewIndex >= slides.length - 1) {
           setActivePreviewIndex(0);
         }
+        setShowDeleteModal(false);
+        setSlideToDelete(null);
         setFeedback({
           type: "success",
-          message: `Slide "${slide.title}" berhasil dihapus dari database & storage.`,
+          message: `Slide "${targetSlide.title}" berhasil dihapus dari database & storage.`,
         });
         setTimeout(() => setFeedback(null), 3000);
       } else {
@@ -245,31 +264,29 @@ export function HeroSettingsForm({
         onChange={handleFileChangeForReplace}
       />
 
-      {/* Floating Action Feedback Notification */}
+      {/* Feedback Toast Banner */}
       {feedback && (
         <div
-          className={`flex items-center justify-between gap-3 rounded-2xl p-4 text-xs font-semibold shadow-xl transition-all animate-fade-in ${
+          className={`flex items-center justify-between p-4 rounded-2xl border text-xs sm:text-sm font-medium animate-fade-in ${
             feedback.type === "success"
-              ? "bg-emerald-600 text-white"
-              : feedback.type === "error"
-              ? "bg-red-600 text-white"
-              : "bg-blue-600 text-white"
+              ? "bg-emerald-50 border-emerald-200 text-emerald-800 dark:bg-emerald-950/40 dark:border-emerald-800 dark:text-emerald-300"
+              : "bg-red-50 border-red-200 text-red-800 dark:bg-red-950/40 dark:border-red-800 dark:text-red-300"
           }`}
         >
           <div className="flex items-center gap-2.5">
             {feedback.type === "success" ? (
-              <CheckCircle2 className="h-4 w-4 shrink-0" />
+              <Check className="w-4 h-4 shrink-0 text-emerald-600 dark:text-emerald-400" />
             ) : (
-              <AlertCircle className="h-4 w-4 shrink-0" />
+              <XCircle className="w-4 h-4 shrink-0 text-red-600 dark:text-red-400" />
             )}
             <span>{feedback.message}</span>
           </div>
           <button
+            type="button"
             onClick={() => setFeedback(null)}
-            className="p-1 hover:opacity-75 transition-opacity"
-            aria-label="Tutup"
+            className="text-xs font-bold opacity-60 hover:opacity-100 transition-opacity ml-4 cursor-pointer"
           >
-            <X className="h-4 w-4" />
+            Tutup
           </button>
         </div>
       )}
@@ -440,23 +457,7 @@ export function HeroSettingsForm({
                         {slide.alt || "Tanpa deskripsi alt"}
                       </p>
 
-                      <div className="flex items-center gap-2 pt-0.5">
-                        {slide.imagePath?.startsWith("local:") ? (
-                          <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-amber-600 dark:text-amber-400">
-                            <HardDrive className="h-3 w-3" />
-                            <span>Storage: Lokal</span>
-                          </span>
-                        ) : slide.imagePath ? (
-                          <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-emerald-600 dark:text-emerald-400">
-                            <Cloud className="h-3 w-3" />
-                            <span>Storage: Supabase</span>
-                          </span>
-                        ) : (
-                          <span className="text-[10px] font-medium text-slate-400">
-                            Storage: Default Aset
-                          </span>
-                        )}
-                      </div>
+                 
                     </div>
                   </div>
 
@@ -502,8 +503,8 @@ export function HeroSettingsForm({
                       <button
                         type="button"
                         onClick={() => handleDeleteSlide(slide)}
-                        disabled={isSlideActionPending || slides.length <= 1}
-                        className="rounded-xl border border-red-200 bg-red-50/60 p-2 text-red-600 hover:bg-red-100 dark:border-red-900/40 dark:bg-red-950/40 dark:text-red-300 dark:hover:bg-red-900/60 transition-colors disabled:opacity-30 disabled:cursor-not-allowed shadow-2xs"
+                        disabled={isSlideActionPending}
+                        className="rounded-xl border border-red-200 bg-red-50/60 p-2 text-red-600 hover:bg-red-100 dark:border-red-900/40 dark:bg-red-950/40 dark:text-red-300 dark:hover:bg-red-900/60 transition-colors disabled:opacity-30 disabled:cursor-not-allowed shadow-2xs cursor-pointer"
                         title="Hapus slide"
                       >
                         <Trash2 className="h-3.5 w-3.5" />
@@ -699,6 +700,21 @@ export function HeroSettingsForm({
         onSubmit={handleAddSlideFromModal}
         isPending={isSlideActionPending}
         isStorageConfigured={isStorageConfigured}
+      />
+
+      {/* Modal Kustom Hapus Slide */}
+      <DeleteSlideModal
+        isOpen={showDeleteModal}
+        onClose={() => {
+          if (!isSlideActionPending) {
+            setShowDeleteModal(false);
+            setSlideToDelete(null);
+          }
+        }}
+        onConfirm={handleConfirmDeleteSlide}
+        slide={slideToDelete}
+        totalSlides={slides.length}
+        isPending={isSlideActionPending}
       />
     </div>
   );

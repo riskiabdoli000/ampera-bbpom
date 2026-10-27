@@ -55,6 +55,7 @@ model Layanan {
   isAktif     Boolean            @default(true)
 
   pengajuan   PengajuanLayanan[]
+  petugas     Petugas[]          // Daftar petugas yang ditugaskan pada layanan ini
   createdAt   DateTime           @default(now())
   updatedAt   DateTime           @updatedAt
 }
@@ -116,6 +117,28 @@ model Admin {
   verifikasi  PengajuanLayanan[]
   createdAt   DateTime           @default(now())
   updatedAt   DateTime           @updatedAt
+}
+
+// Master Data Petugas Pelayanan BBPOM di Palembang
+model Petugas {
+  id        Int      @id @default(autoincrement())
+  nip       String   @unique // Nomor Induk Pegawai (NIP)
+  nama      String   // Nama Lengkap Petugas
+  telepon   String?  // Nomor WhatsApp / Kontak
+  jabatan   String?  // Jabatan / Posisi / Unit Kerja
+  fotoUrl   String?  @db.Text // Foto Profil Petugas
+  fotoPath  String?  @db.Text // Path berkas di storage
+  isAktif   Boolean  @default(true)
+
+  layananId Int?     // Ditugaskan pada Layanan tertentu (opsional)
+  layanan   Layanan? @relation(fields: [layananId], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([nip])
+  @@index([nama])
+  @@index([layananId])
 }
 
 // ==========================================

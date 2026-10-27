@@ -7,9 +7,9 @@ import { usePathname } from "next/navigation";
 import {
   LayoutDashboard,
   ClipboardList,
+  Users,
   Sliders,
   Sparkles,
-  BookOpen,
   Video,
   PhoneCall,
   ChevronDown,
@@ -28,6 +28,7 @@ export function AdminSidebar({ isOpen, onClose }: AdminSidebarProps) {
 
   const isDashboardActive = pathname === "/admin" || pathname === "/admin/dashboard";
   const isLayananActive = pathname.startsWith("/admin/layanan");
+  const isPetugasActive = pathname.startsWith("/admin/petugas");
   const isSettingsPath = pathname.startsWith("/admin/settings");
 
   // Website Settings submenu collapse state (default tertutup)
@@ -36,11 +37,11 @@ export function AdminSidebar({ isOpen, onClose }: AdminSidebarProps) {
   const menuItems = [
     { title: "Dashboard", href: "/admin", icon: LayoutDashboard, active: isDashboardActive },
     { title: "Data Layanan", href: "/admin/layanan", icon: ClipboardList, active: isLayananActive },
+    { title: "Data Petugas", href: "/admin/petugas", icon: Users, active: isPetugasActive },
   ];
 
   const websiteSubItems = [
     { title: "Hero Content", href: "/admin/settings/hero", icon: Sparkles },
-    { title: "Edukasi", href: "/admin/settings/edukasi", icon: BookOpen },
     { title: "Video Profil", href: "/admin/settings/video", icon: Video },
     { title: "Kontak & Lokasi", href: "/admin/settings/kontak", icon: PhoneCall },
   ];

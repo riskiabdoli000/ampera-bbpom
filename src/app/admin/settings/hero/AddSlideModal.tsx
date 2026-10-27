@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
+import { createPortal } from "react-dom";
 import Image from "next/image";
 import {
   X,
@@ -8,7 +9,9 @@ import {
   Plus,
   Loader2,
   Sparkles,
-  CheckCircle2,
+  AlertCircle,
+  Save,
+  ImageIcon,
 } from "lucide-react";
 
 interface AddSlideModalProps {
@@ -26,20 +29,49 @@ export function AddSlideModal({
   isPending,
   isStorageConfigured,
 }: AddSlideModalProps) {
+  const [mounted, setMounted] = useState(false);
   const [title, setTitle] = useState("");
   const [alt, setAlt] = useState("");
   const [file, setFile] = useState<File | null>(null);
   const [filePreview, setFilePreview] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  if (!isOpen) return null;
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  // Reset state when modal opens or closes
+  useEffect(() => {
+    if (!isOpen) {
+      setTitle("");
+      setAlt("");
+      setFile(null);
+      setFilePreview(null);
+      setErrorMessage(null);
+    }
+  }, [isOpen]);
+
+  // Lock body scroll when modal is open
+  useEffect(() => {
+    if (isOpen) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "";
+    }
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [isOpen]);
+
+  if (!isOpen || !mounted) return null;
 
   const handleFileSelect = (selectedFile: File) => {
+    setErrorMessage(null);
     setFile(selectedFile);
     setFilePreview(URL.createObjectURL(selectedFile));
     if (!title) {
-      // Otomatis isi judul dari nama file jika belum ada
       const cleanName = selectedFile.name
         .replace(/\.[^/.]+$/, "")
         .replace(/[-_]/g, " ");
@@ -68,24 +100,29 @@ export function AddSlideModal({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setErrorMessage(null);
+
+    if (!file) {
+      setErrorMessage("Silakan pilih berkas foto untuk banner slide.");
+      return;
+    }
+
     if (!title.trim()) {
-      alert("Masukkan judul slide terlebih dahulu.");
+      setErrorMessage("Judul slide banner wajib diisi.");
       return;
     }
 
     const formData = new FormData();
     formData.append("title", title.trim());
     formData.append("alt", alt.trim() || title.trim());
-    if (file) {
-      formData.append("imageFile", file);
-    }
+    formData.append("imageFile", file);
 
-    await onSubmit(formData);
-    // Reset state setelah sukses
-    setTitle("");
-    setAlt("");
-    setFile(null);
-    setFilePreview(null);
+    try {
+      await onSubmit(formData);
+      onClose();
+    } catch {
+      setErrorMessage("Gagal mengunggah slide. Silakan coba kembali.");
+    }
   };
 
   const formatFileSize = (bytes: number) => {
@@ -93,26 +130,30 @@ export function AddSlideModal({
     return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
   };
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-navy-950/70 backdrop-blur-md animate-fade-in">
-      <div className="relative w-full max-w-xl rounded-3xl border border-slate-200/90 bg-white p-6 sm:p-8 shadow-2xl dark:border-slate-800 dark:bg-slate-900 space-y-6 overflow-hidden">
-        {/* Glow Accent Header */}
-        <div className="absolute top-0 inset-x-0 h-1.5 bg-gradient-to-r from-amber-500 via-brand-orange to-[#f26a0f]" />
+  return createPortal(
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 sm:p-6 overflow-y-auto">
+      {/* Fullscreen Backdrop */}
+      <div
+        onClick={onClose}
+        className="fixed inset-0 bg-slate-950/65 backdrop-blur-md transition-opacity animate-fade-in"
+      />
 
+      {/* Modal Dialog */}
+      <div className="relative w-full max-w-xl rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-2xl p-6 sm:p-8 z-10 animate-fade-up my-auto">
         {/* Modal Header */}
-        <div className="flex items-center justify-between border-b border-slate-100 pb-4 dark:border-slate-800">
+        <div className="flex items-center justify-between pb-4 border-b border-slate-100 dark:border-slate-800">
           <div className="flex items-center gap-3">
-            <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-orange-50 text-brand-orange dark:bg-orange-950/60 dark:text-orange-400 border border-orange-200/80 dark:border-orange-900/40">
-              <Plus className="h-5 w-5" />
+            <div className="w-10 h-10 rounded-2xl bg-orange-50 dark:bg-orange-500/15 text-brand-orange flex items-center justify-center shrink-0">
+              <Plus className="w-5 h-5 stroke-[2.5]" />
             </div>
             <div>
-              <h3 className="text-base sm:text-lg font-bold text-navy-900 dark:text-white">
+              <h3 className="text-base sm:text-lg font-bold text-navy-900 dark:text-white font-brand">
                 Tambah Slide Hero Baru
               </h3>
               <p className="text-xs text-slate-500 dark:text-slate-400">
                 {isStorageConfigured
-                  ? "Tersimpan di Supabase Storage"
-                  : "Tersimpan di penyimpanan lokal (fallback)"}
+                  ? "Tersimpan otomatis di Cloud Storage (Supabase)"
+                  : "Tersimpan di direktori lokal server"}
               </p>
             </div>
           </div>
@@ -121,18 +162,26 @@ export function AddSlideModal({
             type="button"
             onClick={onClose}
             disabled={isPending}
-            className="rounded-xl p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-slate-800 dark:hover:text-slate-200 transition-colors"
+            className="w-8 h-8 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-500 hover:text-navy-900 dark:hover:text-white flex items-center justify-center transition-colors cursor-pointer"
           >
-            <X className="h-5 w-5" />
+            <X className="w-4 h-4" />
           </button>
         </div>
 
+        {/* Error Alert */}
+        {errorMessage && (
+          <div className="mt-4 p-3.5 rounded-2xl bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800 text-xs text-red-700 dark:text-red-300 flex items-start gap-2.5">
+            <AlertCircle className="w-4 h-4 shrink-0 mt-0.5 text-red-600" />
+            <span>{errorMessage}</span>
+          </div>
+        )}
+
         {/* Form Body */}
-        <form onSubmit={handleSubmit} className="space-y-5">
+        <form onSubmit={handleSubmit} className="mt-5 space-y-4">
           {/* Section: Upload Area */}
           <div>
             <div className="flex items-center justify-between mb-2">
-              <label className="text-xs font-bold text-slate-800 dark:text-slate-200">
+              <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
                 Foto Slide Banner <span className="text-red-500">*</span>
               </label>
               <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-600 dark:text-emerald-400">
@@ -178,7 +227,7 @@ export function AddSlideModal({
                   <button
                     type="button"
                     onClick={() => fileInputRef.current?.click()}
-                    className="shrink-0 rounded-xl bg-white/20 backdrop-blur-md px-3 py-1.5 text-xs font-semibold text-white hover:bg-white/30 transition-all border border-white/20"
+                    className="shrink-0 rounded-xl bg-white/20 backdrop-blur-md px-3 py-1.5 text-xs font-semibold text-white hover:bg-white/30 transition-all border border-white/20 cursor-pointer"
                   >
                     Ganti Foto
                   </button>
@@ -190,53 +239,51 @@ export function AddSlideModal({
                 onDragLeave={handleDragLeave}
                 onDrop={handleDrop}
                 onClick={() => fileInputRef.current?.click()}
-                className={`relative flex flex-col items-center justify-center rounded-2xl border-2 border-dashed p-7 text-center cursor-pointer transition-all ${
+                className={`relative flex flex-col items-center justify-center rounded-2xl border-2 border-dashed p-6 text-center cursor-pointer transition-all ${
                   isDragging
                     ? "border-brand-orange bg-orange-50/50 dark:bg-orange-950/20"
                     : "border-slate-300 dark:border-slate-700 hover:border-brand-orange hover:bg-slate-50/50 dark:hover:bg-slate-800/40"
                 }`}
               >
-                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-orange-100 text-brand-orange dark:bg-orange-950/80 mb-3 shadow-inner">
-                  <Upload className="h-6 w-6" />
+                <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-orange-50 text-brand-orange dark:bg-orange-500/15 mb-2.5 shadow-2xs">
+                  <Upload className="h-5 w-5" />
                 </div>
                 <p className="text-xs font-bold text-navy-900 dark:text-white">
                   Klik untuk memilih foto atau seret ke sini
                 </p>
                 <p className="text-[11px] text-slate-400 mt-1">
-                  Mendukung JPG, PNG, WEBP ukuran bebas (otomatis dikompres ke 200KB).
+                  Mendukung JPG, PNG, WEBP (otomatis dikompres web-friendly ~200KB).
                 </p>
               </div>
             )}
           </div>
 
           {/* Section: Text Inputs */}
-          <div className="space-y-3.5">
-            <div>
-              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
-                Judul Slide <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="text"
-                required
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                placeholder="Cth: Layanan Pengujian Cepat Mobil Laboratorium"
-                className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-xs sm:text-sm font-medium text-slate-900 focus:border-brand-orange focus:bg-white focus:outline-none dark:border-slate-700 dark:bg-slate-800 dark:text-white"
-              />
-            </div>
+          <div>
+            <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
+              Judul Slide Banner <span className="text-red-500">*</span>
+            </label>
+            <input
+              type="text"
+              required
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder="Cth: Layanan Pengujian Cepat Mobil Laboratorium"
+              className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-xs sm:text-sm font-bold text-navy-900 dark:text-white focus:border-brand-orange focus:bg-white focus:outline-none dark:border-slate-700 dark:bg-slate-800"
+            />
+          </div>
 
-            <div>
-              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
-                Teks Alt / Keterangan Gambar
-              </label>
-              <input
-                type="text"
-                value={alt}
-                onChange={(e) => setAlt(e.target.value)}
-                placeholder="Cth: Petugas BBPOM sedang melakukan uji sampel di pasar"
-                className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-xs sm:text-sm text-slate-900 focus:border-brand-orange focus:bg-white focus:outline-none dark:border-slate-700 dark:bg-slate-800 dark:text-white"
-              />
-            </div>
+          <div>
+            <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
+              Teks Alt / Keterangan Gambar
+            </label>
+            <input
+              type="text"
+              value={alt}
+              onChange={(e) => setAlt(e.target.value)}
+              placeholder="Cth: Petugas BBPOM sedang melakukan uji sampel pangan"
+              className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-xs sm:text-sm text-slate-900 dark:text-white focus:border-brand-orange focus:bg-white focus:outline-none dark:border-slate-700 dark:bg-slate-800"
+            />
           </div>
 
           {/* Modal Footer Buttons */}
@@ -245,14 +292,14 @@ export function AddSlideModal({
               type="button"
               onClick={onClose}
               disabled={isPending}
-              className="rounded-xl px-4 py-2.5 text-xs font-bold text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800 transition-colors"
+              className="px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs font-bold text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors cursor-pointer"
             >
               Batal
             </button>
             <button
               type="submit"
               disabled={isPending}
-              className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-[#ff7a1a] to-[#f26a0f] px-5 py-2.5 text-xs font-bold text-white shadow-cta hover:brightness-110 active:scale-95 transition-all disabled:opacity-50"
+              className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-[#ff7a1a] to-[#f26a0f] px-5 py-2.5 text-xs sm:text-sm font-bold text-white shadow-cta hover:brightness-110 transition-all hover:-translate-y-0.5 disabled:opacity-50 disabled:pointer-events-none cursor-pointer"
             >
               {isPending ? (
                 <>
@@ -261,7 +308,7 @@ export function AddSlideModal({
                 </>
               ) : (
                 <>
-                  <CheckCircle2 className="h-4 w-4" />
+                  <Save className="h-4 w-4" />
                   <span>Simpan Slide</span>
                 </>
               )}
@@ -269,6 +316,7 @@ export function AddSlideModal({
           </div>
         </form>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
