@@ -29,7 +29,7 @@ export default function CindoPostTestPage() {
   useEffect(() => {
     const s = getSesiCindo();
     if (!s.peserta) {
-      router.push("/cindo/tes/identitas");
+      router.push("/cindo/profile");
       return;
     }
     if (!s.preTest?.completed) {

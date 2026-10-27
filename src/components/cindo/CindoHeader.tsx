@@ -73,7 +73,7 @@ export function CindoHeader({ onOpenSidebar }: CindoHeaderProps) {
   };
 
   const iconBtn =
-    "relative flex h-11 w-11 items-center justify-center rounded-xl border border-[#e3ecfa] bg-white text-[#0f2257] transition-colors hover:bg-[#f1f6ff] hover:text-[#1664e8] dark:border-slate-800 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800";
+    "relative flex h-11 w-11 items-center justify-center rounded-xl border border-[#e3ecfa] bg-white text-[#0f2257] transition-colors hover:bg-orange-50 hover:text-brand-orange dark:border-slate-800 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800";
 
   return (
     <header className="sticky top-0 z-30 flex h-[84px] w-full items-center justify-between gap-4 border-b border-[#e3ecfa] bg-[#f7faff]/90 px-4 backdrop-blur-md transition-colors dark:border-slate-800 dark:bg-slate-950/80 sm:px-8">
@@ -104,7 +104,7 @@ export function CindoHeader({ onOpenSidebar }: CindoHeaderProps) {
               <span className="text-sm font-extrabold tracking-tight text-[#0f2257] dark:text-white sm:text-base md:text-lg">
                 CINDO BBPOM
               </span>
-              <span className="hidden sm:inline-flex items-center gap-1 rounded-md bg-blue-100 px-1.5 py-0.5 text-[10px] font-bold text-blue-700 dark:bg-blue-900/50 dark:text-blue-300">
+              <span className="hidden sm:inline-flex items-center gap-1 rounded-md bg-orange-100 border border-orange-200/80 px-2 py-0.5 text-[10px] font-black text-brand-orange dark:bg-orange-950/60 dark:text-orange-300">
                 <GraduationCap className="h-3 w-3" /> E-Learning
               </span>
             </div>
@@ -147,14 +147,14 @@ export function CindoHeader({ onOpenSidebar }: CindoHeaderProps) {
           title="Kelola Profil & Data Pengguna"
           className="ml-1 flex items-center gap-2.5 rounded-xl p-1 transition-colors hover:bg-slate-100 dark:hover:bg-slate-800/60"
         >
-          <div className="flex h-11 w-11 items-center justify-center rounded-full bg-gradient-to-br from-[#0b4fd1] to-[#2f86f6] text-sm font-bold text-white shadow ring-2 ring-white dark:ring-slate-800">
+          <div className="flex h-11 w-11 items-center justify-center rounded-full bg-gradient-to-br from-brand-orange to-orange-600 text-sm font-bold text-white shadow ring-2 ring-white dark:ring-slate-800">
             {initials}
           </div>
           <div className="hidden flex-col leading-tight md:flex text-left">
             <span className="text-sm font-bold text-[#0f2257] dark:text-white max-w-[130px] truncate">
               {displayName}
             </span>
-            <span className="text-[10px] font-semibold text-blue-600 dark:text-blue-400">
+            <span className="text-[10px] font-semibold text-brand-orange dark:text-orange-400">
               {progressLabel}
             </span>
           </div>

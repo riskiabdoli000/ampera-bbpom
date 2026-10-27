@@ -42,17 +42,29 @@ export interface SoalKuis {
   penjelasan?: string;
 }
 
+export type TipeMateri = "pdf" | "video" | "both";
+
 export interface BabMateri {
   id: number;
   nomor: string;
   judul: string;
   subjudul?: string;
+  kategori: string;
   deskripsiSingkat: string;
   gambarThumbnail: string;
   estimasiMenit: number;
+  tipeMateri: TipeMateri;
+  pdfUrl?: string;
+  pdfTitle?: string;
+  pdfTotalPages?: number;
+  videoUrl?: string;
+  videoTitle?: string;
+  videoDuration?: string;
+  videoTranscript?: string;
   kontenPoin: string[];
   bacaanLengkap: string[];
   tipsPenting?: string;
+  soalList?: SoalKuis[];
 }
 
 export interface PreTestState {
@@ -79,6 +91,33 @@ export interface PostTestState {
   selesaiPada?: string;
 }
 
+export interface TopikModuleProgress {
+  preTest: {
+    completed: boolean;
+    skor: number;
+    jumlahBenar: number;
+    totalSoal: number;
+    jawaban: Record<number, "A" | "B" | "C" | "D">;
+    selesaiPada?: string;
+  };
+  materi: {
+    completed: boolean;
+    selesaiPada?: string;
+    lastActiveTab?: "pdf" | "video";
+  };
+  postTest: {
+    completed: boolean;
+    attemptCount: number;
+    skor: number;
+    jumlahBenar: number;
+    totalSoal: number;
+    isPassed: boolean;
+    canRemedial: boolean;
+    jawaban: Record<number, "A" | "B" | "C" | "D">;
+    selesaiPada?: string;
+  };
+}
+
 export interface CertificateState {
   nomorSertifikat: string;
   tanggalTerbit: string;
@@ -94,14 +133,16 @@ export interface CindoUser {
   materiProgress: MateriProgressState;
   postTest: PostTestState;
   certificate: CertificateState | null;
+  topikProgress?: Record<number, TopikModuleProgress>;
 }
 
 export interface SesiCindo {
   username?: string;
   peserta: PesertaCindo | null;
-  soalTerpilih: SoalKuis[]; // 10 Soal acak unik untuk peserta ini (Pre = Post)
+  soalTerpilih: SoalKuis[]; // Kumpulan soal kuis
   preTest: PreTestState;
   materiProgress: MateriProgressState;
   postTest: PostTestState;
   certificate: CertificateState | null;
+  topikProgress?: Record<number, TopikModuleProgress>;
 }

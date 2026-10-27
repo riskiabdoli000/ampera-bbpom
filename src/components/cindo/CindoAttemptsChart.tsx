@@ -72,7 +72,7 @@ export function CindoAttemptsChart() {
           </p>
         </div>
         {hoveredPoint && (
-          <div className="inline-flex items-center gap-1.5 rounded-lg bg-teal-50 px-2.5 py-1 text-xs font-semibold text-teal-700 dark:bg-teal-950/60 dark:text-teal-300">
+          <div className="inline-flex items-center gap-1.5 rounded-lg bg-orange-50 border border-orange-200/80 px-2.5 py-1 text-xs font-semibold text-brand-orange dark:bg-orange-950/60 dark:text-orange-300">
             <span>{hoveredPoint.date}:</span>
             <span className="font-extrabold">{hoveredPoint.attempts} attempts</span>
           </div>
@@ -88,8 +88,8 @@ export function CindoAttemptsChart() {
           >
             <defs>
               <linearGradient id="cindoWaveGradient" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="#2dd4bf" stopOpacity="0.35" />
-                <stop offset="100%" stopColor="#2dd4bf" stopOpacity="0.0" />
+                <stop offset="0%" stopColor="#ff7a1a" stopOpacity="0.35" />
+                <stop offset="100%" stopColor="#ff7a1a" stopOpacity="0.0" />
               </linearGradient>
             </defs>
 
@@ -126,7 +126,7 @@ export function CindoAttemptsChart() {
             <path
               d={linePath}
               fill="none"
-              stroke="#14b8a6"
+              stroke="#ff7a1a"
               strokeWidth="2.5"
               strokeLinecap="round"
             />
@@ -138,7 +138,7 @@ export function CindoAttemptsChart() {
                   cx={pt.x}
                   cy={pt.y}
                   r={hoveredPoint?.date === pt.date ? "5" : "3.5"}
-                  className="fill-white stroke-teal-500 transition-all duration-150 cursor-pointer"
+                  className="fill-white stroke-[#ff7a1a] transition-all duration-150 cursor-pointer"
                   strokeWidth="2.5"
                   onMouseEnter={() => setHoveredPoint(pt)}
                   onMouseLeave={() => setHoveredPoint(null)}

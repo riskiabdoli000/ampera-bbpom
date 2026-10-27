@@ -28,7 +28,7 @@ export default function CindoHasilPostTestPage() {
   useEffect(() => {
     const s = getSesiCindo();
     if (!s.peserta || !s.postTest?.completed) {
-      router.push("/cindo/tes/identitas");
+      router.push("/cindo/profile");
       return;
     }
     setSesi(s);

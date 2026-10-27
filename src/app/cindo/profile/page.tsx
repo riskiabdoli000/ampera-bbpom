@@ -25,6 +25,8 @@ import {
   Clock,
   ArrowRight,
   FileText,
+  Search,
+  Sparkles,
 } from "lucide-react";
 import {
   PesertaCindo,
@@ -42,6 +44,7 @@ import {
   logoutCindoUser,
   initSesiWithPeserta,
 } from "@/data/cindo/cindoStorage";
+import { lookupNikAction } from "@/app/actions/lookup-nik";
 
 const PENDIDIKAN_LABELS: Record<Pendidikan, string> = {
   SD: "Sekolah Dasar (SD)",
@@ -84,6 +87,10 @@ export default function CindoProfilePage() {
   const [saveSuccessMsg, setSaveSuccessMsg] = useState<string | null>(null);
   const [copiedNik, setCopiedNik] = useState(false);
 
+  // NIK Lookup states
+  const [isLookingUpNik, setIsLookingUpNik] = useState(false);
+  const [lookupMessage, setLookupMessage] = useState<string | null>(null);
+
   // Password Change State
   const [showPasswordModal, setShowPasswordModal] = useState(false);
   const [newPassword, setNewPassword] = useState("");
@@ -96,16 +103,17 @@ export default function CindoProfilePage() {
     setCurrentUser(user);
     setSesi(currentSesi);
 
-    if (currentSesi?.peserta) {
-      setFormData(currentSesi.peserta);
-    } else if (user?.peserta) {
-      setFormData(user.peserta);
+    const existingPeserta = currentSesi?.peserta || user?.peserta;
+    if (existingPeserta) {
+      setFormData(existingPeserta);
     } else {
       // Default initial form with today's date
       setFormData((prev) => ({
         ...prev,
         tanggalTes: new Date().toISOString().slice(0, 10),
       }));
+      // Otomatis buka form jika data belum pernah diisi
+      setIsEditing(true);
     }
   };
 
@@ -121,6 +129,34 @@ export default function CindoProfilePage() {
       ...prev,
       [name]: name === "usia" ? Number(value) : value,
     }));
+  };
+
+  const handleLookupNik = async () => {
+    if (!formData.nik || formData.nik.length < 8) {
+      setLookupMessage("Masukkan minimal 8-16 digit NIK untuk pencarian otomatis.");
+      return;
+    }
+    setIsLookingUpNik(true);
+    setLookupMessage("Mencari data dari sistem Ampera & Buku Tamu BBPOM...");
+    try {
+      const res = await lookupNikAction(formData.nik);
+      if (res.found && res.data) {
+        setFormData((prev) => ({
+          ...prev,
+          nama: res.data?.nama || prev.nama,
+          alamat: res.data?.alamat || prev.alamat,
+          usia: res.data?.umur ? Number(res.data.umur) : prev.usia,
+          instansi: res.data?.asalInstansi || prev.instansi,
+        }));
+        setLookupMessage("✓ " + res.message);
+      } else {
+        setLookupMessage(res.message);
+      }
+    } catch {
+      setLookupMessage("Gagal menghubungkan pencarian NIK. Silakan isi secara manual.");
+    } finally {
+      setIsLookingUpNik(false);
+    }
   };
 
   const handleSaveProfile = (e: React.FormEvent) => {
@@ -140,10 +176,10 @@ export default function CindoProfilePage() {
 
     loadData();
     setIsEditing(false);
-    setSaveSuccessMsg("Data profil peserta berhasil diperbarui!");
+    setSaveSuccessMsg("Data identitas peserta berhasil disimpan! Anda sekarang sudah dapat memilih topik di menu Materi.");
     setTimeout(() => {
       setSaveSuccessMsg(null);
-    }, 4000);
+    }, 6000);
   };
 
   const handleCancelEdit = () => {
@@ -213,18 +249,27 @@ export default function CindoProfilePage() {
     <div className="max-w-6xl mx-auto space-y-6">
       {/* Toast Notification */}
       {saveSuccessMsg && (
-        <div className="flex items-center gap-3 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-800 shadow-sm dark:border-emerald-800 dark:bg-emerald-950/70 dark:text-emerald-200 animate-in fade-in slide-in-from-top-2 duration-300">
-          <CheckCircle2 className="h-5 w-5 text-emerald-600 dark:text-emerald-400 shrink-0" />
-          <span>{saveSuccessMsg}</span>
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-sm font-semibold text-emerald-800 shadow-sm dark:border-emerald-800 dark:bg-emerald-950/70 dark:text-emerald-200 animate-in fade-in slide-in-from-top-2 duration-300">
+          <div className="flex items-center gap-3">
+            <CheckCircle2 className="h-5 w-5 text-emerald-600 dark:text-emerald-400 shrink-0" />
+            <span>{saveSuccessMsg}</span>
+          </div>
+          <Link
+            href="/cindo/materi"
+            className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-2 text-xs font-bold text-white shadow hover:bg-emerald-700 active:scale-95 transition-all"
+          >
+            <span>Pilih Topik Materi Sekarang</span>
+            <ArrowRight className="h-4 w-4" />
+          </Link>
         </div>
       )}
 
       {/* Hero Banner Profile Card */}
-      <div className="relative overflow-hidden rounded-3xl border border-blue-200/80 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
+      <div className="relative overflow-hidden rounded-3xl border border-orange-200/80 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
         {/* Cover Gradient Background (Compact Height) */}
         <div className="h-16 sm:h-20 w-full bg-gradient-to-r from-[#0b2a6b] via-[#12429c] to-[#1e58c7] relative overflow-hidden">
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_30%,rgba(255,255,255,0.15),transparent_70%)]" />
-          <div className="absolute -right-12 -top-12 h-44 w-44 rounded-full bg-blue-400/10 blur-2xl" />
+          <div className="absolute -right-12 -top-12 h-44 w-44 rounded-full bg-orange-400/10 blur-2xl" />
           <div className="absolute left-10 -bottom-10 h-32 w-32 rounded-full bg-amber-400/15 blur-xl" />
 
           {/* Quick decorative badge */}
@@ -240,7 +285,7 @@ export default function CindoProfilePage() {
             {/* Avatar & Basic Info */}
             <div className="flex flex-col sm:flex-row items-center sm:items-center gap-4 text-center sm:text-left">
               <div className="relative -mt-10 sm:-mt-13 shrink-0">
-                <div className="flex h-20 w-20 sm:h-24 sm:w-24 items-center justify-center rounded-2xl bg-gradient-to-br from-[#0b4fd1] via-[#1664e8] to-[#3b82f6] text-2xl sm:text-3xl font-black text-white shadow-xl ring-4 ring-white dark:ring-slate-900">
+                <div className="flex h-20 w-20 sm:h-24 sm:w-24 items-center justify-center rounded-2xl bg-gradient-to-br from-[#0b2a6b] via-brand-orange to-orange-500 text-2xl sm:text-3xl font-black text-white shadow-xl ring-4 ring-white dark:ring-slate-900">
                   {initials}
                 </div>
                 {isDataComplete && (
@@ -255,7 +300,7 @@ export default function CindoProfilePage() {
 
               <div className="space-y-1.5 pt-1.5 sm:pt-2">
                 <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2.5">
-                  <h1 className="text-xl sm:text-2xl font-black tracking-tight text-slate-900 dark:text-white leading-tight">
+                  <h1 className="text-xl sm:text-2xl font-black tracking-tight text-navy-900 dark:text-white leading-tight">
                     {peserta?.nama || currentUser?.username || "Peserta Cindo"}
                   </h1>
                   {sesi?.postTest?.isPassed ? (
@@ -263,8 +308,8 @@ export default function CindoProfilePage() {
                       <Award className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400" /> Lulus Bersertifikat
                     </span>
                   ) : isDataComplete ? (
-                    <span className="inline-flex items-center gap-1 rounded-full bg-blue-100 px-2.5 py-0.5 text-xs font-bold text-blue-700 dark:bg-blue-950 dark:text-blue-300">
-                      <CheckCircle2 className="h-3.5 w-3.5 text-blue-600" /> Data Lengkap
+                    <span className="inline-flex items-center gap-1 rounded-full bg-orange-100 px-2.5 py-0.5 text-xs font-bold text-brand-orange dark:bg-orange-950 dark:text-orange-300 border border-orange-200/60">
+                      <CheckCircle2 className="h-3.5 w-3.5 text-brand-orange" /> Data Lengkap
                     </span>
                   ) : (
                     <span className="inline-flex items-center gap-1 rounded-full bg-rose-100 px-2.5 py-0.5 text-xs font-bold text-rose-700 dark:bg-rose-950 dark:text-rose-300">
@@ -330,7 +375,7 @@ export default function CindoProfilePage() {
         <div className="rounded-2xl border border-slate-200/90 bg-white p-4 sm:p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">Identitas</span>
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-50 text-blue-600 dark:bg-blue-950 dark:text-blue-400">
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-orange-50 text-brand-orange dark:bg-orange-950 dark:text-orange-400">
               <User className="h-4 w-4" />
             </div>
           </div>
@@ -409,11 +454,11 @@ export default function CindoProfilePage() {
           <div className="rounded-2xl border border-slate-200/90 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
             <div className="flex items-center justify-between pb-4 border-b border-slate-100 dark:border-slate-800">
               <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-50 text-blue-600 dark:bg-blue-950/60 dark:text-blue-400">
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-orange-50 text-brand-orange dark:bg-orange-950/60 dark:text-orange-400">
                   <User className="h-5 w-5" />
                 </div>
                 <div>
-                  <h2 className="text-base sm:text-lg font-extrabold text-slate-900 dark:text-white">
+                  <h2 className="text-base sm:text-lg font-extrabold text-navy-900 dark:text-white">
                     {isEditing ? "Formulir Perubahan Data User" : "Data Identitas Peserta"}
                   </h2>
                   <p className="text-xs text-slate-500 dark:text-slate-400">
@@ -428,7 +473,7 @@ export default function CindoProfilePage() {
                 <button
                   type="button"
                   onClick={() => setIsEditing(true)}
-                  className="flex items-center gap-1.5 text-xs font-bold text-blue-600 hover:text-blue-700 dark:text-blue-400 transition-colors"
+                  className="flex items-center gap-1.5 text-xs font-bold text-brand-orange hover:text-orange-600 dark:text-orange-400 transition-colors"
                 >
                   <Edit3 className="h-3.5 w-3.5" />
                   <span>Ubah Data</span>
@@ -453,7 +498,7 @@ export default function CindoProfilePage() {
                         <button
                           type="button"
                           onClick={handleCopyNik}
-                          className="text-xs font-semibold text-blue-600 hover:text-blue-700 dark:text-blue-400 inline-flex items-center gap-1"
+                          className="text-xs font-semibold text-brand-orange hover:text-orange-600 dark:text-orange-400 inline-flex items-center gap-1"
                           title="Salin NIK"
                         >
                           {copiedNik ? (
@@ -553,25 +598,49 @@ export default function CindoProfilePage() {
             ) : (
               /* Edit Mode Form */
               <form onSubmit={handleSaveProfile} className="mt-6 space-y-5">
+                {/* Integration Notice */}
+                <div className="flex items-center gap-2 rounded-xl border border-orange-200 bg-orange-50/70 p-3 text-xs text-orange-950 dark:border-orange-900/50 dark:bg-orange-950/40 dark:text-orange-200">
+                  <Sparkles className="h-4 w-4 shrink-0 text-brand-orange dark:text-orange-400" />
+                  <span>
+                    <strong>Terhubung dengan Buku Tamu BBPOM:</strong> Masukkan NIK Anda lalu klik tombol &ldquo;Cek NIK&rdquo; untuk mengisi otomatis data profil Anda jika pernah berkunjung ke kantor BBPOM.
+                  </span>
+                </div>
+
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                  {/* NIK Input */}
+                  {/* NIK Input with Cek NIK */}
                   <div className="space-y-1.5 md:col-span-2">
                     <label className="text-xs sm:text-sm font-semibold text-slate-700 dark:text-slate-300">
                       Nomor Induk Kependudukan (NIK) <span className="text-red-500">*</span>
                     </label>
-                    <div className="relative">
-                      <CreditCard className="absolute left-3.5 top-3 h-4 w-4 text-slate-400" />
-                      <input
-                        type="text"
-                        name="nik"
-                        required
-                        maxLength={16}
-                        value={formData.nik}
-                        onChange={handleChange}
-                        placeholder="16 Digit NIK KTP Anda..."
-                        className="w-full rounded-xl border border-slate-300 bg-white pl-10 pr-4 py-2.5 text-xs sm:text-sm outline-none transition-all focus:border-blue-600 focus:ring-1 focus:ring-blue-600 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
-                      />
+                    <div className="flex gap-2">
+                      <div className="relative flex-1">
+                        <CreditCard className="absolute left-3.5 top-3 h-4 w-4 text-slate-400" />
+                        <input
+                          type="text"
+                          name="nik"
+                          required
+                          maxLength={16}
+                          value={formData.nik}
+                          onChange={handleChange}
+                          placeholder="16 Digit NIK KTP Anda..."
+                          className="w-full rounded-xl border border-slate-300 bg-white pl-10 pr-4 py-2.5 text-xs sm:text-sm outline-none transition-all focus:border-brand-orange focus:ring-1 focus:ring-brand-orange dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                        />
+                      </div>
+                      <button
+                        type="button"
+                        onClick={handleLookupNik}
+                        disabled={isLookingUpNik}
+                        className="inline-flex shrink-0 items-center gap-1.5 rounded-xl bg-slate-800 px-4 py-2.5 text-xs font-bold text-white shadow hover:bg-slate-900 active:scale-95 disabled:opacity-50 dark:bg-slate-700 dark:hover:bg-slate-600"
+                      >
+                        <Search className="h-4 w-4" />
+                        <span>{isLookingUpNik ? "Memeriksa..." : "Cek NIK"}</span>
+                      </button>
                     </div>
+                    {lookupMessage && (
+                      <p className="text-[11px] font-medium text-brand-orange dark:text-orange-400 mt-1">
+                        {lookupMessage}
+                      </p>
+                    )}
                   </div>
 
                   {/* Nama Lengkap */}
@@ -588,7 +657,7 @@ export default function CindoProfilePage() {
                         value={formData.nama}
                         onChange={handleChange}
                         placeholder="Nama Lengkap Anda..."
-                        className="w-full rounded-xl border border-slate-300 bg-white pl-10 pr-4 py-2.5 text-xs sm:text-sm outline-none transition-all focus:border-blue-600 focus:ring-1 focus:ring-blue-600 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                        className="w-full rounded-xl border border-slate-300 bg-white pl-10 pr-4 py-2.5 text-xs sm:text-sm outline-none transition-all focus:border-brand-orange focus:ring-1 focus:ring-brand-orange dark:border-slate-700 dark:bg-slate-800 dark:text-white"
                       />
                     </div>
                   </div>
@@ -606,7 +675,7 @@ export default function CindoProfilePage() {
                         required
                         value={formData.tanggalTes}
                         onChange={handleChange}
-                        className="w-full rounded-xl border border-slate-300 bg-white pl-10 pr-4 py-2.5 text-xs sm:text-sm outline-none transition-all focus:border-blue-600 focus:ring-1 focus:ring-blue-600 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                        className="w-full rounded-xl border border-slate-300 bg-white pl-10 pr-4 py-2.5 text-xs sm:text-sm outline-none transition-all focus:border-brand-orange focus:ring-1 focus:ring-brand-orange dark:border-slate-700 dark:bg-slate-800 dark:text-white"
                       />
                     </div>
                   </div>
@@ -624,7 +693,7 @@ export default function CindoProfilePage() {
                       required
                       value={formData.usia}
                       onChange={handleChange}
-                      className="w-full rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-xs sm:text-sm outline-none transition-all focus:border-blue-600 focus:ring-1 focus:ring-blue-600 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                      className="w-full rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-xs sm:text-sm outline-none transition-all focus:border-brand-orange focus:ring-1 focus:ring-brand-orange dark:border-slate-700 dark:bg-slate-800 dark:text-white"
                     />
                   </div>
 
@@ -641,7 +710,7 @@ export default function CindoProfilePage() {
                           value="LAKI_LAKI"
                           checked={formData.jenisKelamin === "LAKI_LAKI"}
                           onChange={handleChange}
-                          className="h-4 w-4 text-blue-600"
+                          className="h-4 w-4 text-brand-orange focus:ring-brand-orange"
                         />
                         <span>Laki-laki</span>
                       </label>
@@ -652,7 +721,7 @@ export default function CindoProfilePage() {
                           value="PEREMPUAN"
                           checked={formData.jenisKelamin === "PEREMPUAN"}
                           onChange={handleChange}
-                          className="h-4 w-4 text-blue-600"
+                          className="h-4 w-4 text-brand-orange focus:ring-brand-orange"
                         />
                         <span>Perempuan</span>
                       </label>
@@ -670,7 +739,7 @@ export default function CindoProfilePage() {
                         name="pendidikan"
                         value={formData.pendidikan}
                         onChange={handleChange}
-                        className="w-full rounded-xl border border-slate-300 bg-white pl-10 pr-4 py-2.5 text-xs sm:text-sm outline-none transition-all focus:border-blue-600 focus:ring-1 focus:ring-blue-600 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                        className="w-full rounded-xl border border-slate-300 bg-white pl-10 pr-4 py-2.5 text-xs sm:text-sm outline-none transition-all focus:border-brand-orange focus:ring-1 focus:ring-brand-orange dark:border-slate-700 dark:bg-slate-800 dark:text-white"
                       >
                         <option value="SD">Sekolah Dasar (SD)</option>
                         <option value="SMP">SMP / MTs Sederajat</option>
@@ -694,7 +763,7 @@ export default function CindoProfilePage() {
                         name="pekerjaan"
                         value={formData.pekerjaan}
                         onChange={handleChange}
-                        className="w-full rounded-xl border border-slate-300 bg-white pl-10 pr-4 py-2.5 text-xs sm:text-sm outline-none transition-all focus:border-blue-600 focus:ring-1 focus:ring-blue-600 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                        className="w-full rounded-xl border border-slate-300 bg-white pl-10 pr-4 py-2.5 text-xs sm:text-sm outline-none transition-all focus:border-brand-orange focus:ring-1 focus:ring-brand-orange dark:border-slate-700 dark:bg-slate-800 dark:text-white"
                       >
                         <option value="ASN">Pegawai Negeri Sipil (ASN/PNS)</option>
                         <option value="PEGAWAI_SWASTA">Karyawan / Pegawai Swasta</option>
@@ -719,7 +788,7 @@ export default function CindoProfilePage() {
                         value={formData.instansi}
                         onChange={handleChange}
                         placeholder="Contoh: Universitas Sriwijaya, UMKM Pempek Wong Kito, Pribadi..."
-                        className="w-full rounded-xl border border-slate-300 bg-white pl-10 pr-4 py-2.5 text-xs sm:text-sm outline-none transition-all focus:border-blue-600 focus:ring-1 focus:ring-blue-600 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                        className="w-full rounded-xl border border-slate-300 bg-white pl-10 pr-4 py-2.5 text-xs sm:text-sm outline-none transition-all focus:border-brand-orange focus:ring-1 focus:ring-brand-orange dark:border-slate-700 dark:bg-slate-800 dark:text-white"
                       />
                     </div>
                   </div>
@@ -738,7 +807,7 @@ export default function CindoProfilePage() {
                         value={formData.alamat}
                         onChange={handleChange}
                         placeholder="Contoh: Jl. Jenderal Sudirman No. 12, Ilir Timur I, Kota Palembang..."
-                        className="w-full rounded-xl border border-slate-300 bg-white pl-10 pr-4 py-2.5 text-xs sm:text-sm outline-none transition-all focus:border-blue-600 focus:ring-1 focus:ring-blue-600 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                        className="w-full rounded-xl border border-slate-300 bg-white pl-10 pr-4 py-2.5 text-xs sm:text-sm outline-none transition-all focus:border-brand-orange focus:ring-1 focus:ring-brand-orange dark:border-slate-700 dark:bg-slate-800 dark:text-white"
                       />
                     </div>
                   </div>
@@ -755,7 +824,7 @@ export default function CindoProfilePage() {
                   </button>
                   <button
                     type="submit"
-                    className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-6 py-2.5 text-xs sm:text-sm font-bold text-white shadow hover:bg-blue-700 active:scale-95 transition-all"
+                    className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-brand-orange to-orange-600 px-6 py-2.5 text-xs sm:text-sm font-bold text-white shadow hover:from-orange-600 hover:to-orange-700 active:scale-95 transition-all"
                   >
                     <Save className="h-4 w-4" />
                     <span>Simpan Perubahan</span>
@@ -771,7 +840,7 @@ export default function CindoProfilePage() {
           {/* Card 1: Data Akun & Login */}
           <div className="rounded-2xl border border-slate-200/90 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900 space-y-4">
             <div className="flex items-center gap-2.5 pb-3 border-b border-slate-100 dark:border-slate-800">
-              <ShieldCheck className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+              <ShieldCheck className="h-5 w-5 text-brand-orange dark:text-orange-400" />
               <h3 className="text-sm font-bold text-slate-900 dark:text-white">
                 Informasi Akun Cindo
               </h3>
@@ -862,7 +931,7 @@ export default function CindoProfilePage() {
               </p>
               <Link
                 href="/cindo/materi"
-                className="flex items-center justify-center gap-2 rounded-xl bg-blue-50 py-2.5 text-xs font-bold text-blue-700 hover:bg-blue-100 dark:bg-blue-950/60 dark:text-blue-300 transition-colors"
+                className="flex items-center justify-center gap-2 rounded-xl bg-orange-50 border border-orange-200/80 py-2.5 text-xs font-bold text-brand-orange hover:bg-orange-100 dark:bg-orange-950/60 dark:text-orange-300 transition-colors"
               >
                 <span>Lanjutkan Pembelajaran</span>
                 <ArrowRight className="h-3.5 w-3.5" />
@@ -891,10 +960,10 @@ export default function CindoProfilePage() {
                 <ArrowRight className="h-3.5 w-3.5 text-slate-400" />
               </Link>
               <Link
-                href="/cindo/tes/identitas"
+                href="/cindo/materi"
                 className="flex items-center justify-between p-2.5 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800/60 text-xs font-semibold text-slate-700 dark:text-slate-300 transition-colors"
               >
-                <span>Mulai Alur Uji Tes / Pre-Test</span>
+                <span>Pilih Topik & Asesmen Pembelajaran</span>
                 <ArrowRight className="h-3.5 w-3.5 text-slate-400" />
               </Link>
             </div>
@@ -908,7 +977,7 @@ export default function CindoProfilePage() {
           <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-4 animate-in fade-in zoom-in-95 duration-200">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <Lock className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                <Lock className="h-5 w-5 text-brand-orange dark:text-orange-400" />
                 <h3 className="text-base font-extrabold text-slate-900 dark:text-white">
                   Ubah Password Akun
                 </h3>
@@ -940,7 +1009,7 @@ export default function CindoProfilePage() {
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}
                   placeholder="Minimal 4 karakter..."
-                  className="w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2 text-xs sm:text-sm outline-none transition-all focus:border-blue-600 focus:ring-1 focus:ring-blue-600 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                  className="w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2 text-xs sm:text-sm outline-none transition-all focus:border-brand-orange focus:ring-1 focus:ring-brand-orange dark:border-slate-700 dark:bg-slate-800 dark:text-white"
                 />
               </div>
 
@@ -954,7 +1023,7 @@ export default function CindoProfilePage() {
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
                   placeholder="Ketik ulang password baru..."
-                  className="w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2 text-xs sm:text-sm outline-none transition-all focus:border-blue-600 focus:ring-1 focus:ring-blue-600 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                  className="w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2 text-xs sm:text-sm outline-none transition-all focus:border-brand-orange focus:ring-1 focus:ring-brand-orange dark:border-slate-700 dark:bg-slate-800 dark:text-white"
                 />
               </div>
 
@@ -983,7 +1052,7 @@ export default function CindoProfilePage() {
                 </button>
                 <button
                   type="submit"
-                  className="rounded-xl bg-blue-600 px-5 py-2 text-xs font-bold text-white shadow hover:bg-blue-700"
+                  className="rounded-xl bg-gradient-to-r from-brand-orange to-orange-600 px-5 py-2 text-xs font-bold text-white shadow hover:from-orange-600 hover:to-orange-700"
                 >
                   Simpan Password
                 </button>

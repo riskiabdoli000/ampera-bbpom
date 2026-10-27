@@ -14,8 +14,10 @@ import {
 import {
   getSesiCindo,
   submitPreTestJawaban,
+  initSesiWithPeserta,
 } from "@/data/cindo/cindoStorage";
 import { SesiCindo, SoalKuis } from "@/data/cindo/cindoTypes";
+import { DAFTAR_MATERI_CINDO } from "@/data/cindo/materiData";
 
 export default function CindoPreTestPage() {
   const router = useRouter();
@@ -25,10 +27,18 @@ export default function CindoPreTestPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
-    const s = getSesiCindo();
+    let s = getSesiCindo();
     if (!s.peserta) {
-      router.push("/cindo/tes/identitas");
+      router.push("/cindo/profile");
       return;
+    }
+    // Jika pre-test sudah selesai, jangan izinkan tes ulang, kembali ke materi
+    if (s.preTest?.completed) {
+      router.push("/cindo/materi");
+      return;
+    }
+    if (!s.soalTerpilih || s.soalTerpilih.length !== 10) {
+      s = initSesiWithPeserta(s.peserta);
     }
     setSesi(s);
     if (s.preTest?.jawaban) {
@@ -52,6 +62,9 @@ export default function CindoPreTestPage() {
   const totalSoal = soalList.length;
   const answeredCount = Object.keys(jawaban).length;
   const allAnswered = answeredCount === totalSoal;
+  const activeBab = DAFTAR_MATERI_CINDO.find(
+    (b) => b.id === (sesi.materiProgress?.activeBabId || 1)
+  );
 
   const handleSelectOption = (key: "A" | "B" | "C" | "D") => {
     setJawaban((prev) => ({
@@ -81,9 +94,16 @@ export default function CindoPreTestPage() {
       <div className="rounded-2xl border border-slate-200/90 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
-            <span className="inline-block rounded-md bg-blue-100 px-2 py-0.5 text-[11px] font-bold text-blue-700 dark:bg-blue-950 dark:text-blue-300">
-              Evaluasi Awal (Pre-Test)
-            </span>
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="inline-block rounded-md bg-blue-100 px-2 py-0.5 text-[11px] font-bold text-blue-700 dark:bg-blue-950 dark:text-blue-300">
+                Evaluasi Awal (Pre-Test)
+              </span>
+              {activeBab && (
+                <span className="inline-block rounded-md bg-amber-100 px-2.5 py-0.5 text-[11px] font-bold text-amber-800 dark:bg-amber-950 dark:text-amber-300">
+                  Topik: {activeBab.nomor} - {activeBab.judul}
+                </span>
+              )}
+            </div>
             <h1 className="text-lg sm:text-xl font-black text-slate-900 dark:text-white mt-1">
               Asesmen Pemahaman Awal (10 Soal)
             </h1>
@@ -114,7 +134,7 @@ export default function CindoPreTestPage() {
                 onClick={() => setCurrentIndex(idx)}
                 className={`flex h-8 w-8 sm:h-9 sm:w-9 items-center justify-center rounded-xl text-xs font-bold transition-all ${
                   isCurrent
-                    ? "bg-[#1664e8] text-white shadow-md ring-2 ring-blue-500/30 scale-105"
+                    ? "bg-brand-orange text-white shadow-md ring-2 ring-orange-500/30 scale-105"
                     : isAnswered
                     ? "bg-emerald-50 text-emerald-700 border border-emerald-300 dark:bg-emerald-950/60 dark:text-emerald-300 dark:border-emerald-800"
                     : "bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-400"
@@ -130,7 +150,7 @@ export default function CindoPreTestPage() {
       {/* Question Card */}
       <div className="rounded-2xl border border-slate-200/90 bg-white p-6 sm:p-8 shadow-sm space-y-6 dark:border-slate-800 dark:bg-slate-900">
         <div className="flex items-center justify-between border-b border-slate-100 pb-3 dark:border-slate-800">
-          <span className="text-xs font-bold uppercase tracking-wider text-blue-600 dark:text-blue-400">
+          <span className="text-xs font-bold uppercase tracking-wider text-brand-orange dark:text-orange-400">
             Soal Nomor {currentIndex + 1} dari {totalSoal}
           </span>
           <span className="rounded-full bg-slate-100 px-2.5 py-0.5 text-[10px] font-semibold text-slate-600 dark:bg-slate-800 dark:text-slate-300">
@@ -154,14 +174,14 @@ export default function CindoPreTestPage() {
                 onClick={() => handleSelectOption(pil.key)}
                 className={`group flex w-full items-start gap-3.5 rounded-2xl border p-4 text-left transition-all duration-200 ${
                   isSelected
-                    ? "border-[#1664e8] bg-blue-50/70 text-blue-950 ring-2 ring-blue-500/30 shadow dark:bg-blue-950/60 dark:border-blue-500 dark:text-white"
+                    ? "border-brand-orange bg-orange-50/70 text-orange-950 ring-2 ring-orange-500/30 shadow dark:bg-orange-950/60 dark:border-orange-500 dark:text-white"
                     : "border-slate-200/90 bg-white hover:border-slate-300 hover:bg-slate-50 text-slate-800 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800/60"
                 }`}
               >
                 <div
                   className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-xs font-bold transition-colors ${
                     isSelected
-                      ? "bg-[#1664e8] text-white"
+                      ? "bg-brand-orange text-white"
                       : "bg-slate-100 text-slate-600 group-hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300"
                   }`}
                 >
