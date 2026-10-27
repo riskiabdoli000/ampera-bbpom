@@ -33,8 +33,8 @@ export default function CindoDashboardPage() {
       {/* Top Welcome Bar matching Image 2 without the CTA button */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white">
-            Welcome back, {pesertaNama}! 👋
+          <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-navy-900 dark:text-white">
+            Welcome back, <span className="text-brand-orange">{pesertaNama}</span>! 👋
           </h1>
           <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
             Here&apos;s what&apos;s happening with your quizzes today.
@@ -49,8 +49,8 @@ export default function CindoDashboardPage() {
           value="5"
           subtext="+3 this week"
           icon={FileQuestion}
-          iconBgColor="bg-teal-50 dark:bg-teal-950/60"
-          iconColor="text-teal-600 dark:text-teal-400"
+          iconBgColor="bg-orange-50 dark:bg-orange-950/60"
+          iconColor="text-brand-orange dark:text-orange-400"
         />
 
         <CindoStatCard

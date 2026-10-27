@@ -43,7 +43,7 @@ export default function CindoLayout({
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#f7faff] dark:bg-[#060c1d]">
         <div className="text-center space-y-3">
-          <div className="h-8 w-8 animate-spin rounded-full border-4 border-[#1664e8] border-t-transparent mx-auto" />
+          <div className="h-8 w-8 animate-spin rounded-full border-4 border-brand-orange border-t-transparent mx-auto" />
           <p className="text-xs font-semibold text-slate-500">Memeriksa sesi login Cindo...</p>
         </div>
       </div>

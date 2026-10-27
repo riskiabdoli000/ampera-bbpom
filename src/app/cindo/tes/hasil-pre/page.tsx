@@ -23,7 +23,7 @@ export default function CindoHasilPreTestPage() {
   useEffect(() => {
     const s = getSesiCindo();
     if (!s.peserta || !s.preTest?.completed) {
-      router.push("/cindo/tes/identitas");
+      router.push("/cindo/profile");
       return;
     }
     setSesi(s);
@@ -57,8 +57,8 @@ export default function CindoHasilPreTestPage() {
         </div>
 
         {/* Big Score Display */}
-        <div className="rounded-3xl border border-blue-200/90 bg-gradient-to-b from-blue-50/80 to-white py-8 shadow-inner dark:border-blue-900/50 dark:from-slate-800/80 dark:to-slate-900">
-          <div className="text-5xl sm:text-6xl font-black tracking-tight text-[#1664e8] dark:text-blue-400">
+        <div className="rounded-3xl border border-orange-200/90 bg-gradient-to-b from-orange-50/80 to-white py-8 shadow-inner dark:border-orange-900/50 dark:from-slate-800/80 dark:to-slate-900">
+          <div className="text-5xl sm:text-6xl font-black tracking-tight text-brand-orange dark:text-orange-400">
             {skor}
             <span className="text-xl sm:text-2xl font-bold text-slate-400">/100</span>
           </div>
@@ -113,7 +113,7 @@ export default function CindoHasilPreTestPage() {
         <div className="pt-2">
           <Link
             href="/cindo/materi"
-            className="flex w-full items-center justify-center gap-2 rounded-2xl bg-[#1664e8] px-6 py-4 text-sm font-bold text-white shadow-xl transition-all hover:bg-blue-700 active:scale-95"
+            className="flex w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-brand-orange to-orange-600 px-6 py-4 text-sm font-bold text-white shadow-xl transition-all hover:from-orange-600 hover:to-orange-700 active:scale-95"
           >
             <BookOpen className="h-5 w-5" />
             <span>Buka Materi Pembelajaran (Wajib Dibaca)</span>

@@ -9,6 +9,7 @@ import {
   MateriProgressState,
   CertificateState,
   CindoUser,
+  TopikModuleProgress,
 } from "./cindoTypes";
 import { getRandom10Soal } from "./bankSoal";
 import { DAFTAR_MATERI_CINDO } from "./materiData";
@@ -39,6 +40,30 @@ export const DEFAULT_POST_TEST: PostTestState = {
   canRemedial: false,
 };
 
+export const DEFAULT_TOPIK_PROGRESS: TopikModuleProgress = {
+  preTest: {
+    completed: false,
+    skor: 0,
+    jumlahBenar: 0,
+    totalSoal: 5,
+    jawaban: {},
+  },
+  materi: {
+    completed: false,
+    lastActiveTab: "pdf",
+  },
+  postTest: {
+    completed: false,
+    attemptCount: 0,
+    skor: 0,
+    jumlahBenar: 0,
+    totalSoal: 5,
+    isPassed: false,
+    canRemedial: false,
+    jawaban: {},
+  },
+};
+
 export const DEFAULT_SESI: SesiCindo = {
   peserta: null,
   soalTerpilih: [],
@@ -46,6 +71,7 @@ export const DEFAULT_SESI: SesiCindo = {
   materiProgress: DEFAULT_MATERI_PROGRESS,
   postTest: DEFAULT_POST_TEST,
   certificate: null,
+  topikProgress: {},
 };
 
 /**
@@ -192,6 +218,7 @@ export function getSesiCindo(): SesiCindo {
     materiProgress: user.materiProgress || DEFAULT_MATERI_PROGRESS,
     postTest: user.postTest || DEFAULT_POST_TEST,
     certificate: user.certificate || null,
+    topikProgress: user.topikProgress || {},
   };
 }
 
@@ -220,6 +247,7 @@ export function saveSesiCindo(sesi: SesiCindo): void {
       materiProgress: sesi.materiProgress,
       postTest: sesi.postTest,
       certificate: sesi.certificate,
+      topikProgress: sesi.topikProgress || current.topikProgress || {},
     };
     saveAllCindoUsers(users);
   }
@@ -254,9 +282,14 @@ export function initSesiWithPeserta(peserta: PesertaCindo): SesiCindo {
  */
 export function updateCindoPeserta(peserta: PesertaCindo): SesiCindo {
   const currentSesi = getSesiCindo();
+  let soal = currentSesi.soalTerpilih;
+  if (!soal || soal.length !== 10) {
+    soal = getRandom10Soal();
+  }
   const updated: SesiCindo = {
     ...currentSesi,
     peserta,
+    soalTerpilih: soal,
   };
   saveSesiCindo(updated);
   return updated;
@@ -436,4 +469,226 @@ export function clearCindoSession(): void {
   if (typeof window !== "undefined") {
     localStorage.removeItem(LEGACY_STORAGE_KEY);
   }
+}
+
+/**
+ * Mendapatkan status progres 3 modul (pre-test, materi, post-test) untuk topik tertentu
+ */
+export function getTopikModuleProgress(topikId: number): TopikModuleProgress {
+  const sesi = getSesiCindo();
+  if (sesi.topikProgress && sesi.topikProgress[topikId]) {
+    return sesi.topikProgress[topikId];
+  }
+  return {
+    preTest: { ...DEFAULT_TOPIK_PROGRESS.preTest, jawaban: {} },
+    materi: { ...DEFAULT_TOPIK_PROGRESS.materi },
+    postTest: { ...DEFAULT_TOPIK_PROGRESS.postTest, jawaban: {} },
+  };
+}
+
+/**
+ * Submit Jawaban Pre-Test Topik
+ * Aturan: Selesai pre-test akan MEMBUKA akses modul Materi
+ */
+export function submitTopikPreTest(
+  topikId: number,
+  jawaban: Record<number, "A" | "B" | "C" | "D">,
+  soalList: SoalKuis[]
+): SesiCindo {
+  const sesi = getSesiCindo();
+  const currentTopikProgress = sesi.topikProgress?.[topikId] || {
+    preTest: { ...DEFAULT_TOPIK_PROGRESS.preTest, jawaban: {} },
+    materi: { ...DEFAULT_TOPIK_PROGRESS.materi },
+    postTest: { ...DEFAULT_TOPIK_PROGRESS.postTest, jawaban: {} },
+  };
+
+  let jumlahBenar = 0;
+  soalList.forEach((soal) => {
+    if (jawaban[soal.id] === soal.jawabanBenar) {
+      jumlahBenar += 1;
+    }
+  });
+
+  const totalSoal = soalList.length || 5;
+  const skor = Math.round((jumlahBenar / totalSoal) * 100);
+
+  const updatedTopik: TopikModuleProgress = {
+    ...currentTopikProgress,
+    preTest: {
+      completed: true,
+      skor,
+      jumlahBenar,
+      totalSoal,
+      jawaban,
+      selesaiPada: new Date().toISOString(),
+    },
+  };
+
+  const updatedTopikProgress = {
+    ...(sesi.topikProgress || {}),
+    [topikId]: updatedTopik,
+  };
+
+  const updatedSesi: SesiCindo = {
+    ...sesi,
+    topikProgress: updatedTopikProgress,
+  };
+
+  saveSesiCindo(updatedSesi);
+  return updatedSesi;
+}
+
+/**
+ * Menandai Modul Materi pada topik telah selesai dipelajari
+ * Aturan: Selesai materi akan MEMBUKA akses modul Post-Test
+ */
+export function markTopikMateriCompleted(
+  topikId: number,
+  activeTab: "pdf" | "video" = "pdf"
+): SesiCindo {
+  const sesi = getSesiCindo();
+  const currentTopikProgress = sesi.topikProgress?.[topikId] || {
+    preTest: { ...DEFAULT_TOPIK_PROGRESS.preTest, jawaban: {} },
+    materi: { ...DEFAULT_TOPIK_PROGRESS.materi },
+    postTest: { ...DEFAULT_TOPIK_PROGRESS.postTest, jawaban: {} },
+  };
+
+  const updatedTopik: TopikModuleProgress = {
+    ...currentTopikProgress,
+    materi: {
+      completed: true,
+      lastActiveTab: activeTab,
+      selesaiPada: new Date().toISOString(),
+    },
+  };
+
+  const currentCompletedBabs = sesi.materiProgress?.completedBabIds || [];
+  const updatedBabs = currentCompletedBabs.includes(topikId)
+    ? currentCompletedBabs
+    : [...currentCompletedBabs, topikId];
+
+  const updatedTopikProgress = {
+    ...(sesi.topikProgress || {}),
+    [topikId]: updatedTopik,
+  };
+
+  const updatedSesi: SesiCindo = {
+    ...sesi,
+    materiProgress: {
+      ...sesi.materiProgress,
+      completedBabIds: updatedBabs,
+    },
+    topikProgress: updatedTopikProgress,
+  };
+
+  saveSesiCindo(updatedSesi);
+  return updatedSesi;
+}
+
+/**
+ * Submit Evaluasi Post-Test Topik
+ * Kriteria kelulusan topik: Skor >= 80%
+ */
+export function submitTopikPostTest(
+  topikId: number,
+  jawaban: Record<number, "A" | "B" | "C" | "D">,
+  soalList: SoalKuis[]
+): SesiCindo {
+  const sesi = getSesiCindo();
+  const currentTopikProgress = sesi.topikProgress?.[topikId] || {
+    preTest: { ...DEFAULT_TOPIK_PROGRESS.preTest, jawaban: {} },
+    materi: { ...DEFAULT_TOPIK_PROGRESS.materi },
+    postTest: { ...DEFAULT_TOPIK_PROGRESS.postTest, jawaban: {} },
+  };
+
+  let jumlahBenar = 0;
+  soalList.forEach((soal) => {
+    if (jawaban[soal.id] === soal.jawabanBenar) {
+      jumlahBenar += 1;
+    }
+  });
+
+  const totalSoal = soalList.length || 5;
+  const skor = Math.round((jumlahBenar / totalSoal) * 100);
+  const isPassed = skor >= 80;
+  const newAttemptCount = (currentTopikProgress.postTest?.attemptCount || 0) + 1;
+  const canRemedial = !isPassed && newAttemptCount < 2;
+
+  const updatedTopik: TopikModuleProgress = {
+    ...currentTopikProgress,
+    postTest: {
+      completed: true,
+      attemptCount: newAttemptCount,
+      skor,
+      jumlahBenar,
+      totalSoal,
+      isPassed,
+      canRemedial,
+      jawaban,
+      selesaiPada: new Date().toISOString(),
+    },
+  };
+
+  const updatedTopikProgress = {
+    ...(sesi.topikProgress || {}),
+    [topikId]: updatedTopik,
+  };
+
+  // Penerbitan sertifikat jika minimal ada topik yang lulus
+  let cert = sesi.certificate;
+  if (isPassed && !cert) {
+    const randomHex = Math.random().toString(36).substring(2, 7).toUpperCase();
+    const dateCode = new Date().toISOString().slice(0, 10).replace(/-/g, "");
+    cert = {
+      nomorSertifikat: `CINDO/BBPOM/${dateCode}/${randomHex}`,
+      tanggalTerbit: new Date().toLocaleDateString("id-ID", {
+        day: "numeric",
+        month: "long",
+        year: "numeric",
+      }),
+    };
+  }
+
+  const updatedSesi: SesiCindo = {
+    ...sesi,
+    topikProgress: updatedTopikProgress,
+    certificate: cert,
+  };
+
+  saveSesiCindo(updatedSesi);
+  return updatedSesi;
+}
+
+/**
+ * Reset Post-Test Topik untuk remedial 1 kali
+ */
+export function resetTopikPostTestRemedial(topikId: number): SesiCindo {
+  const sesi = getSesiCindo();
+  const currentTopikProgress = sesi.topikProgress?.[topikId] || {
+    preTest: { ...DEFAULT_TOPIK_PROGRESS.preTest, jawaban: {} },
+    materi: { ...DEFAULT_TOPIK_PROGRESS.materi },
+    postTest: { ...DEFAULT_TOPIK_PROGRESS.postTest, jawaban: {} },
+  };
+
+  const updatedTopik: TopikModuleProgress = {
+    ...currentTopikProgress,
+    postTest: {
+      ...currentTopikProgress.postTest,
+      completed: false,
+      jawaban: {},
+    },
+  };
+
+  const updatedTopikProgress = {
+    ...(sesi.topikProgress || {}),
+    [topikId]: updatedTopik,
+  };
+
+  const updatedSesi: SesiCindo = {
+    ...sesi,
+    topikProgress: updatedTopikProgress,
+  };
+
+  saveSesiCindo(updatedSesi);
+  return updatedSesi;
 }

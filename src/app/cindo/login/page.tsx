@@ -55,7 +55,7 @@ export default function CindoAuthPage() {
       setTimeout(() => {
         const loginRes = loginCindoUser(username, password);
         if (loginRes.success) {
-          router.push("/cindo/tes/identitas");
+          router.push("/cindo/profile");
         } else {
           setTab("login");
           setPassword("");
@@ -77,15 +77,9 @@ export default function CindoAuthPage() {
     if (!res.success) {
       setErrorMsg(res.message);
     } else {
-      setSuccessMsg("Login berhasil! Mengalihkan...");
-      const currentUser = getCurrentCindoUser();
+      setSuccessMsg("Login berhasil! Mengalihkan ke halaman profil...");
       setTimeout(() => {
-        // Jika data identitas belum lengkap, arahkan untuk melengkapi data dulu
-        if (!currentUser?.peserta) {
-          router.push("/cindo/tes/identitas");
-        } else {
-          router.push("/cindo");
-        }
+        router.push("/cindo/profile");
       }, 500);
     }
   };
@@ -165,7 +159,7 @@ export default function CindoAuthPage() {
                     value={username}
                     onChange={(e) => setUsername(e.target.value)}
                     placeholder="Masukkan username Anda..."
-                    className="w-full rounded-xl border border-slate-300 bg-white pl-10 pr-4 py-2.5 text-xs sm:text-sm outline-none transition-all focus:border-[#1664e8] focus:ring-1 focus:ring-[#1664e8] dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                    className="w-full rounded-xl border border-slate-300 bg-white pl-10 pr-4 py-2.5 text-xs sm:text-sm outline-none transition-all focus:border-brand-orange focus:ring-1 focus:ring-brand-orange dark:border-slate-700 dark:bg-slate-800 dark:text-white"
                   />
                 </div>
               </div>
@@ -182,7 +176,7 @@ export default function CindoAuthPage() {
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder="Masukkan password Anda..."
-                    className="w-full rounded-xl border border-slate-300 bg-white pl-10 pr-4 py-2.5 text-xs sm:text-sm outline-none transition-all focus:border-[#1664e8] focus:ring-1 focus:ring-[#1664e8] dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                    className="w-full rounded-xl border border-slate-300 bg-white pl-10 pr-4 py-2.5 text-xs sm:text-sm outline-none transition-all focus:border-brand-orange focus:ring-1 focus:ring-brand-orange dark:border-slate-700 dark:bg-slate-800 dark:text-white"
                   />
                 </div>
               </div>
@@ -190,7 +184,7 @@ export default function CindoAuthPage() {
               <button
                 type="submit"
                 disabled={isLoading}
-                className="w-full flex items-center justify-center gap-2 rounded-xl bg-[#1664e8] py-3 text-xs sm:text-sm font-bold text-white shadow-lg transition-all hover:bg-blue-700 active:scale-95 disabled:opacity-50 mt-2"
+                className="w-full flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-brand-orange to-orange-600 py-3 text-xs sm:text-sm font-bold text-white shadow-lg transition-all hover:from-orange-600 hover:to-orange-700 active:scale-95 disabled:opacity-50 mt-2"
               >
                 <span>{isLoading ? "Memproses..." : "Masuk ke Cindo"}</span>
                 <ArrowRight className="h-4 w-4" />
@@ -205,7 +199,7 @@ export default function CindoAuthPage() {
                       setTab("register");
                       setErrorMsg(null);
                     }}
-                    className="font-bold text-[#1664e8] hover:underline"
+                    className="font-bold text-brand-orange hover:underline"
                   >
                     Daftar di sini
                   </button>
@@ -226,7 +220,7 @@ export default function CindoAuthPage() {
                     value={username}
                     onChange={(e) => setUsername(e.target.value)}
                     placeholder="Contoh: peserta123"
-                    className="w-full rounded-xl border border-slate-300 bg-white pl-10 pr-4 py-2.5 text-xs sm:text-sm outline-none transition-all focus:border-[#1664e8] focus:ring-1 focus:ring-[#1664e8] dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                    className="w-full rounded-xl border border-slate-300 bg-white pl-10 pr-4 py-2.5 text-xs sm:text-sm outline-none transition-all focus:border-brand-orange focus:ring-1 focus:ring-brand-orange dark:border-slate-700 dark:bg-slate-800 dark:text-white"
                   />
                 </div>
               </div>
@@ -243,7 +237,7 @@ export default function CindoAuthPage() {
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder="Minimal 4 karakter..."
-                    className="w-full rounded-xl border border-slate-300 bg-white pl-10 pr-4 py-2.5 text-xs sm:text-sm outline-none transition-all focus:border-[#1664e8] focus:ring-1 focus:ring-[#1664e8] dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                    className="w-full rounded-xl border border-slate-300 bg-white pl-10 pr-4 py-2.5 text-xs sm:text-sm outline-none transition-all focus:border-brand-orange focus:ring-1 focus:ring-brand-orange dark:border-slate-700 dark:bg-slate-800 dark:text-white"
                   />
                 </div>
               </div>
@@ -260,7 +254,7 @@ export default function CindoAuthPage() {
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
                     placeholder="Ulangi password..."
-                    className="w-full rounded-xl border border-slate-300 bg-white pl-10 pr-4 py-2.5 text-xs sm:text-sm outline-none transition-all focus:border-[#1664e8] focus:ring-1 focus:ring-[#1664e8] dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                    className="w-full rounded-xl border border-slate-300 bg-white pl-10 pr-4 py-2.5 text-xs sm:text-sm outline-none transition-all focus:border-brand-orange focus:ring-1 focus:ring-brand-orange dark:border-slate-700 dark:bg-slate-800 dark:text-white"
                   />
                 </div>
               </div>
@@ -268,7 +262,7 @@ export default function CindoAuthPage() {
               <button
                 type="submit"
                 disabled={isLoading}
-                className="w-full flex items-center justify-center gap-2 rounded-xl bg-emerald-600 py-3 text-xs sm:text-sm font-bold text-white shadow-lg transition-all hover:bg-emerald-700 active:scale-95 disabled:opacity-50 mt-2"
+                className="w-full flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-brand-orange to-orange-600 py-3 text-xs sm:text-sm font-bold text-white shadow-lg transition-all hover:from-orange-600 hover:to-orange-700 active:scale-95 disabled:opacity-50 mt-2"
               >
                 <span>{isLoading ? "Mendaftarkan..." : "Daftar Akun Baru"}</span>
                 <CheckCircle2 className="h-4 w-4" />
@@ -283,7 +277,7 @@ export default function CindoAuthPage() {
                       setTab("login");
                       setErrorMsg(null);
                     }}
-                    className="font-bold text-[#1664e8] hover:underline"
+                    className="font-bold text-brand-orange hover:underline"
                   >
                     Masuk di sini
                   </button>

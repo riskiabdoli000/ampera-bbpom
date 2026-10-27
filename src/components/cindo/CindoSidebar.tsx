@@ -187,14 +187,14 @@ export function CindoSidebar({ isOpen, onClose }: CindoSidebarProps) {
                     data-active={active ? "true" : "false"}
                     className={`group relative z-10 flex items-center gap-3 py-3 pl-4 pr-5 text-sm transition-colors duration-200 ${
                       active
-                        ? "font-bold text-[#0b2a6b] dark:text-blue-400"
+                        ? "font-black text-brand-orange dark:text-orange-400"
                         : "mr-4 rounded-xl font-medium text-white hover:bg-white/15"
                     }`}
                   >
                     <Icon
                       className={`h-[19px] w-[19px] shrink-0 transition-colors duration-200 ${
                         active
-                          ? "text-[#0b2a6b] dark:text-blue-400"
+                          ? "text-brand-orange dark:text-orange-400"
                           : "text-white/90 group-hover:text-white"
                       }`}
                     />

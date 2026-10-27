@@ -20,7 +20,7 @@ const RECENT_QUIZZES: QuizItem[] = [
     status: "published",
     questionsCount: 10,
     attempts: 248,
-    href: "/cindo/tes/identitas",
+    href: "/cindo/profile",
   },
   {
     id: "q-2",
@@ -70,7 +70,7 @@ export function CindoRecentQuizzes() {
         </div>
         <Link
           href="/cindo/materi"
-          className="inline-flex items-center gap-1 text-xs font-semibold text-slate-600 hover:text-teal-600 dark:text-slate-400 dark:hover:text-teal-400 transition-colors"
+          className="inline-flex items-center gap-1 text-xs font-semibold text-slate-600 hover:text-brand-orange dark:text-slate-400 dark:hover:text-orange-400 transition-colors"
         >
           <span>View all</span>
           <ExternalLink className="h-3.5 w-3.5" />
@@ -85,11 +85,11 @@ export function CindoRecentQuizzes() {
             className="group flex items-center justify-between rounded-xl p-2.5 transition-all hover:bg-slate-50 dark:hover:bg-slate-800/60"
           >
             <div className="flex items-center gap-3 min-w-0">
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-teal-50 text-teal-600 dark:bg-teal-950/70 dark:text-teal-400 group-hover:scale-105 transition-transform">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-orange-50 text-brand-orange dark:bg-orange-950/70 dark:text-orange-400 group-hover:scale-105 transition-transform">
                 <FileQuestion className="h-5 w-5" />
               </div>
               <div className="min-w-0">
-                <h3 className="text-xs sm:text-sm font-semibold text-slate-800 dark:text-slate-100 truncate group-hover:text-teal-600 dark:group-hover:text-teal-400 transition-colors">
+                <h3 className="text-xs sm:text-sm font-semibold text-slate-800 dark:text-slate-100 truncate group-hover:text-brand-orange dark:group-hover:text-orange-400 transition-colors">
                   {quiz.title}
                 </h3>
                 <div className="flex items-center gap-2 mt-0.5">
