@@ -5,8 +5,32 @@ import Image from "next/image";
 import { Star, Play } from "lucide-react";
 import { VideoModal } from "./VideoModal";
 
-export function VideoSection() {
+export interface LandingVideoData {
+  id?: number;
+  eyebrow: string;
+  judul: string;
+  deskripsi: string;
+  youtubeUrl: string;
+  youtubeId: string;
+}
+
+const DEFAULT_VIDEO: LandingVideoData = {
+  id: 1,
+  eyebrow: "DEDIKASI, INTEGRITAS & PELAYANAN PUBLIK PRIMA",
+  judul: "Mengenal Lebih Dekat Dedikasi & Layanan BBPOM di Palembang",
+  deskripsi:
+    "Saksikan dokumentasi resmi mengenai fasilitas laboratorium modern teruji, pengawasan peredaran terpadu, serta komitmen seluruh insan BPOM dalam melindungi kesehatan masyarakat Sumatera Selatan.",
+  youtubeUrl: "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+  youtubeId: "dQw4w9WgXcQ",
+};
+
+interface VideoSectionProps {
+  initialData?: LandingVideoData | null;
+}
+
+export function VideoSection({ initialData }: VideoSectionProps) {
   const [videoOpen, setVideoOpen] = useState(false);
+  const video = initialData || DEFAULT_VIDEO;
 
   return (
     <>
@@ -27,7 +51,7 @@ export function VideoSection() {
               priority={false}
             />
 
-            {/* Cinematic Moody Overlay (Mengikuti estetika gelap elegan pada referensi) */}
+            {/* Cinematic Moody Overlay */}
             <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-navy-950/75 to-black/60 dark:from-black/95 dark:via-slate-950/80 dark:to-black/70" />
             
             {/* Subtle Vignette & Radial Light */}
@@ -50,19 +74,17 @@ export function VideoSection() {
 
               {/* Eyebrow / Tagline Uppercase */}
               <p className="text-[11px] sm:text-xs md:text-sm font-semibold tracking-[0.24em] sm:tracking-[0.28em] text-white/85 uppercase mb-3 sm:mb-4">
-                DEDIKASI, INTEGRITAS &amp; PELAYANAN PUBLIK PRIMA
+                {video.eyebrow || DEFAULT_VIDEO.eyebrow}
               </p>
 
-              {/* Main Headline (Serif Font Elegan seperti pada referensi gambar) */}
+              {/* Main Headline */}
               <h2 className="font-serif text-3xl sm:text-4xl md:text-5xl lg:text-6xl text-white font-normal tracking-tight leading-[1.18] drop-shadow-md max-w-3xl">
-                Mengenal Lebih Dekat Dedikasi &amp; Layanan BBPOM di Palembang
+                {video.judul || DEFAULT_VIDEO.judul}
               </h2>
 
               {/* Description Paragraph */}
               <p className="text-xs sm:text-sm md:text-base text-white/75 max-w-2xl mx-auto leading-relaxed mt-4 sm:mt-5 font-light">
-                Saksikan dokumentasi resmi mengenai fasilitas laboratorium modern teruji,
-                pengawasan peredaran terpadu, serta komitmen seluruh insan BPOM dalam melindungi kesehatan
-                masyarakat Sumatera Selatan.
+                {video.deskripsi || DEFAULT_VIDEO.deskripsi}
               </p>
 
               {/* Action Button: Interactive Watch Video Button */}
@@ -89,7 +111,7 @@ export function VideoSection() {
       </section>
 
       {/* Video Modal Player Pop-up */}
-      <VideoModal isOpen={videoOpen} onClose={() => setVideoOpen(false)} />
+      <VideoModal isOpen={videoOpen} onClose={() => setVideoOpen(false)} video={video} />
     </>
   );
 }

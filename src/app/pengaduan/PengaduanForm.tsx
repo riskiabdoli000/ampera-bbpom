@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useCallback } from "react";
 import Link from "next/link";
 import {
   User,
@@ -22,12 +22,15 @@ import {
   RefreshCw,
   Eye,
   FileCheck2,
+  Info,
+  Loader2,
 } from "lucide-react";
 import {
   submitPengaduanAction,
   type PengaduanFormState,
   type PengaduanResponse,
 } from "@/app/actions/pengaduan";
+import { lookupNikAction } from "@/app/actions/lookup-nik";
 
 const MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024; // 10MB
 const BUKTI_ALLOWED_EXTS = [".jpg", ".jpeg", ".png"];
@@ -46,9 +49,18 @@ export function PengaduanForm() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [copiedCode, setCopiedCode] = useState(false);
   const [submissionResult, setSubmissionResult] = useState<PengaduanResponse | null>(null);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+
+  // NIK Lookup States
+  const [isCheckingNik, setIsCheckingNik] = useState(false);
+  const [nikLookupStatus, setNikLookupStatus] = useState<{
+    status: "idle" | "found" | "not_found";
+    message: string;
+  }>({ status: "idle", message: "" });
 
   // Form State: Data Teks
   const [formData, setFormData] = useState<PengaduanFormState>({
+    nik: "",
     nama: "",
     email: "",
     alamat: "",
@@ -71,6 +83,61 @@ export function PengaduanForm() {
   // Validation Errors
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
 
+  const nikRef = useRef(formData.nik);
+  nikRef.current = formData.nik;
+  const lastCheckedNikRef = useRef<string>("");
+
+  // Handler: Auto-fill data pemohon saat NIK valid ditemukan
+  const performNikLookup = useCallback(async (cleanNik: string) => {
+    if (!cleanNik || cleanNik.length < 8) return;
+    if (cleanNik === lastCheckedNikRef.current) return;
+
+    lastCheckedNikRef.current = cleanNik;
+    setIsCheckingNik(true);
+
+    try {
+      const res = await lookupNikAction(cleanNik);
+      if (nikRef.current.trim().replace(/\D/g, "") === cleanNik) {
+        if (res.found && res.data) {
+          setNikLookupStatus({
+            status: "found",
+            message: `${res.message}. Data Anda telah diisikan otomatis.`,
+          });
+          setFormData((prev) => ({
+            ...prev,
+            nama: res.data?.nama || prev.nama,
+            email: res.data?.email || prev.email,
+            alamat: res.data?.alamat || res.data?.asalInstansi || prev.alamat,
+            telepon: res.data?.telepon || prev.telepon,
+          }));
+          setErrors((prev) => {
+            const next = { ...prev };
+            delete next.nik;
+            delete next.nama;
+            delete next.email;
+            delete next.alamat;
+            delete next.telepon;
+            return next;
+          });
+        } else {
+          setNikLookupStatus({
+            status: "not_found",
+            message: res.message || "NIK belum terdaftar di sistem. Silakan lengkapi formulir di bawah ini.",
+          });
+        }
+      }
+    } catch {
+      if (nikRef.current.trim().replace(/\D/g, "") === cleanNik) {
+        setNikLookupStatus({
+          status: "not_found",
+          message: "Layanan cek NIK sementara offline. Silakan lengkapi formulir secara manual.",
+        });
+      }
+    } finally {
+      setIsCheckingNik(false);
+    }
+  }, []);
+
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
   ) => {
@@ -84,6 +151,22 @@ export function PengaduanForm() {
         delete newErr[name];
         return newErr;
       });
+    }
+
+    if (name === "nik") {
+      const clean = value.trim().replace(/\D/g, "");
+      if (clean.length === 16) {
+        performNikLookup(clean);
+      } else {
+        setNikLookupStatus({ status: "idle", message: "" });
+      }
+    }
+  };
+
+  const handleNikBlur = () => {
+    const clean = formData.nik.trim().replace(/\D/g, "");
+    if (clean.length >= 8) {
+      performNikLookup(clean);
     }
   };
 
@@ -196,6 +279,14 @@ export function PengaduanForm() {
   // Validasi Step 1: Data Identitas Pelapor
   const validateStep1 = () => {
     const errs: { [key: string]: string } = {};
+
+    const cleanNik = formData.nik.trim().replace(/\D/g, "");
+    if (!formData.nik.trim()) {
+      errs.nik = "Nomor Induk Kependudukan (NIK) pelapor wajib diisi";
+    } else if (cleanNik.length < 8 || cleanNik.length > 16) {
+      errs.nik = "NIK harus terdiri dari 8 hingga 16 digit angka";
+    }
+
     if (!formData.nama.trim()) {
       errs.nama = "Nama lengkap pelapor wajib diisi";
     }
@@ -282,44 +373,35 @@ export function PengaduanForm() {
       return;
     }
 
+    setSubmitError(null);
     setIsSubmitting(true);
     try {
-      const payload: PengaduanFormState = {
-        ...formData,
-        namaBuktiFoto: buktiFile?.name || undefined,
-        ukuranBuktiFoto: buktiFile ? formatFileSize(buktiFile.size) : undefined,
-        namaKtp: ktpFile?.name || undefined,
-        ukuranKtp: ktpFile ? formatFileSize(ktpFile.size) : undefined,
-      };
+      const body = new FormData();
+      body.append("nik", formData.nik);
+      body.append("nama", formData.nama);
+      body.append("telepon", formData.telepon);
+      body.append("email", formData.email);
+      body.append("alamat", formData.alamat);
+      body.append("isiPengaduan", formData.isiPengaduan);
+      if (buktiFile) body.append("buktiFile", buktiFile);
+      if (ktpFile) body.append("ktpFile", ktpFile);
 
-      const response = await submitPengaduanAction(payload);
-      setSubmissionResult(response);
-      window.scrollTo({ top: 200, behavior: "smooth" });
+      const response = await submitPengaduanAction(body);
+      if (response.success) {
+        setSubmissionResult(response);
+        window.scrollTo({ top: 200, behavior: "smooth" });
+      } else {
+        setSubmitError(response.message || "Gagal menyimpan laporan pengaduan ke sistem.");
+        window.scrollTo({ top: 320, behavior: "smooth" });
+      }
     } catch (err) {
       console.error("Gagal mengirim pengaduan:", err);
-      // Fallback response bila terjadi kendala jaringan
-      const fallbackCode = `AMP-ADU-${new Date().getFullYear()}${String(new Date().getMonth() + 1).padStart(2, "0")}-${Math.floor(1000 + Math.random() * 9000)}`;
-      setSubmissionResult({
-        success: true,
-        message: "Laporan pengaduan berhasil diterima dan tiket pendaftaran telah diterbitkan.",
-        kodePengajuan: fallbackCode,
-        data: {
-          ...formData,
-          namaBuktiFoto: buktiFile?.name,
-          ukuranBuktiFoto: buktiFile ? formatFileSize(buktiFile.size) : undefined,
-          namaKtp: ktpFile?.name,
-          ukuranKtp: ktpFile ? formatFileSize(ktpFile.size) : undefined,
-          tanggalPengajuan: new Date().toLocaleDateString("id-ID", {
-            weekday: "long",
-            day: "numeric",
-            month: "long",
-            year: "numeric",
-          }),
-          estimasiWaktuTanggapan: "1 - 3 Hari Kerja",
-          status: "MENUNGGU_VERIFIKASI",
-        },
-      });
-      window.scrollTo({ top: 200, behavior: "smooth" });
+      setSubmitError(
+        err instanceof Error
+          ? err.message
+          : "Terjadi gangguan koneksi jaringan saat menyimpan data. Silakan coba kembali."
+      );
+      window.scrollTo({ top: 320, behavior: "smooth" });
     } finally {
       setIsSubmitting(false);
     }
@@ -337,8 +419,10 @@ export function PengaduanForm() {
 
   const handleReset = () => {
     setSubmissionResult(null);
+    setSubmitError(null);
     setCurrentStep(1);
     setFormData({
+      nik: "",
       nama: "",
       email: "",
       alamat: "",
@@ -349,6 +433,7 @@ export function PengaduanForm() {
     setBuktiPreview(null);
     setKtpFile(null);
     setKtpPreview(null);
+    setNikLookupStatus({ status: "idle", message: "" });
     setErrors({});
   };
 
@@ -408,6 +493,10 @@ export function PengaduanForm() {
                 <span>Data Pelapor</span>
               </h3>
               <div className="bg-slate-50 dark:bg-slate-800/50 rounded-2xl p-4 space-y-2.5">
+                <div>
+                  <span className="text-xs text-ink-soft dark:text-slate-400 block">NIK:</span>
+                  <span className="font-mono font-semibold text-navy-900 dark:text-white">{submissionResult.data.nik}</span>
+                </div>
                 <div>
                   <span className="text-xs text-ink-soft dark:text-slate-400 block">Nama Pelapor:</span>
                   <span className="font-semibold text-navy-900 dark:text-white">{submissionResult.data.nama}</span>
@@ -735,6 +824,17 @@ export function PengaduanForm() {
           </div>
         </div>
 
+        {/* Alert Error jika ada kendala saat submit ke database */}
+        {submitError && (
+          <div className="mb-6 p-4 rounded-2xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800 text-rose-800 dark:text-rose-200 flex items-start gap-3">
+            <AlertCircle className="w-5 h-5 shrink-0 text-rose-600 dark:text-rose-400 mt-0.5" />
+            <div className="text-sm">
+              <p className="font-bold">Pengaduan Gagal Diproses</p>
+              <p className="mt-0.5 text-xs text-rose-700 dark:text-rose-300">{submitError}</p>
+            </div>
+          </div>
+        )}
+
         {/* =================================================================== */}
         {/* 2. FORM BODY BERDASARKAN CURRENT STEP                               */}
         {/* =================================================================== */}
@@ -753,7 +853,75 @@ export function PengaduanForm() {
                 </p>
               </div>
 
+              {/* Status NIK Lookup Notification */}
+              {nikLookupStatus.status === "found" && (
+                <div className="p-3.5 rounded-2xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-xs sm:text-sm text-emerald-700 dark:text-emerald-300 flex items-center gap-2.5">
+                  <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-600 dark:text-emerald-400" />
+                  <span>{nikLookupStatus.message}</span>
+                </div>
+              )}
+              {nikLookupStatus.status === "not_found" && (
+                <div className="p-3.5 rounded-2xl bg-sky-50 dark:bg-sky-950/40 border border-sky-200 dark:border-sky-800 text-xs sm:text-sm text-sky-800 dark:text-sky-300 flex items-center gap-2.5">
+                  <Info className="w-4 h-4 shrink-0 text-sky-600 dark:text-sky-400" />
+                  <span>{nikLookupStatus.message}</span>
+                </div>
+              )}
+
               <div className="grid grid-cols-1 md:grid-cols-2 gap-5 sm:gap-6">
+                {/* Field 1: NIK (Nomor Induk Kependudukan) */}
+                <div className="md:col-span-2">
+                  <div className="flex items-center justify-between mb-2">
+                    <label
+                      htmlFor="nik"
+                      className="block text-xs sm:text-[13px] font-bold text-navy-900 dark:text-slate-200"
+                    >
+                      NIK (Nomor Induk Kependudukan) <span className="text-red-500">*</span>
+                    </label>
+                    {isCheckingNik && (
+                      <span className="inline-flex items-center gap-1.5 text-xs font-medium text-sky-600 dark:text-sky-400">
+                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                        Mengecek NIK otomatis...
+                      </span>
+                    )}
+                  </div>
+                  <div className="relative">
+                    <input
+                      id="nik"
+                      name="nik"
+                      type="text"
+                      inputMode="numeric"
+                      maxLength={16}
+                      value={formData.nik}
+                      onChange={handleChange}
+                      onBlur={handleNikBlur}
+                      placeholder="Masukkan 16 digit NIK KTP Anda"
+                      className={`w-full rounded-2xl border bg-white dark:bg-slate-950 px-4 py-3.5 pr-11 text-sm text-navy-900 dark:text-white placeholder:text-slate-400 focus:outline-hidden transition-all duration-200 ${
+                        errors.nik
+                          ? "border-red-400 focus:ring-2 focus:ring-red-400/20"
+                          : nikLookupStatus.status === "found"
+                          ? "border-emerald-400 focus:ring-2 focus:ring-emerald-400/20"
+                          : "border-slate-200 dark:border-slate-700/80 focus:border-brand-orange focus:ring-2 focus:ring-brand-orange/20"
+                      }`}
+                    />
+                    <div className="absolute right-4 top-1/2 -translate-y-1/2 flex items-center pointer-events-none">
+                      {isCheckingNik ? (
+                        <Loader2 className="w-5 h-5 animate-spin text-sky-600 dark:text-sky-400" />
+                      ) : nikLookupStatus.status === "found" ? (
+                        <CheckCircle2 className="w-5 h-5 text-emerald-500" />
+                      ) : null}
+                    </div>
+                  </div>
+                  {errors.nik ? (
+                    <p className="mt-1.5 text-xs text-red-500 flex items-center gap-1">
+                      <AlertCircle className="w-3.5 h-3.5" />
+                      <span>{errors.nik}</span>
+                    </p>
+                  ) : (
+                    <p className="mt-1 text-[11px] sm:text-xs text-ink-soft dark:text-slate-400">
+                      Masukkan 16 digit NIK KTP. Data identitas Anda akan otomatis terisi jika sudah pernah terdaftar di BBPOM.
+                    </p>
+                  )}
+                </div>
                 {/* Field: Nama Lengkap */}
                 <div>
                   <label
@@ -1205,6 +1373,10 @@ export function PengaduanForm() {
                     </button>
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs sm:text-sm">
+                    <div>
+                      <span className="text-slate-400 block text-xs">NIK:</span>
+                      <span className="font-mono font-semibold text-navy-900 dark:text-white">{formData.nik}</span>
+                    </div>
                     <div>
                       <span className="text-slate-400 block text-xs">Nama Lengkap:</span>
                       <span className="font-semibold text-navy-900 dark:text-white">{formData.nama}</span>

@@ -223,6 +223,7 @@ export async function submitPermintaanInformasiAction(
         tamuId: tamu.id,
         layananId: layanan.id,
         informasiDibutuhkan: cleanInformasi,
+        kategoriInformasi: cleanKategori,
         status: "MENUNGGU_VERIFIKASI",
       },
     });
@@ -234,11 +235,14 @@ export async function submitPermintaanInformasiAction(
       data: responseData,
     };
   } catch (error) {
-    console.warn("[Permintaan Informasi Action] Database offline / unconfigured, using resilient response:", error);
+    console.error("[Permintaan Informasi Action] Database error:", error);
     return {
-      success: true,
-      message: "Formulir permintaan informasi berhasil diterima dan tiket pendaftaran telah diterbitkan.",
-      kodePengajuan,
+      success: false,
+      message:
+        error instanceof Error
+          ? `Gagal menyimpan data ke sistem database: ${error.message}`
+          : "Terjadi gangguan sistem saat menyimpan permohonan.",
+      kodePengajuan: "",
       data: responseData,
     };
   }

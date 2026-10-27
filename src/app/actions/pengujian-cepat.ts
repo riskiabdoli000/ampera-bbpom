@@ -3,6 +3,7 @@
 import { prisma } from "@/lib/prisma";
 
 export interface PengujianCepatFormState {
+  nik: string;
   nama: string;
   email: string;
   alamat: string;
@@ -26,8 +27,45 @@ export interface PengujianCepatResponse {
 export async function submitPengujianCepatAction(
   formData: PengujianCepatFormState
 ): Promise<PengujianCepatResponse> {
+  const cleanNik = (formData.nik || "").trim().replace(/\D/g, "");
+  const cleanNama = (formData.nama || "").trim();
+  const cleanTelepon = (formData.telepon || "").trim();
+  const cleanEmail = (formData.email || "").trim();
+  const cleanAlamat = (formData.alamat || "").trim();
+  const cleanProduk = (formData.produkDicurigai || "").trim();
+  const cleanAlasan = (formData.alasanKecurigaan || "").trim();
+  const cleanRincian = (formData.rincianProduk || "").trim();
+
   // 1. Validasi Input Dasar
-  if (!formData.nama?.trim()) {
+  if (!cleanNik) {
+    return {
+      success: false,
+      message: "Nomor Induk Kependudukan (NIK) pemohon wajib diisi.",
+      kodePengajuan: "",
+      data: {
+        ...formData,
+        tanggalPengajuan: new Date().toISOString(),
+        estimasiHasil: "15 - 30 Menit",
+        status: "MENUNGGU_VERIFIKASI",
+      },
+    };
+  }
+
+  if (cleanNik.length < 8 || cleanNik.length > 16) {
+    return {
+      success: false,
+      message: "Format NIK tidak valid (harus 8 hingga 16 digit angka).",
+      kodePengajuan: "",
+      data: {
+        ...formData,
+        tanggalPengajuan: new Date().toISOString(),
+        estimasiHasil: "15 - 30 Menit",
+        status: "MENUNGGU_VERIFIKASI",
+      },
+    };
+  }
+
+  if (!cleanNama) {
     return {
       success: false,
       message: "Nama pemohon wajib diisi.",
@@ -41,7 +79,7 @@ export async function submitPengujianCepatAction(
     };
   }
 
-  if (!formData.telepon?.trim()) {
+  if (!cleanTelepon) {
     return {
       success: false,
       message: "Nomor telepon / WhatsApp wajib diisi.",
@@ -55,7 +93,7 @@ export async function submitPengujianCepatAction(
     };
   }
 
-  if (!formData.alamat?.trim()) {
+  if (!cleanAlamat) {
     return {
       success: false,
       message: "Alamat domisili pemohon wajib diisi.",
@@ -69,7 +107,7 @@ export async function submitPengujianCepatAction(
     };
   }
 
-  if (!formData.produkDicurigai?.trim()) {
+  if (!cleanProduk) {
     return {
       success: false,
       message: "Pilihan produk yang dicurigai wajib dipilih.",
@@ -83,7 +121,7 @@ export async function submitPengujianCepatAction(
     };
   }
 
-  if (!formData.alasanKecurigaan?.trim()) {
+  if (!cleanAlasan) {
     return {
       success: false,
       message: "Alasan kecurigaan wajib dipilih.",
@@ -97,7 +135,7 @@ export async function submitPengujianCepatAction(
     };
   }
 
-  if (!formData.rincianProduk?.trim()) {
+  if (!cleanRincian) {
     return {
       success: false,
       message: "Rincian produk (lokasi/pasar/penjual) wajib diisi.",
@@ -127,14 +165,22 @@ export async function submitPengujianCepatAction(
 
   const responseData = {
     ...formData,
+    nik: cleanNik,
+    nama: cleanNama,
+    telepon: cleanTelepon,
+    email: cleanEmail,
+    alamat: cleanAlamat,
+    produkDicurigai: cleanProduk,
+    alasanKecurigaan: cleanAlasan,
+    rincianProduk: cleanRincian,
     tanggalPengajuan: tanggalFormat,
     estimasiHasil: "15 - 30 Menit",
     status: "MENUNGGU_PENYERAHAN_SAMPEL",
   };
 
-  // 3. Simpan ke Database Prisma dengan Fallback Aman
+  // 3. Simpan ke Database Prisma
   try {
-    // Cari layanan UJI_CEPAT
+    // Cari atau buat master layanan UJI_CEPAT
     let layanan = await prisma.layanan.findUnique({
       where: { kode: "UJI_CEPAT" },
     });
@@ -150,40 +196,29 @@ export async function submitPengujianCepatAction(
       });
     }
 
-    // Buat NIK sintetis jika belum ada (karena NIK adalah unique identifier di schema Tamu)
-    const cleanPhone = formData.telepon.replace(/\D/g, "");
-    const syntheticNik = `1600${yearMonth}${cleanPhone.slice(-6).padStart(6, "0")}`.slice(0, 16);
-
-    // Cari atau buat Tamu
-    let tamu = await prisma.tamu.findFirst({
-      where: {
-        OR: [
-          { telepon: formData.telepon.trim() },
-          { email: formData.email?.trim() || undefined },
-          { nik: syntheticNik },
-        ],
-      },
+    // Cari atau buat/update Tamu berdasarkan NIK resmi
+    let tamu = await prisma.tamu.findUnique({
+      where: { nik: cleanNik },
     });
 
     if (!tamu) {
       tamu = await prisma.tamu.create({
         data: {
-          nik: syntheticNik,
-          nama: formData.nama.trim(),
-          email: formData.email?.trim() || null,
-          telepon: formData.telepon.trim(),
-          alamat: formData.alamat.trim(),
+          nik: cleanNik,
+          nama: cleanNama,
+          email: cleanEmail || null,
+          telepon: cleanTelepon,
+          alamat: cleanAlamat,
         },
       });
     } else {
-      // Update data terbaru tamu
       tamu = await prisma.tamu.update({
         where: { id: tamu.id },
         data: {
-          nama: formData.nama.trim(),
-          email: formData.email?.trim() || tamu.email,
-          alamat: formData.alamat.trim(),
-          telepon: formData.telepon.trim(),
+          nama: cleanNama,
+          email: cleanEmail || tamu.email,
+          telepon: cleanTelepon || tamu.telepon,
+          alamat: cleanAlamat || tamu.alamat,
         },
       });
     }
@@ -194,9 +229,9 @@ export async function submitPengujianCepatAction(
         kodePengajuan,
         tamuId: tamu.id,
         layananId: layanan.id,
-        produkDicurigai: formData.produkDicurigai.trim(),
-        alasanKecurigaan: formData.alasanKecurigaan.trim(),
-        rincianProduk: formData.rincianProduk.trim(),
+        produkDicurigai: cleanProduk,
+        alasanKecurigaan: cleanAlasan,
+        rincianProduk: cleanRincian,
         status: "MENUNGGU_VERIFIKASI",
       },
     });
@@ -208,12 +243,14 @@ export async function submitPengujianCepatAction(
       data: responseData,
     };
   } catch (error) {
-    console.warn("[Pengujian Cepat Action] Database offline / unconfigured, using resilient response:", error);
-    // Tetap kembalikan response sukses agar UX pengguna tidak terputus bila DB sedang offline
+    console.error("[Pengujian Cepat Action] Database error:", error);
     return {
-      success: true,
-      message: "Formulir berhasil diterima dan kode pendaftaran resmi telah diterbitkan.",
-      kodePengajuan,
+      success: false,
+      message:
+        error instanceof Error
+          ? `Gagal menyimpan permohonan ke sistem database: ${error.message}`
+          : "Terjadi gangguan sistem saat menyimpan data.",
+      kodePengajuan: "",
       data: responseData,
     };
   }

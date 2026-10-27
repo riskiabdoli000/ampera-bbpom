@@ -44,6 +44,90 @@ export async function getHeroSettings() {
   };
 }
 
+export interface LandingHeroSlide {
+  id: number;
+  title: string;
+  alt: string;
+  image: string;
+  mobilePosition?: string;
+}
+
+export interface LandingHeroData {
+  konten: {
+    id: number;
+    judul: string;
+    subjudul: string;
+    ctaUtamaLabel: string;
+    ctaSekunderLabel?: string | null;
+  };
+  slides: LandingHeroSlide[];
+  video: {
+    eyebrow: string;
+    judul: string;
+    deskripsi: string;
+    youtubeUrl: string;
+    youtubeId: string;
+  };
+}
+
+/**
+ * Mengambil data hero section dan video card untuk landing page publik dari database.
+ */
+export async function getLandingHeroData(): Promise<LandingHeroData> {
+  const [konten, slides, video] = await Promise.all([
+    prisma.heroKonten.findUnique({ where: { id: 1 } }),
+    prisma.heroSlide.findMany({
+      where: { isActive: true },
+      orderBy: [{ urutan: "asc" }, { id: "asc" }],
+    }),
+    prisma.videoProfil.findUnique({ where: { id: 1 } }),
+  ]);
+
+  return {
+    konten: konten || {
+      id: 1,
+      judul: "Obat & Pangan yang Aman, untuk Anda",
+      subjudul:
+        "AMPERA adalah inovasi Balai Besar POM di Palembang untuk layanan informasi, pengaduan, dan pengujian cepat sediaan farmasi dan pangan olahan.",
+      ctaUtamaLabel: "Akses Layanan AMPERA",
+      ctaSekunderLabel: "",
+    },
+    slides:
+      slides.length > 0
+        ? slides.map((s, index) => ({
+            id: s.id,
+            title: s.title,
+            alt: s.alt || s.title,
+            image: s.imageUrl,
+            mobilePosition: index === 0 ? "80% center" : "50% center",
+          }))
+        : [
+            {
+              id: 1,
+              image: "/assets-landingpage/hero2.png",
+              mobilePosition: "80% center",
+              alt: "Jembatan Ampera dan Sungai Musi Palembang",
+              title: "Jembatan Ampera Palembang",
+            },
+            {
+              id: 2,
+              image: "/assets-landingpage/hero1.png",
+              mobilePosition: "50% center",
+              alt: "Gedung Balai Besar POM di Palembang",
+              title: "Gedung BBPOM Palembang",
+            },
+          ],
+    video: video || {
+      eyebrow: "DEDIKASI, INTEGRITAS & PELAYANAN PUBLIK PRIMA",
+      judul: "Profil Video AMPERA",
+      deskripsi:
+        "Kenali layanan pengawasan obat dan makanan di Bumi Sriwijaya.",
+      youtubeUrl: "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+      youtubeId: "dQw4w9WgXcQ",
+    },
+  };
+}
+
 export async function saveHeroKontenAction(data: {
   judul: string;
   subjudul: string;

@@ -1,8 +1,10 @@
 "use server";
 
 import { prisma } from "@/lib/prisma";
+import { uploadFileOrDocument } from "@/lib/storage";
 
 export interface KeterbukaanInformasiFormState {
+  nik: string;
   nama: string;
   email: string;
   alamat: string;
@@ -26,16 +28,95 @@ export interface KeterbukaanInformasiResponse {
 }
 
 export async function submitKeterbukaanInformasiAction(
-  formData: KeterbukaanInformasiFormState
+  input: FormData | KeterbukaanInformasiFormState
 ): Promise<KeterbukaanInformasiResponse> {
+  let rawNik = "";
+  let rawNama = "";
+  let rawTelepon = "";
+  let rawEmail = "";
+  let rawAlamat = "";
+  let rawCatatan = "";
+  let formulirFile: File | null = null;
+  let ktpFile: File | null = null;
+  let namaFormulirPdf: string | undefined = undefined;
+  let namaKtp: string | undefined = undefined;
+
+  if (input instanceof FormData) {
+    rawNik = (input.get("nik") as string) || "";
+    rawNama = (input.get("nama") as string) || "";
+    rawTelepon = (input.get("telepon") as string) || "";
+    rawEmail = (input.get("email") as string) || "";
+    rawAlamat = (input.get("alamat") as string) || "";
+    rawCatatan = (input.get("catatanTambahan") as string) || "";
+    formulirFile = input.get("formulirPdf") as File | null;
+    ktpFile = input.get("ktpFile") as File | null;
+    namaFormulirPdf = formulirFile?.name || (input.get("namaFormulirPdf") as string) || undefined;
+    namaKtp = ktpFile?.name || (input.get("namaKtp") as string) || undefined;
+  } else {
+    rawNik = input.nik;
+    rawNama = input.nama;
+    rawTelepon = input.telepon;
+    rawEmail = input.email;
+    rawAlamat = input.alamat;
+    rawCatatan = input.catatanTambahan || "";
+    namaFormulirPdf = input.namaFormulirPdf;
+    namaKtp = input.namaKtp;
+  }
+
+  const cleanNik = (rawNik || "").trim().replace(/\D/g, "");
+  const cleanNama = (rawNama || "").trim();
+  const cleanTelepon = (rawTelepon || "").trim();
+  const cleanEmail = (rawEmail || "").trim();
+  const cleanAlamat = (rawAlamat || "").trim();
+  const cleanCatatan = (rawCatatan || "").trim();
+
+  const baseFormData: KeterbukaanInformasiFormState = {
+    nik: cleanNik,
+    nama: cleanNama,
+    telepon: cleanTelepon,
+    email: cleanEmail,
+    alamat: cleanAlamat,
+    namaFormulirPdf,
+    namaKtp,
+    catatanTambahan: cleanCatatan,
+  };
+
   // 1. Validasi Input Dasar
-  if (!formData.nama?.trim()) {
+  if (!cleanNik) {
+    return {
+      success: false,
+      message: "Nomor Induk Kependudukan (NIK) pemohon wajib diisi.",
+      kodePengajuan: "",
+      data: {
+        ...baseFormData,
+        tanggalPengajuan: new Date().toISOString(),
+        estimasiWaktuTanggapan: "1 - 3 Hari Kerja",
+        status: "MENUNGGU_VERIFIKASI",
+      },
+    };
+  }
+
+  if (cleanNik.length < 8 || cleanNik.length > 16) {
+    return {
+      success: false,
+      message: "Format NIK tidak valid (harus 8 hingga 16 digit angka).",
+      kodePengajuan: "",
+      data: {
+        ...baseFormData,
+        tanggalPengajuan: new Date().toISOString(),
+        estimasiWaktuTanggapan: "1 - 3 Hari Kerja",
+        status: "MENUNGGU_VERIFIKASI",
+      },
+    };
+  }
+
+  if (!cleanNama) {
     return {
       success: false,
       message: "Nama pemohon wajib diisi.",
       kodePengajuan: "",
       data: {
-        ...formData,
+        ...baseFormData,
         tanggalPengajuan: new Date().toISOString(),
         estimasiWaktuTanggapan: "1 - 3 Hari Kerja",
         status: "MENUNGGU_VERIFIKASI",
@@ -43,13 +124,13 @@ export async function submitKeterbukaanInformasiAction(
     };
   }
 
-  if (!formData.telepon?.trim()) {
+  if (!cleanTelepon) {
     return {
       success: false,
       message: "Nomor WhatsApp / telepon pemohon wajib diisi.",
       kodePengajuan: "",
       data: {
-        ...formData,
+        ...baseFormData,
         tanggalPengajuan: new Date().toISOString(),
         estimasiWaktuTanggapan: "1 - 3 Hari Kerja",
         status: "MENUNGGU_VERIFIKASI",
@@ -57,13 +138,13 @@ export async function submitKeterbukaanInformasiAction(
     };
   }
 
-  if (!formData.email?.trim()) {
+  if (!cleanEmail) {
     return {
       success: false,
       message: "Email aktif pemohon wajib diisi.",
       kodePengajuan: "",
       data: {
-        ...formData,
+        ...baseFormData,
         tanggalPengajuan: new Date().toISOString(),
         estimasiWaktuTanggapan: "1 - 3 Hari Kerja",
         status: "MENUNGGU_VERIFIKASI",
@@ -71,41 +152,13 @@ export async function submitKeterbukaanInformasiAction(
     };
   }
 
-  if (!formData.alamat?.trim()) {
+  if (!cleanAlamat) {
     return {
       success: false,
       message: "Alamat domisili pemohon wajib diisi.",
       kodePengajuan: "",
       data: {
-        ...formData,
-        tanggalPengajuan: new Date().toISOString(),
-        estimasiWaktuTanggapan: "1 - 3 Hari Kerja",
-        status: "MENUNGGU_VERIFIKASI",
-      },
-    };
-  }
-
-  if (!formData.namaFormulirPdf?.trim()) {
-    return {
-      success: false,
-      message: "Formulir rincian permintaan informasi publik (PDF) wajib diunggah.",
-      kodePengajuan: "",
-      data: {
-        ...formData,
-        tanggalPengajuan: new Date().toISOString(),
-        estimasiWaktuTanggapan: "1 - 3 Hari Kerja",
-        status: "MENUNGGU_VERIFIKASI",
-      },
-    };
-  }
-
-  if (!formData.namaKtp?.trim()) {
-    return {
-      success: false,
-      message: "Identitas pemohon (KTP) wajib diunggah.",
-      kodePengajuan: "",
-      data: {
-        ...formData,
+        ...baseFormData,
         tanggalPengajuan: new Date().toISOString(),
         estimasiWaktuTanggapan: "1 - 3 Hari Kerja",
         status: "MENUNGGU_VERIFIKASI",
@@ -128,15 +181,49 @@ export async function submitKeterbukaanInformasiAction(
   });
 
   const responseData = {
-    ...formData,
+    ...baseFormData,
     tanggalPengajuan: tanggalFormat,
     estimasiWaktuTanggapan: "1 - 3 Hari Kerja",
     status: "MENUNGGU_VERIFIKASI",
   };
 
-  // 3. Simpan ke Database Prisma dengan Fallback Aman
+  // 3. Upload Berkas ke Storage
+  let dokumenPendukungUrl: string | null = null;
+  let ktpUrl: string | null = null;
+
   try {
-    // Cari atau buat layanan KIP (sesuai schema enum master Layanan Ampera-BBPOM)
+    if (formulirFile && formulirFile.size > 0) {
+      const uploadFormulir = await uploadFileOrDocument(formulirFile, "kip");
+      dokumenPendukungUrl = uploadFormulir.url;
+    }
+  } catch (err) {
+    console.error("[Keterbukaan Informasi Action] Gagal upload formulir PDF:", err);
+    return {
+      success: false,
+      message: `Gagal mengunggah formulir PDF: ${err instanceof Error ? err.message : "Kesalahan berkas"}`,
+      kodePengajuan: "",
+      data: responseData,
+    };
+  }
+
+  try {
+    if (ktpFile && ktpFile.size > 0) {
+      const uploadKtp = await uploadFileOrDocument(ktpFile, "ktp");
+      ktpUrl = uploadKtp.url;
+    }
+  } catch (err) {
+    console.error("[Keterbukaan Informasi Action] Gagal upload KTP:", err);
+    return {
+      success: false,
+      message: `Gagal mengunggah identitas KTP: ${err instanceof Error ? err.message : "Kesalahan berkas"}`,
+      kodePengajuan: "",
+      data: responseData,
+    };
+  }
+
+  // 4. Simpan ke Database Prisma
+  try {
+    // Cari atau buat layanan KIP
     let layanan = await prisma.layanan.findUnique({
       where: { kode: "KIP" },
     });
@@ -152,56 +239,43 @@ export async function submitKeterbukaanInformasiAction(
       });
     }
 
-    // Buat NIK sintetis jika belum ada
-    const cleanPhone = formData.telepon.replace(/\D/g, "");
-    const syntheticNik = `1600${yearMonth}${cleanPhone.slice(-6).padStart(6, "0")}`.slice(0, 16);
-
-    // Cari atau buat Tamu
-    let tamu = await prisma.tamu.findFirst({
-      where: {
-        OR: [
-          { telepon: formData.telepon.trim() },
-          { email: formData.email?.trim() || undefined },
-          { nik: syntheticNik },
-        ],
-      },
+    // Cari atau buat/update Tamu berdasarkan NIK resmi
+    let tamu = await prisma.tamu.findUnique({
+      where: { nik: cleanNik },
     });
 
     if (!tamu) {
       tamu = await prisma.tamu.create({
         data: {
-          nik: syntheticNik,
-          nama: formData.nama.trim(),
-          email: formData.email?.trim() || null,
-          telepon: formData.telepon.trim(),
-          alamat: formData.alamat.trim(),
+          nik: cleanNik,
+          nama: cleanNama,
+          email: cleanEmail || null,
+          telepon: cleanTelepon,
+          alamat: cleanAlamat,
         },
       });
     } else {
-      // Perbarui kontak tamu terkini
       tamu = await prisma.tamu.update({
         where: { id: tamu.id },
         data: {
-          nama: formData.nama.trim(),
-          email: formData.email?.trim() || tamu.email,
-          alamat: formData.alamat.trim(),
-          telepon: formData.telepon.trim(),
+          nama: cleanNama,
+          email: cleanEmail || tamu.email,
+          alamat: cleanAlamat || tamu.alamat,
+          telepon: cleanTelepon || tamu.telepon,
         },
       });
     }
 
     // Buat PengajuanLayanan
-    const formulirDeskripsi = `Formulir KIP Terlampir: ${formData.namaFormulirPdf} (${formData.ukuranFormulirPdf || "Maks 10MB"})`;
-    const ktpDeskripsi = `Identitas KTP Terlampir: ${formData.namaKtp} (${formData.ukuranKtp || "Maks 10MB"})`;
-    const rincianDokumen = `${formulirDeskripsi}\n${ktpDeskripsi}${formData.catatanTambahan ? `\n\nCatatan Pemohon: ${formData.catatanTambahan}` : ""}`;
-
     await prisma.pengajuanLayanan.create({
       data: {
         kodePengajuan,
         tamuId: tamu.id,
         layananId: layanan.id,
-        rincianInformasiKip: rincianDokumen,
+        rincianInformasiKip: cleanCatatan || "Permohonan Keterbukaan Informasi Publik PPID",
         tujuanPenggunaanKip: "Permohonan Keterbukaan Informasi Publik (PPID BBPOM Palembang)",
+        dokumenPendukungUrl,
+        ktpUrl,
         status: "MENUNGGU_VERIFIKASI",
       },
     });
@@ -213,11 +287,14 @@ export async function submitKeterbukaanInformasiAction(
       data: responseData,
     };
   } catch (error) {
-    console.warn("[Keterbukaan Informasi Action] Database offline / unconfigured, using resilient response:", error);
+    console.error("[Keterbukaan Informasi Action] Database error:", error);
     return {
-      success: true,
-      message: "Permohonan Keterbukaan Informasi Publik berhasil diterima dan tiket pendaftaran resmi telah diterbitkan.",
-      kodePengajuan,
+      success: false,
+      message:
+        error instanceof Error
+          ? `Gagal menyimpan permohonan ke sistem database: ${error.message}`
+          : "Terjadi gangguan sistem saat menyimpan permohonan.",
+      kodePengajuan: "",
       data: responseData,
     };
   }

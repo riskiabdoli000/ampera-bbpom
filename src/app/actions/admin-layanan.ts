@@ -281,3 +281,136 @@ export async function deleteLayananAction(id: number) {
     };
   }
 }
+
+export interface LandingServiceItem {
+  id: string;
+  kode: string;
+  title: string;
+  description: string;
+  iconName: "HelpCircle" | "FlaskConical" | "ShieldAlert" | "FileText";
+  image: string;
+  href: string;
+  actionText: string;
+}
+
+const SERVICE_META_MAP: Record<
+  string,
+  {
+    iconName: "HelpCircle" | "FlaskConical" | "ShieldAlert" | "FileText";
+    image: string;
+    href: string;
+    actionText: string;
+  }
+> = {
+  INFO: {
+    iconName: "HelpCircle",
+    image: "/assets-landingpage/layanan/1.jpg",
+    href: "/permintaan-informasi",
+    actionText: "Akses Layanan",
+  },
+  UJI_CEPAT: {
+    iconName: "FlaskConical",
+    image: "/assets-landingpage/layanan/2.jpg",
+    href: "/pengujian-cepat",
+    actionText: "Uji Sekarang",
+  },
+  ADUAN: {
+    iconName: "ShieldAlert",
+    image: "/assets-landingpage/layanan/3.jpg",
+    href: "/pengaduan",
+    actionText: "Buat Pengaduan",
+  },
+  KIP: {
+    iconName: "FileText",
+    image: "/assets-landingpage/layanan/4.jpg",
+    href: "/keterbukaan-informasi",
+    actionText: "Lihat Dokumen",
+  },
+};
+
+const DEFAULT_LANDING_SERVICES: LandingServiceItem[] = [
+  {
+    id: "permintaan-informasi",
+    kode: "INFO",
+    title: "Permintaan Informasi",
+    description:
+      "Layanan konsultasi regulasi, perizinan edar, dan sertifikasi obat & makanan untuk masyarakat dan UMKM.",
+    iconName: "HelpCircle",
+    image: "/assets-landingpage/layanan/1.jpg",
+    href: "/permintaan-informasi",
+    actionText: "Akses Layanan",
+  },
+  {
+    id: "pengujian-cepat",
+    kode: "UJI_CEPAT",
+    title: "Pengujian Cepat AMPERA",
+    description:
+      "Inovasi uji laboratorium cepat untuk mendeteksi bahan kimia berbahaya pada sampel pangan dan farmasi.",
+    iconName: "FlaskConical",
+    image: "/assets-landingpage/layanan/2.jpg",
+    href: "/pengujian-cepat",
+    actionText: "Uji Sekarang",
+  },
+  {
+    id: "pengaduan",
+    kode: "ADUAN",
+    title: "Layanan Pengaduan",
+    description:
+      "Kanal resmi pelaporan dugaan peredaran obat dan makanan ilegal, palsu, rusak, atau kedaluwarsa.",
+    iconName: "ShieldAlert",
+    image: "/assets-landingpage/layanan/3.jpg",
+    href: "/pengaduan",
+    actionText: "Buat Pengaduan",
+  },
+  {
+    id: "ppid",
+    kode: "KIP",
+    title: "Keterbukaan Informasi",
+    description:
+      "Akses transparan terhadap dokumen resmi publik, SOP pengawasan, anggaran, dan laporan kinerja PPID.",
+    iconName: "FileText",
+    image: "/assets-landingpage/layanan/4.jpg",
+    href: "/keterbukaan-informasi",
+    actionText: "Lihat Dokumen",
+  },
+];
+
+/**
+ * Mengambil data layanan yang aktif untuk ditampilkan pada ServicesSection beranda publik.
+ */
+export async function getLandingServicesData(): Promise<LandingServiceItem[]> {
+  try {
+    const list = await prisma.layanan.findMany({
+      where: { isAktif: true },
+      orderBy: { id: "asc" },
+    });
+
+    if (list.length === 0) {
+      return DEFAULT_LANDING_SERVICES;
+    }
+
+    return list.map((item) => {
+      const meta = SERVICE_META_MAP[item.kode] || {
+        iconName: "HelpCircle" as const,
+        image: "/assets-landingpage/layanan/1.jpg",
+        href: `/${item.kode.toLowerCase().replace(/_/g, "-")}`,
+        actionText: "Akses Layanan",
+      };
+
+      return {
+        id: item.kode.toLowerCase().replace(/_/g, "-"),
+        kode: item.kode,
+        title: item.nama,
+        description: item.deskripsi || "",
+        iconName: meta.iconName,
+        image: meta.image,
+        href: meta.href,
+        actionText: meta.actionText,
+      };
+    });
+  } catch (err) {
+    console.error("Gagal mengambil data layanan landing page:", err);
+    return DEFAULT_LANDING_SERVICES;
+  }
+}
+

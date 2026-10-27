@@ -437,6 +437,7 @@ export function HeroSettingsForm({
                         alt={slide.alt || slide.title}
                         fill
                         className="object-cover transition-transform group-hover:scale-105"
+                        unoptimized={slide.imageUrl.startsWith("http")}
                       />
                       <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                         <Eye className="h-4 w-4 text-white" />
@@ -647,6 +648,7 @@ export function HeroSettingsForm({
                       alt={currentPreviewSlide.alt || "Preview"}
                       fill
                       className="object-cover transition-all duration-500"
+                      unoptimized={currentPreviewSlide.imageUrl.startsWith("http")}
                     />
                   )}
 

@@ -35,6 +35,7 @@ export function PermintaanInformasiForm() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [copiedCode, setCopiedCode] = useState(false);
   const [submissionResult, setSubmissionResult] = useState<PermintaanInformasiResponse | null>(null);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   // NIK Lookup States
   const [isCheckingNik, setIsCheckingNik] = useState(false);
@@ -263,33 +264,25 @@ export function PermintaanInformasiForm() {
       return;
     }
 
+    setSubmitError(null);
     setIsSubmitting(true);
     try {
       const response = await submitPermintaanInformasiAction(formData);
-      setSubmissionResult(response);
-      window.scrollTo({ top: 200, behavior: "smooth" });
+      if (response.success) {
+        setSubmissionResult(response);
+        window.scrollTo({ top: 200, behavior: "smooth" });
+      } else {
+        setSubmitError(response.message || "Gagal menyimpan permohonan ke sistem.");
+        window.scrollTo({ top: 320, behavior: "smooth" });
+      }
     } catch (err) {
       console.error("Gagal mengirim permintaan informasi:", err);
-      const fallbackCode = `AMP-INF-${new Date().getFullYear()}${String(
-        new Date().getMonth() + 1
-      ).padStart(2, "0")}-${Math.floor(1000 + Math.random() * 9000)}`;
-      setSubmissionResult({
-        success: true,
-        message: "Formulir permintaan informasi berhasil dicatat dalam sistem.",
-        kodePengajuan: fallbackCode,
-        data: {
-          ...formData,
-          tanggalPengajuan: new Date().toLocaleDateString("id-ID", {
-            weekday: "long",
-            day: "numeric",
-            month: "long",
-            year: "numeric",
-          }),
-          estimasiPenyelesaian: "1 - 3 Hari Kerja",
-          status: "MENUNGGU_VERIFIKASI",
-        },
-      });
-      window.scrollTo({ top: 200, behavior: "smooth" });
+      setSubmitError(
+        err instanceof Error
+          ? err.message
+          : "Terjadi gangguan koneksi jaringan saat menyimpan data. Silakan coba kembali."
+      );
+      window.scrollTo({ top: 320, behavior: "smooth" });
     } finally {
       setIsSubmitting(false);
     }
@@ -710,6 +703,17 @@ export function PermintaanInformasiForm() {
             </button>
           </div>
         </div>
+
+        {/* Alert Error jika ada kendala saat submit ke database */}
+        {submitError && (
+          <div className="mb-6 p-4 rounded-2xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800 text-rose-800 dark:text-rose-200 flex items-start gap-3">
+            <AlertCircle className="w-5 h-5 shrink-0 text-rose-600 dark:text-rose-400 mt-0.5" />
+            <div className="text-sm">
+              <p className="font-bold">Pengajuan Gagal Diproses</p>
+              <p className="mt-0.5 text-xs text-rose-700 dark:text-rose-300">{submitError}</p>
+            </div>
+          </div>
+        )}
 
         {/* =================================================================== */}
         {/* 2. FORM BODY BERDASARKAN CURRENT STEP                               */}

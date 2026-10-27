@@ -152,3 +152,101 @@ export async function saveKontakSettingsAction(data: KontakSettingsInput) {
     };
   }
 }
+
+/**
+ * Server action untuk langsung mengubah status aktif/nonaktif master sosial media di database
+ */
+export async function toggleMasterSosmedAction(isActive: boolean) {
+  await verifyAdminSession();
+
+  try {
+    const kontak = await getKontakSettings();
+    const cleanLabel = (kontak.labelSosmed || DEFAULT_KONTAK.labelSosmed)
+      .replace(/^\[NONAKTIF\]\s*/, "")
+      .trim();
+
+    const newLabelSosmed = isActive
+      ? (cleanLabel || "Media Sosial Resmi BBPOM Palembang:")
+      : `[NONAKTIF] ${cleanLabel || "Media Sosial Resmi BBPOM Palembang:"}`;
+
+    const updated = await prisma.kontakKantor.update({
+      where: { id: 1 },
+      data: {
+        labelSosmed: newLabelSosmed,
+      },
+    });
+
+    revalidatePath("/admin/settings/kontak");
+    revalidatePath("/admin/settings");
+    revalidatePath("/");
+
+    return {
+      success: true,
+      isSosmedActive: isActive,
+      labelSosmed: updated.labelSosmed,
+    };
+  } catch (error) {
+    console.error("Gagal toggle master sosmed:", error);
+    return {
+      success: false,
+      error: "Gagal menyimpan status aktif/nonaktif media sosial ke database.",
+    };
+  }
+}
+
+/**
+ * Server action untuk langsung mengubah status aktif/nonaktif akun media sosial individual di database
+ */
+export async function toggleIndividualSosmedAction(
+  platform: "instagram" | "facebook" | "tiktok" | "threads" | "youtube",
+  isActive: boolean
+) {
+  await verifyAdminSession();
+
+  const fieldMap = {
+    instagram: "instagramUrl",
+    facebook: "facebookUrl",
+    tiktok: "tiktokUrl",
+    threads: "threadsUrl",
+    youtube: "youtubeUrl",
+  } as const;
+
+  const field = fieldMap[platform];
+
+  try {
+    const kontak = await getKontakSettings();
+    const rawVal = kontak[field] || "";
+    const cleanUrl = rawVal.replace(/^\[NONAKTIF\]\s*/, "").trim();
+
+    if (!cleanUrl) {
+      return { success: true, isActive };
+    }
+
+    const newVal = isActive ? cleanUrl : `[NONAKTIF]${cleanUrl}`;
+
+    const updated = await prisma.kontakKantor.update({
+      where: { id: 1 },
+      data: {
+        [field]: newVal,
+      },
+    });
+
+    revalidatePath("/admin/settings/kontak");
+    revalidatePath("/admin/settings");
+    revalidatePath("/");
+
+    return {
+      success: true,
+      platform,
+      isActive,
+      url: updated[field],
+    };
+  } catch (error) {
+    console.error(`Gagal toggle akun ${platform}:`, error);
+    return {
+      success: false,
+      error: `Gagal memperbarui status ${platform} di database.`,
+    };
+  }
+}
+

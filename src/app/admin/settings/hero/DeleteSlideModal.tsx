@@ -123,6 +123,7 @@ export function DeleteSlideModal({
                   alt={slide.alt || slide.title}
                   fill
                   className="object-cover"
+                  unoptimized={slide.imageUrl.startsWith("http")}
                 />
               </div>
             )}

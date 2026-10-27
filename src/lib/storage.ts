@@ -44,9 +44,11 @@ export async function ensureBucket(): Promise<boolean> {
         '${bucketName}',
         true,
         26214400,
-        ARRAY['image/jpeg', 'image/png', 'image/webp', 'image/jpg']::text[]
+        ARRAY['image/jpeg', 'image/png', 'image/webp', 'image/jpg', 'application/pdf']::text[]
       )
-      ON CONFLICT (id) DO UPDATE SET public = true;
+      ON CONFLICT (id) DO UPDATE SET 
+        public = true,
+        allowed_mime_types = ARRAY['image/jpeg', 'image/png', 'image/webp', 'image/jpg', 'application/pdf']::text[];
     `);
     return true;
   } catch (err) {
@@ -63,6 +65,15 @@ export interface UploadResult {
   compressedSize: number;
 }
 
+export type UploadFolder =
+  | "hero"
+  | "edukasi"
+  | "petugas"
+  | "aduan"
+  | "kip"
+  | "ktp"
+  | "layanan";
+
 /**
  * Kompresi gambar cerdas menggunakan Sharp ke target ukuran ~200KB
  * Mengonversi gambar ke format WebP modern dengan resolusi maksimal 1920px (Full HD).
@@ -72,16 +83,12 @@ export async function compressImageToTarget(
   targetSizeKB = 200
 ): Promise<{ buffer: Buffer; contentType: string; ext: string }> {
   const targetBytes = targetSizeKB * 1024;
-  const pipeline = sharp(inputBuffer).rotate(); // auto-orient berdasarkan EXIF
+  const pipeline = sharp(inputBuffer).rotate();
 
   const metadata = await pipeline.metadata();
   const width = metadata.width || 1920;
-
-  // Jika resolusi lebih besar dari 1920px (misal foto 4K atau kamera ponsel 48MP),
-  // kecilkan ke Full HD (1920px) agar efisien tanpa menurunkan ketajaman layar
   const maxWidth = width > 1920 ? 1920 : width;
 
-  // Loop kompresi adaptif untuk mencapai target ~200KB
   const qualitySteps = [82, 75, 68, 58, 48, 38];
   let finalBuffer: Buffer | null = null;
 
@@ -98,7 +105,6 @@ export async function compressImageToTarget(
     }
   }
 
-  // Jika masih di atas target (gambar sangat kompleks), turunkan dimensi sedikit ke 1440px
   if (finalBuffer && finalBuffer.length > targetBytes && maxWidth > 1440) {
     const candidate = await sharp(inputBuffer)
       .rotate()
@@ -116,45 +122,54 @@ export async function compressImageToTarget(
 }
 
 /**
- * Upload gambar ke Supabase Storage (atau fallback lokal jika service role key belum diisi)
- * Menerima file gambar ukuran berapa saja lalu otomatis mengompresi ke ~200KB.
+ * Upload gambar atau dokumen PDF ke Supabase Storage (atau fallback lokal jika service role key belum diisi).
+ * Jika file adalah gambar, otomatis dikompresi ke format WebP ~200KB.
+ * Jika file adalah PDF, disimpan utuh dengan MIME application/pdf.
  */
-export async function uploadImage(
+export async function uploadFileOrDocument(
   file: File,
-  folder: "hero" | "edukasi" | "petugas" = "hero"
+  folder: UploadFolder = "layanan"
 ): Promise<UploadResult> {
   const originalSize = file.size;
   const rawArrayBuffer = await file.arrayBuffer();
   const rawBuffer = Buffer.from(rawArrayBuffer);
 
-  // Kompres gambar ke format webp dengan target ukuran ~200KB
-  let compressedBuffer: Buffer;
-  let contentType = "image/webp";
-  let ext = "webp";
+  const isPdf =
+    file.type === "application/pdf" ||
+    file.name.toLowerCase().endsWith(".pdf");
 
-  try {
-    const compressionResult = await compressImageToTarget(rawBuffer, 200);
-    compressedBuffer = compressionResult.buffer;
-    contentType = compressionResult.contentType;
-    ext = compressionResult.ext;
-  } catch (compressErr) {
-    console.warn("Gagal melakukan kompresi sharp, menggunakan file asli:", compressErr);
-    compressedBuffer = rawBuffer;
-    ext = file.name.split(".").pop()?.toLowerCase() || "jpg";
-    contentType = file.type || "image/jpeg";
+  let uploadBuffer: Buffer = rawBuffer;
+  let contentType = file.type || "application/octet-stream";
+  let ext = file.name.split(".").pop()?.toLowerCase() || "bin";
+
+  if (isPdf) {
+    contentType = "application/pdf";
+    ext = "pdf";
+  } else if (file.type.startsWith("image/") || /\.(jpe?g|png|webp)$/i.test(file.name)) {
+    try {
+      const compressionResult = await compressImageToTarget(rawBuffer, 200);
+      uploadBuffer = compressionResult.buffer;
+      contentType = compressionResult.contentType;
+      ext = compressionResult.ext;
+    } catch (compressErr) {
+      console.warn("Gagal kompresi sharp, menggunakan gambar asli:", compressErr);
+      uploadBuffer = rawBuffer;
+      ext = file.name.split(".").pop()?.toLowerCase() || "jpg";
+      contentType = file.type || "image/jpeg";
+    }
   }
 
-  const compressedSize = compressedBuffer.length;
+  const compressedSize = uploadBuffer.length;
   const uniqueName = `${Date.now()}-${Math.random().toString(36).substring(2, 9)}.${ext}`;
   const storageFilePath = `${folder}/${uniqueName}`;
 
-  // 1. Jika Supabase Storage sudah terkonfigurasi
+  // 1. Supabase Storage
   if (isSupabaseStorageConfigured()) {
     await ensureBucket();
     const supabase = getSupabaseAdmin()!;
     const { error: uploadError } = await supabase.storage
       .from(bucketName)
-      .upload(storageFilePath, compressedBuffer, {
+      .upload(storageFilePath, uploadBuffer, {
         contentType,
         upsert: false,
       });
@@ -176,11 +191,11 @@ export async function uploadImage(
     };
   }
 
-  // 2. Fallback lokal jika SUPABASE_SERVICE_ROLE_KEY belum diisi
+  // 2. Fallback Lokal
   const localDir = path.join(process.cwd(), "public", "uploads", folder);
   await fs.mkdir(localDir, { recursive: true });
   const localFilePath = path.join(localDir, uniqueName);
-  await fs.writeFile(localFilePath, compressedBuffer);
+  await fs.writeFile(localFilePath, uploadBuffer);
 
   return {
     url: `/uploads/${folder}/${uniqueName}`,
@@ -189,6 +204,17 @@ export async function uploadImage(
     originalSize,
     compressedSize,
   };
+}
+
+/**
+ * Upload gambar ke Supabase Storage (atau fallback lokal jika service role key belum diisi)
+ * Menerima file gambar ukuran berapa saja lalu otomatis mengompresi ke ~200KB.
+ */
+export async function uploadImage(
+  file: File,
+  folder: UploadFolder = "hero"
+): Promise<UploadResult> {
+  return uploadFileOrDocument(file, folder);
 }
 
 /**

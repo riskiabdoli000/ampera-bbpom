@@ -10,61 +10,69 @@ import {
   FileText,
   ArrowRight,
 } from "lucide-react";
+import type { LandingServiceItem } from "@/app/actions/admin-layanan";
 
-interface ServiceItem {
-  id: string;
-  title: string;
-  description: string;
-  icon: React.ElementType;
-  image: string;
-  href: string;
-  actionText: string;
-}
+const ICON_MAP: Record<string, React.ElementType> = {
+  HelpCircle,
+  FlaskConical,
+  ShieldAlert,
+  FileText,
+};
 
-const SERVICES: ServiceItem[] = [
+const DEFAULT_SERVICES: LandingServiceItem[] = [
   {
     id: "permintaan-informasi",
+    kode: "INFO",
     title: "Permintaan Informasi",
     description:
       "Layanan konsultasi regulasi, perizinan edar, dan sertifikasi obat & makanan untuk masyarakat dan UMKM.",
-    icon: HelpCircle,
+    iconName: "HelpCircle",
     image: "/assets-landingpage/layanan/1.jpg",
     href: "/permintaan-informasi",
     actionText: "Akses Layanan",
   },
   {
     id: "pengujian-cepat",
+    kode: "UJI_CEPAT",
     title: "Pengujian Cepat AMPERA",
     description:
       "Inovasi uji laboratorium cepat untuk mendeteksi bahan kimia berbahaya pada sampel pangan dan farmasi.",
-    icon: FlaskConical,
+    iconName: "FlaskConical",
     image: "/assets-landingpage/layanan/2.jpg",
     href: "/pengujian-cepat",
     actionText: "Uji Sekarang",
   },
   {
     id: "pengaduan",
+    kode: "ADUAN",
     title: "Layanan Pengaduan",
     description:
       "Kanal resmi pelaporan dugaan peredaran obat dan makanan ilegal, palsu, rusak, atau kedaluwarsa.",
-    icon: ShieldAlert,
+    iconName: "ShieldAlert",
     image: "/assets-landingpage/layanan/3.jpg",
     href: "/pengaduan",
     actionText: "Buat Pengaduan",
   },
   {
     id: "ppid",
+    kode: "KIP",
     title: "Keterbukaan Informasi",
     description:
       "Akses transparan terhadap dokumen resmi publik, SOP pengawasan, anggaran, dan laporan kinerja PPID.",
-    icon: FileText,
+    iconName: "FileText",
     image: "/assets-landingpage/layanan/4.jpg",
     href: "/keterbukaan-informasi",
     actionText: "Lihat Dokumen",
   },
 ];
 
-export function ServicesSection() {
+interface ServicesSectionProps {
+  initialData?: LandingServiceItem[];
+}
+
+export function ServicesSection({ initialData }: ServicesSectionProps) {
+  const services = initialData && initialData.length > 0 ? initialData : DEFAULT_SERVICES;
+
   return (
     <section
       id="layanan"
@@ -99,11 +107,11 @@ export function ServicesSection() {
         </div>
 
         {/* ========================================================= */}
-        {/* GRID 4 KARTU LAYANAN: 2 Kolom di Mobile, 4 di Desktop     */}
+        {/* GRID KARTU LAYANAN: 2 Kolom di Mobile, 4 di Desktop       */}
         {/* ========================================================= */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6 mt-7 sm:mt-12 lg:mt-14">
-          {SERVICES.map((service) => {
-            const IconComponent = service.icon;
+          {services.map((service) => {
+            const IconComponent = ICON_MAP[service.iconName] || HelpCircle;
             return (
               <div
                 key={service.id}
@@ -119,6 +127,7 @@ export function ServicesSection() {
                       fill
                       sizes="(max-width: 640px) 50vw, (max-width: 1024px) 50vw, 25vw"
                       className="object-cover object-center group-hover:scale-105 transition-transform duration-700 ease-out"
+                      unoptimized={service.image.startsWith("http")}
                     />
 
                     {/* Subtle Gradient Shadow di bawah foto */}

@@ -76,6 +76,7 @@ model PengajuanLayanan {
   
   // Field Spesifik Layanan 1 (Permintaan Informasi)
   informasiDibutuhkan String?         @db.Text
+  kategoriInformasi   String?
   
   // Field Spesifik Layanan 2 (Pengujian Cepat Ampera)
   // Menyimpan jenis produk yang dicurigai: "Pempek, tekwan, model", "Tahu", "Mie basah", dsb.
@@ -85,9 +86,11 @@ model PengajuanLayanan {
   alasanLainnya       String?         // Isian jika memilih "Yang lain"
   rincianProduk       String?         @db.Text // Lokasi pasar, warung, penjual, tanggal pembelian
   
-  // Field Spesifik Layanan 3 (Pengaduan)
+  // Field Spesifik Layanan 3 (Pengaduan) & Layanan 4 (Keterbukaan Informasi Publik)
   isiPengaduan        String?         @db.Text
-  buktiFotoUrl        String?         // URL foto bukti di Supabase storage
+  buktiFotoUrl        String?         @db.Text // URL foto bukti di Supabase storage
+  ktpUrl              String?         @db.Text // URL scan / foto KTP di Supabase storage
+  dokumenPendukungUrl String?         @db.Text // URL dokumen formulir PDF (Layanan KIP)
   
   // Field Spesifik Layanan 4 (Keterbukaan Informasi Publik)
   rincianInformasiKip String?         @db.Text

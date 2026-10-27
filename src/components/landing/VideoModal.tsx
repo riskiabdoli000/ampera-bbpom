@@ -7,6 +7,13 @@ import Image from "next/image";
 interface VideoModalProps {
   isOpen: boolean;
   onClose: () => void;
+  video?: {
+    eyebrow?: string;
+    judul?: string;
+    deskripsi?: string;
+    youtubeUrl?: string;
+    youtubeId?: string;
+  };
 }
 
 const INFO_ITEMS = [
@@ -15,7 +22,7 @@ const INFO_ITEMS = [
   { icon: Award, label: "Pelayanan Prima & Akreditasi ISO" },
 ];
 
-export function VideoModal({ isOpen, onClose }: VideoModalProps) {
+export function VideoModal({ isOpen, onClose, video }: VideoModalProps) {
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape") onClose();
@@ -65,16 +72,16 @@ export function VideoModal({ isOpen, onClose }: VideoModalProps) {
             <div className="min-w-0">
               <div className="flex items-center gap-1.5 text-[10px] sm:text-[11px] font-semibold text-ink-soft dark:text-slate-400">
                 <span className="w-1.5 h-1.5 rounded-full bg-brand-orange" />
-                Info Terbaru
+                {video?.eyebrow || "Info Terbaru"}
               </div>
               <h3
                 id="video-modal-title"
                 className="font-brand font-extrabold text-sm sm:text-xl text-navy-900 dark:text-white leading-tight tracking-tight mt-0.5"
               >
-                Profil Balai Besar POM di Palembang
+                {video?.judul || "Profil Balai Besar POM di Palembang"}
               </h3>
-              <p className="text-[11px] sm:text-sm text-ink-soft dark:text-slate-400 mt-0.5 leading-snug">
-                Sumatera Selatan — Integritas, Profesional, Melayani
+              <p className="text-[11px] sm:text-sm text-ink-soft dark:text-slate-400 mt-0.5 leading-snug line-clamp-1">
+                {video?.deskripsi || "Sumatera Selatan — Integritas, Profesional, Melayani"}
               </p>
             </div>
           </div>
@@ -90,37 +97,47 @@ export function VideoModal({ isOpen, onClose }: VideoModalProps) {
 
         {/* Area Video */}
         <div className="px-3 sm:px-5">
-          <div className="relative aspect-video w-full rounded-xl sm:rounded-3xl overflow-hidden bg-navy-900 group">
-            <Image
-              src="/assets-landingpage/hero1.png"
-              alt="Gedung Balai Besar POM di Palembang"
-              fill
-              sizes="(max-width: 768px) 100vw, 768px"
-              className="object-cover group-hover:scale-105 transition-transform duration-700"
-            />
-            <div className="absolute inset-0 bg-gradient-to-t from-navy-900/85 via-navy-900/25 to-transparent" />
+          <div className="relative aspect-video w-full rounded-xl sm:rounded-3xl overflow-hidden bg-navy-900 shadow-inner group">
+            {video?.youtubeId ? (
+              <iframe
+                src={`https://www.youtube.com/embed/${video.youtubeId}?autoplay=1&rel=0`}
+                title={video.judul || "Video Profil BBPOM di Palembang"}
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                allowFullScreen
+                className="w-full h-full border-0"
+              />
+            ) : (
+              <>
+                <Image
+                  src="/assets-landingpage/hero1.png"
+                  alt="Gedung Balai Besar POM di Palembang"
+                  fill
+                  sizes="(max-width: 768px) 100vw, 768px"
+                  className="object-cover group-hover:scale-105 transition-transform duration-700"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-navy-900/85 via-navy-900/25 to-transparent" />
 
-            <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-4">
-              <button
-                type="button"
-                className="w-12 h-12 sm:w-20 sm:h-20 rounded-full bg-gradient-to-br from-[#ff8a1f] to-[#f26a0f] text-white flex items-center justify-center shadow-cta ring-6 sm:ring-8 ring-white/30 cursor-pointer transition-transform duration-300 hover:scale-110 active:scale-95 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white"
-                aria-label="Putar video"
-              >
-                <Play className="w-5 h-5 sm:w-8 sm:h-8 fill-current ml-0.5 sm:ml-1" />
-              </button>
-            </div>
+                <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-4">
+                  <div
+                    className="w-12 h-12 sm:w-20 sm:h-20 rounded-full bg-gradient-to-br from-[#ff8a1f] to-[#f26a0f] text-white flex items-center justify-center shadow-cta ring-6 sm:ring-8 ring-white/30"
+                  >
+                    <Play className="w-5 h-5 sm:w-8 sm:h-8 fill-current ml-0.5 sm:ml-1" />
+                  </div>
+                </div>
 
-            <div className="absolute bottom-0 inset-x-0 p-3 sm:p-6 text-white">
-              <span className="inline-block text-[9px] sm:text-xs uppercase tracking-wider font-bold text-orange-300 mb-0.5 sm:mb-1">
-                Video Resmi Profil Institusi
-              </span>
-              <h4 className="font-brand font-bold text-xs sm:text-lg leading-snug max-w-xl line-clamp-2 sm:line-clamp-none">
-                BBPOM di Palembang: Garda Terdepan Perlindungan Obat &amp; Makanan
-              </h4>
-              <p className="hidden sm:block text-xs sm:text-sm text-white/80 mt-1 max-w-xl line-clamp-2">
-                Mengenal lebih dekat pengawasan laboratorium, layanan sertifikasi UMKM, dan pengawalan pangan sehat di Bumi Sriwijaya.
-              </p>
-            </div>
+                <div className="absolute bottom-0 inset-x-0 p-3 sm:p-6 text-white">
+                  <span className="inline-block text-[9px] sm:text-xs uppercase tracking-wider font-bold text-orange-300 mb-0.5 sm:mb-1">
+                    Video Resmi Profil Institusi
+                  </span>
+                  <h4 className="font-brand font-bold text-xs sm:text-lg leading-snug max-w-xl line-clamp-2 sm:line-clamp-none">
+                    BBPOM di Palembang: Garda Terdepan Perlindungan Obat &amp; Makanan
+                  </h4>
+                  <p className="hidden sm:block text-xs sm:text-sm text-white/80 mt-1 max-w-xl line-clamp-2">
+                    Mengenal lebih dekat pengawasan laboratorium, layanan sertifikasi UMKM, dan pengawalan pangan sehat di Bumi Sriwijaya.
+                  </p>
+                </div>
+              </>
+            )}
           </div>
         </div>
 

@@ -15,6 +15,12 @@ import {
   ChevronDown,
   ChevronRight,
   LogOut,
+  FileSpreadsheet,
+  FolderKanban,
+  FileQuestion,
+  FlaskConical,
+  AlertTriangle,
+  FileLock,
 } from "lucide-react";
 
 interface AdminSidebarProps {
@@ -27,15 +33,33 @@ export function AdminSidebar({ isOpen, onClose }: AdminSidebarProps) {
   const navRef = useRef<HTMLElement>(null);
 
   const isDashboardActive = pathname === "/admin" || pathname === "/admin/dashboard";
+  const isDataAmperaActive = pathname === "/admin/data-ampera";
   const isLayananActive = pathname.startsWith("/admin/layanan");
   const isPetugasActive = pathname.startsWith("/admin/petugas");
   const isSettingsPath = pathname.startsWith("/admin/settings");
+  const isLaporanPath = pathname.startsWith("/admin/laporan");
 
-  // Website Settings submenu collapse state (default tertutup)
-  const [settingsOpen, setSettingsOpen] = useState(false);
+  // Website Settings submenu collapse state
+  const [settingsOpen, setSettingsOpen] = useState(pathname.startsWith("/admin/settings"));
+  // Data Laporan Pengguna submenu collapse state (buka otomatis jika sedang berada di menu laporan)
+  const [laporanOpen, setLaporanOpen] = useState(pathname.startsWith("/admin/laporan"));
 
   const menuItems = [
     { title: "Dashboard", href: "/admin", icon: LayoutDashboard, active: isDashboardActive },
+    { title: "Data Ampera", href: "/admin/data-ampera", icon: FileSpreadsheet, active: isDataAmperaActive },
+  ];
+
+  const laporanSubItems = [
+    { title: "Data Informasi", href: "/admin/laporan/informasi", icon: FileQuestion },
+    { title: "Data Pengujian Cepat", href: "/admin/laporan/pengujian-cepat", icon: FlaskConical },
+    { title: "Data Pengaduan", href: "/admin/laporan/pengaduan", icon: AlertTriangle },
+    { title: "Data KIP", href: "/admin/laporan/kip", icon: FileLock },
+  ];
+
+  const isAnyLaporanSubActive = laporanSubItems.some((item) => pathname === item.href);
+  const isLaporanParentActive = isLaporanPath && (!laporanOpen || !isAnyLaporanSubActive);
+
+  const masterItems = [
     { title: "Data Layanan", href: "/admin/layanan", icon: ClipboardList, active: isLayananActive },
     { title: "Data Petugas", href: "/admin/petugas", icon: Users, active: isPetugasActive },
   ];
@@ -86,7 +110,7 @@ export function AdminSidebar({ isOpen, onClose }: AdminSidebarProps) {
       window.removeEventListener("resize", updateIndicator);
       clearTimeout(timer);
     };
-  }, [pathname, settingsOpen]);
+  }, [pathname, settingsOpen, laporanOpen]);
 
   const handleLinkClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
     if (navRef.current) {
@@ -103,6 +127,10 @@ export function AdminSidebar({ isOpen, onClose }: AdminSidebarProps) {
 
   const handleSettingsToggle = () => {
     setSettingsOpen((prev) => !prev);
+  };
+
+  const handleLaporanToggle = () => {
+    setLaporanOpen((prev) => !prev);
   };
 
   const renderLink = (item: { title: string; href: string; icon: React.ElementType; active?: boolean }) => {
@@ -161,7 +189,7 @@ export function AdminSidebar({ isOpen, onClose }: AdminSidebarProps) {
         <div className="mx-6 border-t border-white/10" />
 
         {/* Navigation with Animated Sliding Indicator */}
-        <nav ref={navRef} className="relative flex-1 space-y-6 overflow-y-auto pl-4 pr-0 py-5">
+        <nav ref={navRef} className="relative z-10 flex-1 space-y-6 overflow-y-auto pl-4 pr-0 pt-5 pb-24">
           {/* Sliding active tab indicator with organic inverted curves */}
           <div
             className="pointer-events-none absolute right-0 z-0 will-change-transform"
@@ -201,7 +229,75 @@ export function AdminSidebar({ isOpen, onClose }: AdminSidebarProps) {
             <p className="mb-2.5 px-3 text-[11px] font-bold uppercase tracking-wider text-white/70">
               Menu
             </p>
-            <div className="space-y-1.5">{menuItems.map(renderLink)}</div>
+            <div className="space-y-1.5">
+              {menuItems.map(renderLink)}
+
+              {/* Data Laporan Pengguna (Collapsible Navlink with 4 Sub-items) */}
+              <div>
+                <button
+                  type="button"
+                  onClick={handleLaporanToggle}
+                  data-active={isLaporanParentActive ? "true" : "false"}
+                  className={`group relative z-10 flex w-full items-center justify-between py-3 pl-4 pr-5 text-sm transition-colors duration-200 cursor-pointer ${
+                    isLaporanParentActive
+                      ? "font-bold text-[#0b2a6b] dark:text-blue-400"
+                      : isLaporanPath
+                      ? "mr-4 rounded-xl font-semibold text-white hover:bg-white/15"
+                      : "mr-4 rounded-xl font-medium text-white hover:bg-white/15"
+                  }`}
+                >
+                  <div className="flex items-center gap-3">
+                    <FolderKanban
+                      className={`h-[19px] w-[19px] shrink-0 transition-colors duration-200 ${
+                        isLaporanParentActive
+                          ? "text-[#0b2a6b] dark:text-blue-400"
+                          : "text-white/90 group-hover:text-white"
+                      }`}
+                    />
+                    <span>Data Laporan</span>
+                  </div>
+                  {laporanOpen ? (
+                    <ChevronDown className="h-4 w-4 text-white/80 transition-colors group-hover:text-white" />
+                  ) : (
+                    <ChevronRight className="h-4 w-4 text-white/80 transition-colors group-hover:text-white" />
+                  )}
+                </button>
+
+                {/* 4 Sub-items */}
+                {laporanOpen && (
+                  <div className="mt-1 space-y-1 pl-3">
+                    {laporanSubItems.map((sub) => {
+                      const SubIcon = sub.icon;
+                      const active = pathname === sub.href;
+                      return (
+                        <Link
+                          key={sub.href}
+                          href={sub.href}
+                          onClick={handleLinkClick}
+                          data-active={active ? "true" : "false"}
+                          className={`group relative z-10 flex items-center gap-2.5 py-2.5 pl-5 pr-5 text-[13px] transition-colors duration-200 ${
+                            active
+                              ? "font-bold text-[#0b2a6b] dark:text-blue-400"
+                              : "mr-4 rounded-xl font-medium text-white hover:bg-white/15"
+                          }`}
+                        >
+                          <SubIcon
+                            className={`h-4 w-4 shrink-0 transition-colors duration-200 ${
+                              active
+                                ? "text-[#0b2a6b] dark:text-blue-400"
+                                : "text-white/90 group-hover:text-white"
+                            }`}
+                          />
+                          <span>{sub.title}</span>
+                        </Link>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+
+              {masterItems.map(renderLink)}
+            </div>
           </div>
 
           {/* Section 2: General */}
@@ -273,34 +369,21 @@ export function AdminSidebar({ isOpen, onClose }: AdminSidebarProps) {
           </div>
         </nav>
 
-        {/* Bottom Section: Gambar Jembatan Emas selebar sidebar dengan gradasi atas menyatu dan Tombol Logout menimpa di atasnya */}
-        <div className="relative mt-auto w-full overflow-hidden">
+        {/* Gambar Jembatan Emas sebagai layer latar belakang di bagian bawah (z-0) agar navlink berada di atasnya */}
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 z-0 h-44 sm:h-48 overflow-hidden">
           {/* Gambar Jembatan Emas selebar horizontal sidebar */}
-          <div className="relative h-44 w-full sm:h-48">
+          <div className="relative h-full w-full">
             <Image
               src="/assets-landingpage/Jembatan-emas.png"
               alt="Jembatan Emas Palembang"
               fill
               sizes="(max-width: 1024px) 288px, 256px"
-              className="object-cover"
-              style={{ objectPosition: "center 27%" }}
+              className="object-cover opacity-80 brightness-90"
+              style={{ objectPosition: "center 15%" }}
             />
-            {/* Gradasi bagian atas agar menyatu mulus dengan warna sidebar (#0b2a6b) */}
-            <div className="pointer-events-none absolute inset-x-0 top-0 h-16 bg-gradient-to-b from-[#0b2a6b] via-[#0b2a6b]/70 to-transparent" />
-           
+            {/* Overlay gradasi biru tua (#0b2a6b) agar gambar lebih gelap, menyatu mulus, dan navlink sangat kontras */}
+            <div className="absolute inset-0 bg-gradient-to-b from-[#0b2a6b] via-[#0b2a6b]/45 to-[#0b2a6b]/50" />
           </div>
-
-          {/* Tombol Logout menimpa (overlay) di atas gambar */}
-          {/* <div className="absolute inset-x-0 bottom-0 p-4">
-            <Link
-              href="/"
-              title="Keluar ke Landing Page"
-              className="flex items-center justify-center gap-2.5 rounded-xl border border-white/25 bg-white/10 px-4 py-2.5 text-sm font-semibold text-white shadow-lg backdrop-blur-md transition-all hover:border-rose-300/60 hover:bg-rose-500/30 hover:backdrop-blur-lg active:scale-[0.98]"
-            >
-              <LogOut className="h-[18px] w-[18px] text-rose-300" />
-              <span>Logout</span>
-            </Link>
-          </div> */}
         </div>
       </aside>
     </>

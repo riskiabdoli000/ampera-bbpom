@@ -1,9 +1,8 @@
-"use client";
-
 import React from "react";
 import Link from "next/link";
 import Image from "next/image";
 import WaStatusBadge from "@/components/admin/WaStatusBadge";
+import { prisma } from "@/lib/prisma";
 import {
   ClipboardList,
   Clock,
@@ -19,74 +18,125 @@ import {
   ChevronDown,
 } from "lucide-react";
 
+export const dynamic = "force-dynamic";
+
 const card =
   "rounded-2xl border border-[#e3ecfa] bg-white dark:border-slate-800 dark:bg-slate-900";
 
-export default function AdminDashboardPage() {
+export default async function AdminDashboardPage() {
+  // Query data live dari database PostgreSQL / Supabase
+  let totalPengajuan = 0;
+  let menungguVerifikasi = 0;
+  let sedangDiproses = 0;
+  let selesai = 0;
+  let rawRecent: Array<{
+    id: number;
+    kodePengajuan: string;
+    status: string;
+    createdAt: Date;
+    produkDicurigai: string | null;
+    informasiDibutuhkan: string | null;
+    isiPengaduan: string | null;
+    rincianInformasiKip: string | null;
+    tamu: { nama: string; nik: string };
+    layanan: { nama: string };
+  }> = [];
+
+  try {
+    const [tCount, mCount, pCount, sCount, recents] = await Promise.all([
+      prisma.pengajuanLayanan.count(),
+      prisma.pengajuanLayanan.count({ where: { status: "MENUNGGU_VERIFIKASI" } }),
+      prisma.pengajuanLayanan.count({ where: { status: "DIPROSES" } }),
+      prisma.pengajuanLayanan.count({ where: { status: "SELESAI" } }),
+      prisma.pengajuanLayanan.findMany({
+        take: 8,
+        orderBy: { createdAt: "desc" },
+        include: {
+          tamu: true,
+          layanan: true,
+        },
+      }),
+    ]);
+    totalPengajuan = tCount;
+    menungguVerifikasi = mCount;
+    sedangDiproses = pCount;
+    selesai = sCount;
+    rawRecent = recents;
+  } catch (err) {
+    console.warn("[Admin Dashboard] Gagal membaca data pengajuan database:", err);
+  }
+
+  const recentSubmissions = rawRecent.map((p) => {
+    const sampel =
+      p.produkDicurigai ||
+      p.informasiDibutuhkan ||
+      p.isiPengaduan ||
+      p.rincianInformasiKip ||
+      "Permohonan Layanan";
+
+    const diffMs = Date.now() - new Date(p.createdAt).getTime();
+    const diffMins = Math.floor(diffMs / (1000 * 60));
+    const diffHours = Math.floor(diffMins / 60);
+    const diffDays = Math.floor(diffHours / 24);
+
+    let waktu = "Baru saja";
+    if (diffMins < 60) {
+      waktu = `${Math.max(1, diffMins)} menit lalu`;
+    } else if (diffHours < 24) {
+      waktu = `${diffHours} jam lalu`;
+    } else if (diffDays === 1) {
+      waktu = "Kemarin";
+    } else {
+      waktu = `${diffDays} hari lalu`;
+    }
+
+    let statusKey: "MENUNGGU" | "DIPROSES" | "SELESAI" | "DITOLAK" = "MENUNGGU";
+    if (p.status === "SEDANG_DIPROSES") statusKey = "DIPROSES";
+    else if (p.status === "SELESAI") statusKey = "SELESAI";
+    else if (p.status === "DITOLAK") statusKey = "DITOLAK";
+
+    return {
+      id: p.kodePengajuan,
+      nama: p.tamu.nama,
+      layanan: p.layanan.nama,
+      sampel,
+      status: statusKey,
+      waktu,
+    };
+  });
+
   const stats = [
     {
       title: "Total Pengajuan",
-      value: "148",
-      subtext: "+12 minggu ini",
+      value: String(totalPengajuan),
+      subtext: "Semua kanal layanan",
       icon: ClipboardList,
       primary: true,
       iconColor: "bg-white text-[#1664e8]",
     },
     {
       title: "Menunggu Verifikasi",
-      value: "16",
+      value: String(menungguVerifikasi),
       subtext: "Butuh tindakan petugas",
       icon: AlertCircle,
-      iconColor: "border border-amber-200/90 bg-amber-50 text-amber-600 dark:border-amber-800/60 dark:bg-amber-950/50 dark:text-amber-400",
+      iconColor:
+        "border border-amber-200/90 bg-amber-50 text-amber-600 dark:border-amber-800/60 dark:bg-amber-950/50 dark:text-amber-400",
     },
     {
       title: "Sedang Diproses",
-      value: "28",
+      value: String(sedangDiproses),
       subtext: "Uji cepat & verifikasi",
       icon: Clock,
-      iconColor: "border border-sky-200/90 bg-sky-50 text-sky-600 dark:border-sky-800/60 dark:bg-sky-950/50 dark:text-sky-400",
+      iconColor:
+        "border border-sky-200/90 bg-sky-50 text-sky-600 dark:border-sky-800/60 dark:bg-sky-950/50 dark:text-sky-400",
     },
     {
       title: "Selesai",
-      value: "104",
+      value: String(selesai),
       subtext: "Tuntas dilayani",
       icon: CheckCircle2,
-      iconColor: "border border-emerald-200/90 bg-emerald-50 text-emerald-600 dark:border-emerald-800/60 dark:bg-emerald-950/50 dark:text-emerald-400",
-    },
-  ];
-
-  const recentSubmissions = [
-    {
-      id: "AMP-UJI-202610-0042",
-      nama: "Siti Rahmawati",
-      layanan: "Pengujian Cepat Ampera",
-      sampel: "Pempek & Tekwan Pasar Cinde",
-      status: "MENUNGGU",
-      waktu: "15 menit yang lalu",
-    },
-    {
-      id: "AMP-INF-202610-0041",
-      nama: "Ahmad Fauzan (UMKM)",
-      layanan: "Permintaan Informasi",
-      sampel: "Prosedur Izin Edar MD Pangan",
-      status: "DIPROSES",
-      waktu: "1 jam yang lalu",
-    },
-    {
-      id: "AMP-ADU-202610-0040",
-      nama: "Hendra Wijaya",
-      layanan: "Pengaduan Konsumen",
-      sampel: "Dugaan Kosmetik Ilegal Tanpa Notifikasi",
-      status: "DIPROSES",
-      waktu: "3 jam yang lalu",
-    },
-    {
-      id: "AMP-KIP-202610-0039",
-      nama: "Universitas Sriwijaya (Riset)",
-      layanan: "Keterbukaan Informasi Publik",
-      sampel: "Data Rekapitulasi Uji Sampel 2025",
-      status: "SELESAI",
-      waktu: "Kemarin",
+      iconColor:
+        "border border-emerald-200/90 bg-emerald-50 text-emerald-600 dark:border-emerald-800/60 dark:bg-emerald-950/50 dark:text-emerald-400",
     },
   ];
 
@@ -107,10 +157,15 @@ export default function AdminDashboardPage() {
   ];
   const dayLabels = ["S", "S", "R", "K", "J", "S", "M"];
 
+  const totalForCalc = totalPengajuan > 0 ? totalPengajuan : 1;
+  const selesaiPct = totalPengajuan > 0 ? Math.round((selesai / totalForCalc) * 100) : 0;
+  const diprosesPct = totalPengajuan > 0 ? Math.round((sedangDiproses / totalForCalc) * 100) : 0;
+  const menungguPct = totalPengajuan > 0 ? Math.max(0, 100 - selesaiPct - diprosesPct) : 0;
+
   const progress = [
-    { label: "Selesai", pct: 70, color: "#1664e8" },
-    { label: "Diproses", pct: 19, color: "#8ebcf8" },
-    { label: "Menunggu", pct: 11, color: "#cfe1fb" },
+    { label: "Selesai", pct: selesaiPct, color: "#1664e8" },
+    { label: "Diproses", pct: diprosesPct, color: "#8ebcf8" },
+    { label: "Menunggu", pct: menungguPct, color: "#cfe1fb" },
   ];
 
   let acc = 0;
@@ -471,7 +526,7 @@ export default function AdminDashboardPage() {
               ))}
             </svg>
             <div className="absolute inset-x-0 bottom-0 text-center">
-              <div className="text-3xl font-bold text-[#0f2257] dark:text-white">70%</div>
+              <div className="text-3xl font-bold text-[#0f2257] dark:text-white">{selesaiPct}%</div>
               <div className="text-[11px] text-[#7b8aa8]">Pengajuan Selesai</div>
             </div>
           </div>
@@ -496,7 +551,7 @@ export default function AdminDashboardPage() {
             Pengajuan Layanan Terkini
           </h2>
           <Link
-            href="/admin/layanan"
+            href="/admin/data-ampera"
             className="text-xs font-semibold text-[#1664e8] transition hover:underline"
           >
             Lihat Semua
@@ -514,9 +569,19 @@ export default function AdminDashboardPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-[#eef3fb] dark:divide-slate-800">
-              {recentSubmissions.map((row) => {
+              {recentSubmissions.length === 0 ? (
+                <tr>
+                  <td
+                    colSpan={4}
+                    className="py-10 text-center text-xs text-slate-400 dark:text-slate-500"
+                  >
+                    Belum ada pengajuan layanan yang tercatat dalam sistem database.
+                  </td>
+                </tr>
+              ) : (
+                recentSubmissions.map((row) => {
                 let badge = "bg-slate-100 text-slate-600";
-                let label = row.status;
+                let label: string = row.status;
                 if (row.status === "MENUNGGU") {
                   badge = "bg-rose-50 text-rose-500 dark:bg-rose-950/40 dark:text-rose-400";
                   label = "Menunggu";
@@ -562,7 +627,7 @@ export default function AdminDashboardPage() {
                     </td>
                     <td className="py-3.5 text-right">
                       <Link
-                        href="/admin/layanan"
+                        href="/admin/data-ampera"
                         className="inline-flex items-center gap-1 rounded-lg border border-[#e3ecfa] bg-white px-3 py-1.5 font-semibold text-[#0f2257] transition hover:border-[#1664e8] hover:text-[#1664e8] dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
                       >
                         Detail <ArrowUpRight className="h-3 w-3" />
@@ -570,7 +635,7 @@ export default function AdminDashboardPage() {
                     </td>
                   </tr>
                 );
-              })}
+              }))}
             </tbody>
           </table>
         </div>

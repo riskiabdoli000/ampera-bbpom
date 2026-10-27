@@ -21,6 +21,8 @@ import {
 } from "lucide-react";
 import {
   saveKontakSettingsAction,
+  toggleMasterSosmedAction,
+  toggleIndividualSosmedAction,
   KontakSettingsInput,
 } from "@/app/actions/settings-kontak";
 import {
@@ -158,6 +160,76 @@ export function KontakSettingsForm({ initialData }: KontakSettingsFormProps) {
   const initialYoutube = parseSocialUrl(initialData.youtubeUrl);
   const [isYoutubeActive, setIsYoutubeActive] = useState(initialYoutube.isActive);
   const [youtubeUrl, setYoutubeUrl] = useState(initialYoutube.url);
+
+  // Status loading per toggle saat auto-save ke DB
+  const [togglingPlatform, setTogglingPlatform] = useState<string | null>(null);
+
+  // Auto-save toggle Master Sosmed langsung ke database saat diklik
+  const handleToggleMasterSosmed = async () => {
+    const nextState = !isSosmedActive;
+    setIsSosmedActive(nextState);
+    setTogglingPlatform("master");
+    try {
+      const res = await toggleMasterSosmedAction(nextState);
+      if (res.success) {
+        setFeedback({
+          type: "success",
+          message: nextState
+            ? "Tampilan media sosial berhasil diaktifkan di landing page (tersimpan ke database)!"
+            : "Tampilan media sosial berhasil dinonaktifkan dari landing page (tersimpan ke database)!",
+        });
+      } else {
+        setIsSosmedActive(!nextState); // Rollback jika gagal
+        setFeedback({
+          type: "error",
+          message: res.error || "Gagal mengubah status media sosial.",
+        });
+      }
+    } catch {
+      setIsSosmedActive(!nextState); // Rollback
+      setFeedback({
+        type: "error",
+        message: "Terjadi kesalahan jaringan saat menyimpan status toggle.",
+      });
+    } finally {
+      setTogglingPlatform(null);
+    }
+  };
+
+  // Auto-save toggle akun individual langsung ke database saat diklik
+  const handleToggleIndividualSosmed = async (
+    platform: "instagram" | "facebook" | "tiktok" | "threads" | "youtube",
+    currentState: boolean,
+    setStateFn: React.Dispatch<React.SetStateAction<boolean>>
+  ) => {
+    const nextState = !currentState;
+    setStateFn(nextState);
+    setTogglingPlatform(platform);
+    try {
+      const res = await toggleIndividualSosmedAction(platform, nextState);
+      if (res.success) {
+        const platformName = platform.charAt(0).toUpperCase() + platform.slice(1);
+        setFeedback({
+          type: "success",
+          message: `Akun ${platformName} berhasil ${nextState ? "diaktifkan" : "disembunyikan"} di landing page!`,
+        });
+      } else {
+        setStateFn(!nextState); // Rollback
+        setFeedback({
+          type: "error",
+          message: res.error || `Gagal mengubah status ${platform}.`,
+        });
+      }
+    } catch {
+      setStateFn(!nextState); // Rollback
+      setFeedback({
+        type: "error",
+        message: "Terjadi kesalahan jaringan saat menyimpan toggle akun.",
+      });
+    } finally {
+      setTogglingPlatform(null);
+    }
+  };
 
   // Feedback & Transition State
   const [feedback, setFeedback] = useState<{
@@ -590,25 +662,33 @@ export function KontakSettingsForm({ initialData }: KontakSettingsFormProps) {
               </div>
             </div>
 
-            {/* Master Toggle Switch: Tampilkan / Sembunyikan Seluruh Bagian Medsos */}
+            {/* Master Toggle Switch: Langsung tersimpan otomatis ke database saat diklik */}
             <div className="flex items-center gap-3 bg-slate-50 dark:bg-slate-800/80 px-4 py-2 rounded-2xl border border-slate-200/80 dark:border-slate-700 shrink-0">
               <div className="text-left sm:text-right">
                 <span className="block text-xs font-bold text-navy-900 dark:text-white">
                   Tampilkan di Website
                 </span>
-                <span className={`text-[10px] font-semibold ${isSosmedActive ? "text-emerald-600 dark:text-emerald-400" : "text-slate-400"}`}>
-                  {isSosmedActive ? "● Aktif (Tampil)" : "○ Nonaktif (Sembunyi)"}
+                <span className={`text-[10px] font-semibold flex items-center justify-end gap-1 ${isSosmedActive ? "text-emerald-600 dark:text-emerald-400" : "text-slate-400"}`}>
+                  {togglingPlatform === "master" ? (
+                    <>
+                      <Loader2 className="w-2.5 h-2.5 animate-spin text-brand-orange" />
+                      <span>Menyimpan ke DB...</span>
+                    </>
+                  ) : (
+                    <span>{isSosmedActive ? "● Aktif (Tampil)" : "○ Nonaktif (Sembunyi)"}</span>
+                  )}
                 </span>
               </div>
               <button
                 type="button"
                 role="switch"
+                disabled={togglingPlatform === "master"}
                 aria-checked={isSosmedActive}
-                onClick={() => setIsSosmedActive(!isSosmedActive)}
-                className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                onClick={handleToggleMasterSosmed}
+                className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none disabled:opacity-60 ${
                   isSosmedActive ? "bg-emerald-500" : "bg-slate-300 dark:bg-slate-700"
                 }`}
-                title={isSosmedActive ? "Klik untuk menonaktifkan seluruh bagian media sosial" : "Klik untuk mengaktifkan bagian media sosial"}
+                title={isSosmedActive ? "Klik untuk langsung menyembunyikan media sosial di website" : "Klik untuk langsung menampilkan media sosial di website"}
               >
                 <span
                   className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-md ring-0 transition duration-200 ease-in-out ${
@@ -619,14 +699,14 @@ export function KontakSettingsForm({ initialData }: KontakSettingsFormProps) {
             </div>
           </div>
 
-          {/* Banner Peringatan jika Master Toggle Nonaktif */}
+          {/* Banner Informasi jika Master Toggle Nonaktif */}
           {!isSosmedActive && (
             <div className="rounded-2xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800/50 p-4 text-xs text-amber-900 dark:text-amber-200 flex items-start gap-3 animate-fade-in">
               <AlertCircle className="w-4 h-4 shrink-0 text-amber-600 dark:text-amber-400 mt-0.5" />
               <div className="space-y-0.5">
-                <p className="font-bold">Bagian Media Sosial Sedang Dinonaktifkan</p>
+                <p className="font-bold">Bagian Media Sosial Sedang Dinonaktifkan di Landing Page</p>
                 <p className="text-amber-700 dark:text-amber-300/90 text-[11px] leading-relaxed">
-                  Seluruh deretan ikon media sosial dan labelnya tidak akan dimunculkan di landing page website. Data tautan yang Anda simpan di bawah ini tetap aman dan tidak akan hilang.
+                  Seluruh deretan ikon media sosial dan labelnya telah tersimpan nonaktif di database dan tidak akan dimunculkan di landing page website. Data tautan yang Anda simpan di bawah ini tetap aman.
                 </p>
               </div>
             </div>
@@ -658,14 +738,15 @@ export function KontakSettingsForm({ initialData }: KontakSettingsFormProps) {
                   </label>
                   <div className="flex items-center gap-2">
                     <span className={`text-[10px] font-bold ${isInstagramActive ? "text-emerald-600 dark:text-emerald-400" : "text-slate-400"}`}>
-                      {isInstagramActive ? "Aktif" : "Nonaktif"}
+                      {togglingPlatform === "instagram" ? "Menyimpan..." : (isInstagramActive ? "Aktif" : "Nonaktif")}
                     </span>
                     <button
                       type="button"
                       role="switch"
+                      disabled={togglingPlatform === "instagram"}
                       aria-checked={isInstagramActive}
-                      onClick={() => setIsInstagramActive(!isInstagramActive)}
-                      className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                      onClick={() => handleToggleIndividualSosmed("instagram", isInstagramActive, setIsInstagramActive)}
+                      className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none disabled:opacity-60 ${
                         isInstagramActive ? "bg-emerald-500" : "bg-slate-300 dark:bg-slate-700"
                       }`}
                       title={isInstagramActive ? "Klik untuk menonaktifkan Instagram" : "Klik untuk mengaktifkan Instagram"}
@@ -707,14 +788,15 @@ export function KontakSettingsForm({ initialData }: KontakSettingsFormProps) {
                   </label>
                   <div className="flex items-center gap-2">
                     <span className={`text-[10px] font-bold ${isFacebookActive ? "text-emerald-600 dark:text-emerald-400" : "text-slate-400"}`}>
-                      {isFacebookActive ? "Aktif" : "Nonaktif"}
+                      {togglingPlatform === "facebook" ? "Menyimpan..." : (isFacebookActive ? "Aktif" : "Nonaktif")}
                     </span>
                     <button
                       type="button"
                       role="switch"
+                      disabled={togglingPlatform === "facebook"}
                       aria-checked={isFacebookActive}
-                      onClick={() => setIsFacebookActive(!isFacebookActive)}
-                      className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                      onClick={() => handleToggleIndividualSosmed("facebook", isFacebookActive, setIsFacebookActive)}
+                      className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none disabled:opacity-60 ${
                         isFacebookActive ? "bg-emerald-500" : "bg-slate-300 dark:bg-slate-700"
                       }`}
                       title={isFacebookActive ? "Klik untuk menonaktifkan Facebook" : "Klik untuk mengaktifkan Facebook"}
@@ -756,14 +838,15 @@ export function KontakSettingsForm({ initialData }: KontakSettingsFormProps) {
                   </label>
                   <div className="flex items-center gap-2">
                     <span className={`text-[10px] font-bold ${isTiktokActive ? "text-emerald-600 dark:text-emerald-400" : "text-slate-400"}`}>
-                      {isTiktokActive ? "Aktif" : "Nonaktif"}
+                      {togglingPlatform === "tiktok" ? "Menyimpan..." : (isTiktokActive ? "Aktif" : "Nonaktif")}
                     </span>
                     <button
                       type="button"
                       role="switch"
+                      disabled={togglingPlatform === "tiktok"}
                       aria-checked={isTiktokActive}
-                      onClick={() => setIsTiktokActive(!isTiktokActive)}
-                      className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                      onClick={() => handleToggleIndividualSosmed("tiktok", isTiktokActive, setIsTiktokActive)}
+                      className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none disabled:opacity-60 ${
                         isTiktokActive ? "bg-emerald-500" : "bg-slate-300 dark:bg-slate-700"
                       }`}
                       title={isTiktokActive ? "Klik untuk menonaktifkan TikTok" : "Klik untuk mengaktifkan TikTok"}
@@ -805,14 +888,15 @@ export function KontakSettingsForm({ initialData }: KontakSettingsFormProps) {
                   </label>
                   <div className="flex items-center gap-2">
                     <span className={`text-[10px] font-bold ${isThreadsActive ? "text-emerald-600 dark:text-emerald-400" : "text-slate-400"}`}>
-                      {isThreadsActive ? "Aktif" : "Nonaktif"}
+                      {togglingPlatform === "threads" ? "Menyimpan..." : (isThreadsActive ? "Aktif" : "Nonaktif")}
                     </span>
                     <button
                       type="button"
                       role="switch"
+                      disabled={togglingPlatform === "threads"}
                       aria-checked={isThreadsActive}
-                      onClick={() => setIsThreadsActive(!isThreadsActive)}
-                      className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                      onClick={() => handleToggleIndividualSosmed("threads", isThreadsActive, setIsThreadsActive)}
+                      className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none disabled:opacity-60 ${
                         isThreadsActive ? "bg-emerald-500" : "bg-slate-300 dark:bg-slate-700"
                       }`}
                       title={isThreadsActive ? "Klik untuk menonaktifkan Threads" : "Klik untuk mengaktifkan Threads"}
@@ -854,14 +938,15 @@ export function KontakSettingsForm({ initialData }: KontakSettingsFormProps) {
                   </label>
                   <div className="flex items-center gap-2">
                     <span className={`text-[10px] font-bold ${isYoutubeActive ? "text-emerald-600 dark:text-emerald-400" : "text-slate-400"}`}>
-                      {isYoutubeActive ? "Aktif" : "Nonaktif"}
+                      {togglingPlatform === "youtube" ? "Menyimpan..." : (isYoutubeActive ? "Aktif" : "Nonaktif")}
                     </span>
                     <button
                       type="button"
                       role="switch"
+                      disabled={togglingPlatform === "youtube"}
                       aria-checked={isYoutubeActive}
-                      onClick={() => setIsYoutubeActive(!isYoutubeActive)}
-                      className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                      onClick={() => handleToggleIndividualSosmed("youtube", isYoutubeActive, setIsYoutubeActive)}
+                      className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none disabled:opacity-60 ${
                         isYoutubeActive ? "bg-emerald-500" : "bg-slate-300 dark:bg-slate-700"
                       }`}
                       title={isYoutubeActive ? "Klik untuk menonaktifkan YouTube" : "Klik untuk mengaktifkan YouTube"}
