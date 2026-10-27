@@ -290,7 +290,7 @@ export function AdminSidebar({ isOpen, onClose }: AdminSidebarProps) {
           </div>
 
           {/* Tombol Logout menimpa (overlay) di atas gambar */}
-          <div className="absolute inset-x-0 bottom-0 p-4">
+          {/* <div className="absolute inset-x-0 bottom-0 p-4">
             <Link
               href="/"
               title="Keluar ke Landing Page"
@@ -299,7 +299,7 @@ export function AdminSidebar({ isOpen, onClose }: AdminSidebarProps) {
               <LogOut className="h-[18px] w-[18px] text-rose-300" />
               <span>Logout</span>
             </Link>
-          </div>
+          </div> */}
         </div>
       </aside>
     </>

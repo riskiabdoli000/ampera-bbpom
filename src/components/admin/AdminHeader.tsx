@@ -2,7 +2,8 @@
 
 import React, { useState, useEffect } from "react";
 import Image from "next/image";
-import { Menu, Sun, Moon, Bell, Mail, ChevronDown } from "lucide-react";
+import { Menu, Sun, Moon, Bell, Mail, LogOut } from "lucide-react";
+import { logoutAdminAction } from "@/app/actions/admin-auth";
 
 interface AdminHeaderProps {
   onOpenSidebar: () => void;
@@ -93,13 +94,24 @@ export function AdminHeader({ onOpenSidebar }: AdminHeaderProps) {
         </button>
 
         <div className="ml-1 flex items-center gap-3">
-          <div className="flex h-11 w-11 items-center justify-center rounded-full bg-gradient-to-br from-[#0b4fd1] to-[#2f86f6] text-sm font-bold text-white ring-2 ring-white dark:ring-slate-800">
-            OP
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-[#0b4fd1] to-[#2f86f6] text-xs font-bold text-white shadow-sm ring-1 ring-white/20">
+            ADM
           </div>
-          <div className="hidden flex-col leading-tight md:flex">
-            <span className="text-sm font-bold text-[#0f2257] dark:text-white">BBPOM Operator</span>
-            <span className="text-xs text-[#7b8aa8]">operator@ampera.go.id</span>
+          <div className="hidden flex-col leading-tight sm:flex">
+            <span className="text-xs font-bold text-[#0f2257] dark:text-white">Admin BBPOM</span>
+            <span className="text-[10px] text-[#7b8aa8]">Petugas Terverifikasi</span>
           </div>
+
+          <form action={logoutAdminAction}>
+            <button
+              type="submit"
+              className="flex h-10 items-center gap-1.5 rounded-xl border border-red-200 bg-red-50/70 px-3 text-xs font-semibold text-red-600 transition-colors hover:bg-red-100 hover:text-red-700 dark:border-red-900/40 dark:bg-red-950/40 dark:text-red-300 dark:hover:bg-red-900/60"
+              title="Keluar dari akun admin"
+            >
+              <LogOut className="h-3.5 w-3.5" />
+              <span className="hidden md:inline">Keluar</span>
+            </button>
+          </form>
         </div>
       </div>
     </header>

@@ -3,6 +3,7 @@
 import React from "react";
 import Link from "next/link";
 import Image from "next/image";
+import WaStatusBadge from "@/components/admin/WaStatusBadge";
 import {
   ClipboardList,
   Clock,
@@ -160,6 +161,8 @@ export default function AdminDashboardPage() {
             <p className="mt-1 text-sm text-[#5d6c8c] dark:text-slate-400">
               Pantau pengajuan layanan publik dan kelola konten landing page dengan mudah.
             </p>
+            {/* Status WhatsApp Gateway */}
+            <WaStatusBadge />
           </div>
 
           {/* Stat cards */}

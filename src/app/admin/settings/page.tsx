@@ -1,7 +1,6 @@
-"use client";
-
 import React from "react";
 import Link from "next/link";
+import { prisma } from "@/lib/prisma";
 import {
   Sparkles,
   BookOpen,
@@ -12,14 +11,21 @@ import {
   ExternalLink,
 } from "lucide-react";
 
-export default function WebsiteSettingsIndexPage() {
+export const dynamic = "force-dynamic";
+
+export default async function WebsiteSettingsIndexPage() {
+  const [activeSlidesCount, totalEdukasiCount] = await Promise.all([
+    prisma.heroSlide.count({ where: { isActive: true } }),
+    prisma.edukasi.count(),
+  ]);
+
   const sections = [
     {
       title: "Hero Content Banner",
       desc: "Atur foto slider latar belakang, judul utama, deskripsi layanan, dan tombol CTA 'Mulai Pengujian Cepat'.",
       icon: Sparkles,
       href: "/admin/settings/hero",
-      badge: "2 Slide Aktif",
+      badge: `${activeSlidesCount} Slide Aktif`,
       color: "from-amber-500 to-orange-600",
     },
     {
@@ -27,7 +33,7 @@ export default function WebsiteSettingsIndexPage() {
       desc: "Kelola artikel dan tips edukasi keamanan obat, pangan, kosmetik, serta kampanye Cek KLIK.",
       icon: BookOpen,
       href: "/admin/settings/edukasi",
-      badge: "3 Materi Siap",
+      badge: `${totalEdukasiCount} Materi Siap`,
       color: "from-blue-600 to-cyan-600",
     },
     {
@@ -40,10 +46,10 @@ export default function WebsiteSettingsIndexPage() {
     },
     {
       title: "Kontak & Lokasi Kantor",
-      desc: "Perbarui nomor WhatsApp pengaduan, hotline darurat, alamat Jl. Pangeran Ratu, dan jam operasional.",
+      desc: "Perbarui nomor WhatsApp pengaduan, alamat kantor, Google Maps, dan media sosial resmi.",
       icon: PhoneCall,
       href: "/admin/settings/kontak",
-      badge: "WhatsApp Hotline",
+      badge: "Google Maps & Sosmed",
       color: "from-emerald-600 to-teal-600",
     },
   ];
@@ -61,7 +67,7 @@ export default function WebsiteSettingsIndexPage() {
             Pengaturan Konten Website
           </h1>
           <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1">
-            Pilih bagian landing page yang ingin Anda ubah atau perbarui tampilannya.
+            Kelola teks, foto slider, video profil, dan informasi kontak yang tersimpan di database.
           </p>
         </div>
 
