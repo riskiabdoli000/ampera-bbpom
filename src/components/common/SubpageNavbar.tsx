@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { Sun, Moon, Menu, X, ArrowRight, HelpCircle } from "lucide-react";
+import { Sun, Moon, Menu, X, HelpCircle } from "lucide-react";
 
 interface SubpageNavbarProps {
   activePage?: "beranda" | "layanan" | "edukasi" | "video" | "kontak";
@@ -114,32 +114,23 @@ export function SubpageNavbar({ activePage = "layanan" }: SubpageNavbarProps) {
             })}
           </nav>
 
-          {/* Action Kanan: Theme Toggle + Tombol Bantuan */}
+          {/* Action Kanan: Theme Toggle (Desktop) & Menu (Mobile) */}
           <div className="flex items-center gap-2.5 sm:gap-3 z-20">
-            {/* Theme Toggle Button */}
+            {/* Theme Toggle Button (Desktop) */}
             <button
               type="button"
               onClick={toggleTheme}
-              className="w-10 h-10 sm:w-11 sm:h-11 rounded-full bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 text-navy-900 dark:text-yellow-400 flex items-center justify-center shadow-xs hover:border-brand-orange transition-colors cursor-pointer"
+              className="hidden lg:flex w-10 h-10 sm:w-11 sm:h-11 rounded-full bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 text-navy-900 dark:text-yellow-400 items-center justify-center shadow-xs hover:border-brand-orange hover:scale-105 active:scale-95 transition-all cursor-pointer focus-visible:outline-2 focus-visible:outline-brand-orange"
               aria-label={isDark ? "Ganti ke tema terang" : "Ganti ke tema gelap"}
             >
-              {isDark ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5 text-slate-700" />}
+              {isDark ? <Sun className="w-5 h-5 text-amber-400" /> : <Moon className="w-5 h-5 text-slate-700 dark:text-slate-200" />}
             </button>
-
-            {/* Tombol Bantuan seperti di gambar referensi */}
-            <Link
-              href="/#kontak"
-              className="group inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-[#ff8a1f] to-[#f26a0f] px-5 sm:px-6 py-2.5 sm:py-3 text-xs sm:text-sm font-bold text-white shadow-cta transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_14px_28px_-8px_rgb(255_122_26/0.65)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-orange"
-            >
-              <span>Bantuan</span>
-              <ArrowRight className="w-4 h-4 transition-transform duration-200 group-hover:translate-x-1" />
-            </Link>
 
             {/* Mobile Menu Button */}
             <button
               type="button"
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="lg:hidden w-10 h-10 sm:w-11 sm:h-11 rounded-full bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-700 text-navy-900 dark:text-white flex items-center justify-center shadow-sm active:scale-95 cursor-pointer"
+              className="lg:hidden w-10 h-10 sm:w-11 sm:h-11 rounded-full bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-700 text-navy-900 dark:text-white flex items-center justify-center shadow-sm active:scale-95 cursor-pointer focus-visible:outline-2 focus-visible:outline-brand-orange"
               aria-label="Buka menu navigasi"
               aria-expanded={mobileMenuOpen}
             >
@@ -169,15 +160,43 @@ export function SubpageNavbar({ activePage = "layanan" }: SubpageNavbarProps) {
                   </Link>
                 );
               })}
-              <div className="pt-2 mt-2 border-t border-slate-100 dark:border-slate-800">
+              <div className="pt-2 mt-2 border-t border-slate-100 dark:border-slate-800 flex flex-col gap-2.5">
                 <Link
                   href="/#kontak"
                   onClick={() => setMobileMenuOpen(false)}
-                  className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#ff8a1f] to-[#f26a0f] py-3 text-sm font-bold text-white shadow-cta"
+                  className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#ff8a1f] to-[#f26a0f] py-3 text-sm font-bold text-white shadow-cta hover:shadow-orange-500/25 transition-all"
                 >
                   <HelpCircle className="w-4 h-4" />
                   <span>Pusat Bantuan BBPOM</span>
                 </Link>
+
+                {/* Night Mode Toggle */}
+                <button
+                  type="button"
+                  onClick={toggleTheme}
+                  className="w-full flex items-center justify-between px-4 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200/80 dark:border-slate-700/80 text-navy-900 dark:text-slate-100 transition-colors cursor-pointer hover:border-brand-orange"
+                  aria-label={isDark ? "Beralih ke mode terang" : "Beralih ke mode gelap"}
+                >
+                  <span className="flex items-center gap-2.5 text-xs font-semibold">
+                    {isDark ? (
+                      <Sun className="w-4 h-4 text-amber-400" />
+                    ) : (
+                      <Moon className="w-4 h-4 text-slate-600 dark:text-slate-300" />
+                    )}
+                    <span>{isDark ? "Mode Terang" : "Mode Gelap"}</span>
+                  </span>
+                  <div
+                    className={`w-9 h-5 flex items-center rounded-full p-0.5 transition-colors duration-200 ${
+                      isDark ? "bg-brand-orange" : "bg-slate-300 dark:bg-slate-600"
+                    }`}
+                  >
+                    <div
+                      className={`w-4 h-4 rounded-full bg-white shadow-xs transition-transform duration-200 ${
+                        isDark ? "translate-x-4" : "translate-x-0"
+                      }`}
+                    />
+                  </div>
+                </button>
               </div>
             </nav>
           </div>

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import Link from "next/link";
 import {
   User,
@@ -9,7 +9,6 @@ import {
   MapPin,
   AlertCircle,
   CheckCircle2,
-  ChevronDown,
   ArrowRight,
   ArrowLeft,
   ShieldCheck,
@@ -18,7 +17,6 @@ import {
   Printer,
   Sparkles,
   RefreshCw,
-  Search,
   Loader2,
   Calendar,
   Building2,
@@ -31,16 +29,6 @@ import {
   type PermintaanInformasiResponse,
 } from "@/app/actions/permintaan-informasi";
 import { lookupNikAction } from "@/app/actions/lookup-nik";
-
-const KATEGORI_OPTIONS = [
-  "Konsultasi Izin Edar & Registrasi Obat / Makanan",
-  "Regulasi & Standar Keamanan Pangan UMKM",
-  "Konsultasi Sertifikasi CPPOB / CDOB / Halal",
-  "Informasi Pengujian Mutu Laboratorium BBPOM",
-  "Regulasi Obat Tradisional, Suplemen & Kosmetik",
-  "Informasi Prosedur Ekspor / Impor Komoditas Obat & Pangan",
-  "Layanan Informasi Umum Lainnya",
-];
 
 export function PermintaanInformasiForm() {
   const [currentStep, setCurrentStep] = useState<1 | 2 | 3>(1);
@@ -64,21 +52,107 @@ export function PermintaanInformasiForm() {
     alamatAsalInstansi: "",
     informasiDibutuhkan: "",
     telepon: "",
-    kategoriInformasi: KATEGORI_OPTIONS[0],
+    kategoriInformasi: "Layanan Informasi Obat & Makanan",
   });
 
   // Validation Errors
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
 
+  const nikRef = useRef(formData.nik);
+  nikRef.current = formData.nik;
+  const lastCheckedNikRef = useRef<string>("");
+
+  // Handler: Auto-fill data pemohon saat NIK valid ditemukan
+  const performNikLookup = useCallback(async (cleanNik: string) => {
+    if (!cleanNik || cleanNik.length < 8) return;
+    if (cleanNik === lastCheckedNikRef.current) return;
+
+    lastCheckedNikRef.current = cleanNik;
+    setIsCheckingNik(true);
+
+    try {
+      const res = await lookupNikAction(cleanNik);
+      // Validasi bahwa NIK di form saat ini belum berubah sebelum update state
+      if (nikRef.current.trim().replace(/\D/g, "") === cleanNik) {
+        if (res.found && res.data) {
+          setNikLookupStatus({
+            status: "found",
+            message: `${res.message}. Data Anda telah diisikan otomatis.`,
+          });
+          setFormData((prev) => ({
+            ...prev,
+            nama: res.data?.nama || prev.nama,
+            email: res.data?.email || prev.email,
+            umur: res.data?.umur ? String(res.data.umur) : prev.umur,
+            alamatAsalInstansi:
+              res.data?.asalInstansi || res.data?.alamat || prev.alamatAsalInstansi,
+            telepon: res.data?.telepon || prev.telepon,
+          }));
+          // Hapus error yang bersangkutan
+          setErrors((prev) => {
+            const next = { ...prev };
+            delete next.nik;
+            delete next.nama;
+            delete next.email;
+            delete next.umur;
+            delete next.alamatAsalInstansi;
+            delete next.telepon;
+            return next;
+          });
+        } else {
+          setNikLookupStatus({
+            status: "not_found",
+            message: res.message || "NIK belum terdaftar di sistem. Silakan lengkapi formulir di bawah ini.",
+          });
+        }
+      }
+    } catch {
+      if (nikRef.current.trim().replace(/\D/g, "") === cleanNik) {
+        setNikLookupStatus({
+          status: "not_found",
+          message: "Layanan cek NIK sementara offline. Silakan lengkapi formulir secara manual.",
+        });
+      }
+    } finally {
+      setIsCheckingNik(false);
+    }
+  }, []);
+
+  // Auto-lookup saat NIK mencapai 16 digit (standar KTP)
+  useEffect(() => {
+    const cleanNik = formData.nik.trim().replace(/\D/g, "");
+    if (cleanNik.length === 16 && cleanNik !== lastCheckedNikRef.current) {
+      performNikLookup(cleanNik);
+    }
+  }, [formData.nik, performNikLookup]);
+
+  // Lookup cadangan saat user selesai input NIK (onBlur) jika panjang >= 8
+  const handleNikBlur = () => {
+    const cleanNik = formData.nik.trim().replace(/\D/g, "");
+    if (cleanNik.length >= 8 && cleanNik !== lastCheckedNikRef.current) {
+      performNikLookup(cleanNik);
+    }
+  };
+
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>
   ) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
 
-    // Reset NIK lookup status if NIK is modified
     if (name === "nik") {
-      setNikLookupStatus({ status: "idle", message: "" });
+      // Hanya izinkan angka, maksimal 16 digit
+      const numericVal = value.replace(/\D/g, "").slice(0, 16);
+      setFormData((prev) => ({ ...prev, nik: numericVal }));
+
+      // Reset lookup status jika NIK diubah dan berbeda dari NIK yang dicek sebelumnya
+      if (numericVal !== lastCheckedNikRef.current) {
+        setNikLookupStatus({ status: "idle", message: "" });
+      }
+      if (numericVal.length < 8) {
+        lastCheckedNikRef.current = "";
+      }
+    } else {
+      setFormData((prev) => ({ ...prev, [name]: value }));
     }
 
     // Clear error on type
@@ -88,60 +162,6 @@ export function PermintaanInformasiForm() {
         delete newErr[name];
         return newErr;
       });
-    }
-  };
-
-  // Handler: Cek NIK otomatis / manual
-  const handleLookupNik = async () => {
-    const cleanNik = formData.nik.trim();
-    if (!cleanNik || cleanNik.length < 8) {
-      setErrors((prev) => ({
-        ...prev,
-        nik: "Masukkan minimal 8-16 digit NIK untuk verifikasi",
-      }));
-      return;
-    }
-
-    setIsCheckingNik(true);
-    try {
-      const res = await lookupNikAction(cleanNik);
-      if (res.found && res.data) {
-        setNikLookupStatus({
-          status: "found",
-          message: `${res.message}. Data Anda telah diisikan otomatis.`,
-        });
-        setFormData((prev) => ({
-          ...prev,
-          nama: res.data?.nama || prev.nama,
-          email: res.data?.email || prev.email,
-          umur: res.data?.umur ? String(res.data.umur) : prev.umur,
-          alamatAsalInstansi:
-            res.data?.asalInstansi || res.data?.alamat || prev.alamatAsalInstansi,
-          telepon: res.data?.telepon || prev.telepon,
-        }));
-        // Hapus error yang bersangkutan
-        setErrors((prev) => {
-          const next = { ...prev };
-          delete next.nik;
-          delete next.nama;
-          delete next.email;
-          delete next.umur;
-          delete next.alamatAsalInstansi;
-          return next;
-        });
-      } else {
-        setNikLookupStatus({
-          status: "not_found",
-          message: res.message || "NIK belum terdaftar. Silakan lengkapi formulir di bawah ini.",
-        });
-      }
-    } catch {
-      setNikLookupStatus({
-        status: "not_found",
-        message: "Layanan cek NIK sementara offline. Silakan lengkapi formulir secara manual.",
-      });
-    } finally {
-      setIsCheckingNik(false);
     }
   };
 
@@ -296,7 +316,7 @@ export function PermintaanInformasiForm() {
       alamatAsalInstansi: "",
       informasiDibutuhkan: "",
       telepon: "",
-      kategoriInformasi: KATEGORI_OPTIONS[0],
+      kategoriInformasi: "Layanan Informasi Obat & Makanan",
     });
     setNikLookupStatus({ status: "idle", message: "" });
     setErrors({});
@@ -409,12 +429,6 @@ export function PermintaanInformasiForm() {
               </h3>
               <div className="bg-slate-50 dark:bg-slate-800/50 rounded-2xl p-4 space-y-2.5">
                 <div>
-                  <span className="text-xs text-ink-soft dark:text-slate-400 block">Kategori Informasi:</span>
-                  <span className="font-bold text-brand-orange-600 dark:text-orange-400">
-                    {submissionResult.data.kategoriInformasi || "Layanan Konsultasi / Informasi Umum"}
-                  </span>
-                </div>
-                <div>
                   <span className="text-xs text-ink-soft dark:text-slate-400 block">Estimasi Waktu Tanggapan:</span>
                   <span className="font-semibold text-navy-900 dark:text-white">
                     {submissionResult.data.estimasiPenyelesaian || "1 - 3 Hari Kerja"}
@@ -492,13 +506,112 @@ export function PermintaanInformasiForm() {
   // =========================================================================
   return (
     <div className="w-full max-w-5xl mx-auto">
-      <div className="bg-white dark:bg-slate-900 rounded-[28px] sm:rounded-[36px] border border-slate-100 dark:border-slate-800/90 shadow-[0_20px_60px_-15px_rgba(11,42,107,0.1)] p-6 sm:p-10 lg:p-12 relative overflow-hidden transition-all duration-300">
+      <div className="bg-white dark:bg-slate-900 rounded-[28px] sm:rounded-[36px] border border-slate-100 dark:border-slate-800/90 shadow-[0_20px_60px_-15px_rgba(11,42,107,0.1)] p-5 sm:p-10 lg:p-12 relative overflow-hidden transition-all duration-300">
         
         {/* =================================================================== */}
-        {/* 1. STEPPER PROGRESS INDICATOR (Gaya Pengujian Cepat)                */}
+        {/* 1. STEPPER PROGRESS INDICATOR (Responsive Mobile & Desktop)         */}
         {/* =================================================================== */}
-        <div className="relative mb-10 pb-8 border-b border-slate-100 dark:border-slate-800/80">
-          <div className="flex items-center justify-between max-w-3xl mx-auto relative">
+        <div className="relative mb-8 sm:mb-10 pb-6 sm:pb-8 border-b border-slate-100 dark:border-slate-800/80">
+          
+          {/* Mobile Stepper View (< sm) */}
+          <div className="sm:hidden relative">
+            {/* Progress Bar Behind Circles */}
+            <div className="absolute top-4 left-[16.67%] right-[16.67%] h-0.5 -translate-y-1/2 bg-slate-200 dark:bg-slate-800">
+              <div
+                className="h-full bg-brand-orange transition-all duration-500 rounded-full"
+                style={{
+                  width: currentStep === 1 ? "0%" : currentStep === 2 ? "50%" : "100%",
+                }}
+              />
+            </div>
+
+            <div className="grid grid-cols-3 relative">
+              {/* Step 1: Data Pemohon */}
+              <button
+                type="button"
+                onClick={() => handleStepClick(1)}
+                className="flex flex-col items-center group focus:outline-hidden cursor-pointer relative z-10"
+              >
+                <div
+                  className={`w-8 h-8 rounded-full flex items-center justify-center font-brand font-bold text-xs transition-all duration-300 ring-4 ring-white dark:ring-slate-900 ${
+                    currentStep >= 1
+                      ? "bg-brand-orange text-white shadow-[0_4px_14px_rgba(255,122,26,0.4)]"
+                      : "bg-slate-100 text-slate-400 dark:bg-slate-800"
+                  }`}
+                >
+                  01
+                </div>
+                <span
+                  className={`mt-1.5 font-brand text-[11px] font-bold text-center leading-tight transition-colors line-clamp-2 px-1 ${
+                    currentStep === 1
+                      ? "text-brand-orange dark:text-orange-400"
+                      : currentStep > 1
+                      ? "text-navy-900 dark:text-white"
+                      : "text-slate-400 dark:text-slate-500"
+                  }`}
+                >
+                  Data Pemohon
+                </span>
+              </button>
+
+              {/* Step 2: Detail Informasi */}
+              <button
+                type="button"
+                onClick={() => handleStepClick(2)}
+                className="flex flex-col items-center group focus:outline-hidden cursor-pointer relative z-10"
+              >
+                <div
+                  className={`w-8 h-8 rounded-full flex items-center justify-center font-brand font-bold text-xs transition-all duration-300 ring-4 ring-white dark:ring-slate-900 ${
+                    currentStep >= 2
+                      ? "bg-brand-orange text-white shadow-[0_4px_14px_rgba(255,122,26,0.4)]"
+                      : "bg-sky-50 text-sky-700 dark:bg-slate-800 dark:text-slate-400 border border-sky-200 dark:border-slate-700"
+                  }`}
+                >
+                  02
+                </div>
+                <span
+                  className={`mt-1.5 font-brand text-[11px] font-bold text-center leading-tight transition-colors line-clamp-2 px-1 ${
+                    currentStep === 2
+                      ? "text-brand-orange dark:text-orange-400"
+                      : currentStep > 2
+                      ? "text-navy-900 dark:text-white"
+                      : "text-slate-400 dark:text-slate-500"
+                  }`}
+                >
+                  Informasi Dibutuhkan
+                </span>
+              </button>
+
+              {/* Step 3: Konfirmasi */}
+              <button
+                type="button"
+                onClick={() => handleStepClick(3)}
+                className="flex flex-col items-center group focus:outline-hidden cursor-pointer relative z-10"
+              >
+                <div
+                  className={`w-8 h-8 rounded-full flex items-center justify-center font-brand font-bold text-xs transition-all duration-300 ring-4 ring-white dark:ring-slate-900 ${
+                    currentStep === 3
+                      ? "bg-brand-orange text-white shadow-[0_4px_14px_rgba(255,122,26,0.4)]"
+                      : "bg-slate-100 text-slate-400 dark:bg-slate-800"
+                  }`}
+                >
+                  03
+                </div>
+                <span
+                  className={`mt-1.5 font-brand text-[11px] font-bold text-center leading-tight transition-colors line-clamp-2 px-1 ${
+                    currentStep === 3
+                      ? "text-brand-orange dark:text-orange-400"
+                      : "text-slate-400 dark:text-slate-500"
+                  }`}
+                >
+                  Konfirmasi
+                </span>
+              </button>
+            </div>
+          </div>
+
+          {/* Desktop Stepper View (>= sm) */}
+          <div className="hidden sm:flex items-center justify-between max-w-3xl mx-auto relative">
             
             {/* Step 1: Data Pemohon */}
             <button
@@ -633,48 +746,46 @@ export function PermintaanInformasiForm() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-5 sm:gap-6">
                 {/* Field 1: NIK (Nomor Induk Kependudukan) */}
                 <div className="md:col-span-2">
-                  <label
-                    htmlFor="nik"
-                    className="block text-xs sm:text-[13px] font-bold text-navy-900 dark:text-slate-200 mb-2"
-                  >
-                    NIK (Nomor Induk Kependudukan) <span className="text-red-500">*</span>
-                  </label>
-                  <div className="flex flex-col sm:flex-row gap-2.5">
-                    <div className="relative flex-1">
-                      <input
-                        id="nik"
-                        name="nik"
-                        type="text"
-                        maxLength={16}
-                        value={formData.nik}
-                        onChange={handleChange}
-                        placeholder="Masukkan 16 digit NIK KTP Anda"
-                        className={`w-full rounded-2xl border bg-white dark:bg-slate-950 px-4 py-3.5 text-sm text-navy-900 dark:text-white placeholder:text-slate-400 focus:outline-hidden transition-all duration-200 ${
-                          errors.nik
-                            ? "border-red-400 focus:ring-2 focus:ring-red-400/20"
-                            : "border-slate-200 dark:border-slate-700/80 focus:border-brand-orange focus:ring-2 focus:ring-brand-orange/20"
-                        }`}
-                      />
-                    </div>
-                    <button
-                      type="button"
-                      onClick={handleLookupNik}
-                      disabled={isCheckingNik}
-                      className="inline-flex items-center justify-center gap-2 px-5 py-3.5 rounded-2xl border border-sky-200 dark:border-sky-800 bg-sky-50 dark:bg-sky-950/50 text-xs sm:text-sm font-bold text-sky-700 dark:text-sky-300 hover:bg-sky-100 hover:border-sky-300 dark:hover:bg-sky-900/40 transition-colors cursor-pointer shrink-0 disabled:opacity-50"
-                      title="Periksa apakah NIK sudah pernah terdaftar di sistem Buku Tamu BBPOM"
+                  <div className="flex items-center justify-between mb-2">
+                    <label
+                      htmlFor="nik"
+                      className="block text-xs sm:text-[13px] font-bold text-navy-900 dark:text-slate-200"
                     >
+                      NIK (Nomor Induk Kependudukan) <span className="text-red-500">*</span>
+                    </label>
+                    {isCheckingNik && (
+                      <span className="inline-flex items-center gap-1.5 text-xs font-medium text-sky-600 dark:text-sky-400">
+                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                        Mengecek NIK otomatis...
+                      </span>
+                    )}
+                  </div>
+                  <div className="relative">
+                    <input
+                      id="nik"
+                      name="nik"
+                      type="text"
+                      inputMode="numeric"
+                      maxLength={16}
+                      value={formData.nik}
+                      onChange={handleChange}
+                      onBlur={handleNikBlur}
+                      placeholder="Masukkan 16 digit NIK KTP Anda"
+                      className={`w-full rounded-2xl border bg-white dark:bg-slate-950 px-4 py-3.5 pr-11 text-sm text-navy-900 dark:text-white placeholder:text-slate-400 focus:outline-hidden transition-all duration-200 ${
+                        errors.nik
+                          ? "border-red-400 focus:ring-2 focus:ring-red-400/20"
+                          : nikLookupStatus.status === "found"
+                          ? "border-emerald-400 focus:ring-2 focus:ring-emerald-400/20"
+                          : "border-slate-200 dark:border-slate-700/80 focus:border-brand-orange focus:ring-2 focus:ring-brand-orange/20"
+                      }`}
+                    />
+                    <div className="absolute right-4 top-1/2 -translate-y-1/2 flex items-center pointer-events-none">
                       {isCheckingNik ? (
-                        <>
-                          <Loader2 className="w-4 h-4 animate-spin text-sky-600" />
-                          <span>Memeriksa...</span>
-                        </>
-                      ) : (
-                        <>
-                          <Search className="w-4 h-4 text-sky-600 dark:text-sky-400" />
-                          <span>Cek Data NIK</span>
-                        </>
-                      )}
-                    </button>
+                        <Loader2 className="w-5 h-5 animate-spin text-sky-600 dark:text-sky-400" />
+                      ) : nikLookupStatus.status === "found" ? (
+                        <CheckCircle2 className="w-5 h-5 text-emerald-500" />
+                      ) : null}
+                    </div>
                   </div>
                   {errors.nik ? (
                     <p className="mt-1.5 text-xs text-red-500 flex items-center gap-1">
@@ -683,7 +794,7 @@ export function PermintaanInformasiForm() {
                     </p>
                   ) : (
                     <p className="mt-1 text-[11px] sm:text-xs text-ink-soft dark:text-slate-400">
-                      Gunakan tombol <strong>Cek Data NIK</strong> jika Anda pernah berkunjung ke loket BBPOM untuk mengisi otomatis.
+                      Masukkan 16 digit NIK KTP. Data identitas Anda akan otomatis terisi jika sudah pernah terdaftar di BBPOM.
                     </p>
                   )}
                 </div>
@@ -872,33 +983,7 @@ export function PermintaanInformasiForm() {
               </div>
 
               <div className="space-y-5">
-                {/* Pilihan Kategori Informasi */}
-                <div>
-                  <label
-                    htmlFor="kategoriInformasi"
-                    className="block text-xs sm:text-[13px] font-bold text-navy-900 dark:text-slate-200 mb-2"
-                  >
-                    Kategori / Topik Informasi
-                  </label>
-                  <div className="relative">
-                    <select
-                      id="kategoriInformasi"
-                      name="kategoriInformasi"
-                      value={formData.kategoriInformasi}
-                      onChange={handleChange}
-                      className="w-full rounded-2xl border border-slate-200 dark:border-slate-700/80 bg-white dark:bg-slate-950 px-4 py-3.5 text-sm text-navy-900 dark:text-white appearance-none focus:outline-hidden focus:border-brand-orange focus:ring-2 focus:ring-brand-orange/20 transition-all duration-200 cursor-pointer"
-                    >
-                      {KATEGORI_OPTIONS.map((item) => (
-                        <option key={item} value={item}>
-                          {item}
-                        </option>
-                      ))}
-                    </select>
-                    <ChevronDown className="w-4 h-4 text-slate-400 absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none" />
-                  </div>
-                </div>
-
-                {/* Field: Informasi yang Dibutuhkan (Textarea Sesuai Prompt) */}
+                {/* Field: Informasi yang Dibutuhkan */}
                 <div>
                   <div className="flex items-center justify-between mb-2">
                     <label
@@ -1062,12 +1147,6 @@ export function PermintaanInformasiForm() {
                   </button>
                 </div>
                 <div className="space-y-2 text-xs sm:text-sm">
-                  <div>
-                    <span className="text-ink-soft dark:text-slate-400 block text-xs">Kategori / Topik:</span>
-                    <span className="font-bold text-brand-orange-600 dark:text-orange-400">
-                      {formData.kategoriInformasi}
-                    </span>
-                  </div>
                   <div>
                     <span className="text-ink-soft dark:text-slate-400 block text-xs">Informasi yang Dibutuhkan:</span>
                     <p className="font-normal text-slate-800 dark:text-slate-200 leading-relaxed bg-white dark:bg-slate-900 p-3 rounded-xl border border-slate-100 dark:border-slate-800 mt-1 whitespace-pre-line">
