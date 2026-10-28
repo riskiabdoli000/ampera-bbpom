@@ -1,6 +1,7 @@
 "use client";
 
-import React from "react";
+import React, { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import {
   X,
   Star,
@@ -29,7 +30,25 @@ export function PenilaianDetailModal({
   onClose,
   onDeleteClick,
 }: PenilaianDetailModalProps) {
-  if (!isOpen || !item) return null;
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  // Kunci scroll body ketika modal terbuka
+  useEffect(() => {
+    if (isOpen) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "";
+    }
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [isOpen]);
+
+  if (!isOpen || !item || !mounted) return null;
 
   const formatTanggalIndo = (d: Date | string) => {
     return new Date(d).toLocaleString("id-ID", {
@@ -86,9 +105,15 @@ export function PenilaianDetailModal({
   const kualitasWeb = getLabelKualitas(item.kualitasWebsite);
   const manfaatWeb = getLabelManfaat(item.manfaatWebsite);
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 overflow-y-auto">
-      <div className="relative w-full max-w-2xl rounded-3xl bg-white shadow-2xl dark:bg-slate-900 border border-slate-100 dark:border-slate-800 overflow-hidden my-8 animate-fade-up">
+  return createPortal(
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 sm:p-6 overflow-y-auto">
+      {/* Fullscreen Backdrop di atas semua komponen */}
+      <div
+        onClick={onClose}
+        className="fixed inset-0 bg-slate-950/65 backdrop-blur-md transition-opacity animate-fade-in"
+      />
+
+      <div className="relative w-full max-w-2xl rounded-3xl bg-white shadow-2xl dark:bg-slate-900 border border-slate-100 dark:border-slate-800 overflow-hidden my-auto z-10 animate-fade-up">
         {/* Modal Header */}
         <div className="flex items-center justify-between border-b border-slate-100 px-6 py-5 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-800/50">
           <div className="flex items-center gap-3">
@@ -297,6 +322,7 @@ export function PenilaianDetailModal({
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

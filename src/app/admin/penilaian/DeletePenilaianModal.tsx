@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useState, useTransition } from "react";
+import React, { useState, useEffect, useTransition } from "react";
+import { createPortal } from "react-dom";
 import { AlertTriangle, Trash2, X } from "lucide-react";
 import { PenilaianItem, deletePenilaianAction } from "@/app/actions/admin-penilaian";
 
@@ -19,9 +20,26 @@ export function DeletePenilaianModal({
   onSuccess,
   onNotify,
 }: DeletePenilaianModalProps) {
+  const [mounted, setMounted] = useState(false);
   const [isPending, startTransition] = useTransition();
 
-  if (!isOpen || !item) return null;
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  // Kunci scroll body ketika modal terbuka
+  useEffect(() => {
+    if (isOpen) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "";
+    }
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [isOpen]);
+
+  if (!isOpen || !item || !mounted) return null;
 
   const handleDelete = () => {
     startTransition(async () => {
@@ -36,9 +54,15 @@ export function DeletePenilaianModal({
     });
   };
 
-  return (
-    <div className="fixed inset-0 z-60 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4">
-      <div className="relative w-full max-w-md rounded-3xl bg-white p-6 shadow-2xl dark:bg-slate-900 border border-slate-100 dark:border-slate-800 animate-fade-up">
+  return createPortal(
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 sm:p-6 overflow-y-auto">
+      {/* Fullscreen Backdrop di atas semua komponen */}
+      <div
+        onClick={onClose}
+        className="fixed inset-0 bg-slate-950/65 backdrop-blur-md transition-opacity animate-fade-in"
+      />
+
+      <div className="relative w-full max-w-md rounded-3xl bg-white p-6 shadow-2xl dark:bg-slate-900 border border-slate-100 dark:border-slate-800 animate-fade-up my-auto z-10">
         <button
           onClick={onClose}
           className="absolute top-4 right-4 flex h-8 w-8 items-center justify-center rounded-full text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-600 transition cursor-pointer"
@@ -90,6 +114,7 @@ export function DeletePenilaianModal({
           </div>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
