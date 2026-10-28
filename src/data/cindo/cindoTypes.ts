@@ -91,6 +91,13 @@ export interface PostTestState {
   selesaiPada?: string;
 }
 
+export interface SurveyProgressState {
+  completed: boolean;
+  rating?: number;
+  saran?: string;
+  selesaiPada?: string;
+}
+
 export interface TopikModuleProgress {
   preTest: {
     completed: boolean;
@@ -116,6 +123,8 @@ export interface TopikModuleProgress {
     jawaban: Record<number, "A" | "B" | "C" | "D">;
     selesaiPada?: string;
   };
+  survey: SurveyProgressState;
+  certificate?: CertificateState | null;
 }
 
 export interface CertificateState {

@@ -3,13 +3,8 @@
 import React, { useRef, useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { usePathname, useRouter } from "next/navigation";
-import { LayoutDashboard, BookOpen, ArrowLeft, LogOut, User } from "lucide-react";
-import {
-  getSesiCindo,
-  getCurrentCindoUser,
-  logoutCindoUser,
-} from "@/data/cindo/cindoStorage";
+import { usePathname } from "next/navigation";
+import { LayoutDashboard, BookOpen, User } from "lucide-react";
 
 interface CindoSidebarProps {
   isOpen: boolean;
@@ -18,9 +13,7 @@ interface CindoSidebarProps {
 
 export function CindoSidebar({ isOpen, onClose }: CindoSidebarProps) {
   const pathname = usePathname();
-  const router = useRouter();
   const navRef = useRef<HTMLElement>(null);
-  const [displayName, setDisplayName] = useState<string | null>(null);
 
   const isDashboardActive = pathname === "/cindo" || pathname === "/cindo/dashboard";
   const isMateriActive = pathname.startsWith("/cindo/materi");
@@ -43,14 +36,6 @@ export function CindoSidebar({ isOpen, onClose }: CindoSidebarProps) {
     ready: false,
   });
 
-  useEffect(() => {
-    const user = getCurrentCindoUser();
-    const sesi = getSesiCindo();
-    const name = sesi?.peserta?.nama || user?.username;
-    if (name) {
-      setDisplayName(name);
-    }
-  }, [pathname]);
 
   // Calculate position whenever pathname changes
   useEffect(() => {
@@ -93,12 +78,6 @@ export function CindoSidebar({ isOpen, onClose }: CindoSidebarProps) {
     onClose();
   };
 
-  const handleLogout = () => {
-    if (confirm("Apakah Anda yakin ingin keluar dari akun Cindo?")) {
-      logoutCindoUser();
-      router.push("/cindo/login");
-    }
-  };
 
   return (
     <>
@@ -221,40 +200,6 @@ export function CindoSidebar({ isOpen, onClose }: CindoSidebarProps) {
             <div className="pointer-events-none absolute inset-x-0 top-0 h-16 bg-gradient-to-b from-[#0b2a6b] via-[#0b2a6b]/70 to-transparent" />
           </div>
 
-          {/* Action Button: User info, Logout, and Home */}
-          <div className="absolute inset-x-0 bottom-0 p-3 space-y-2">
-            {displayName && (
-              <div className="flex items-center justify-between rounded-xl border border-white/20 bg-black/40 px-3 py-1.5 text-xs text-white backdrop-blur-md">
-                <Link
-                  href="/cindo/profile"
-                  onClick={onClose}
-                  className="flex items-center gap-1.5 min-w-0 hover:text-blue-200 transition-colors group"
-                  title="Lihat Profil Saya"
-                >
-                  <User className="h-3.5 w-3.5 text-blue-300 group-hover:text-amber-300 shrink-0 transition-colors" />
-                  <span className="truncate max-w-[110px] font-medium group-hover:underline underline-offset-2">{displayName}</span>
-                </Link>
-                <button
-                  type="button"
-                  onClick={handleLogout}
-                  title="Logout Akun"
-                  className="flex items-center gap-1 text-[11px] font-bold text-rose-300 hover:text-rose-200 transition-colors"
-                >
-                  <LogOut className="h-3 w-3" />
-                  <span>Keluar</span>
-                </button>
-              </div>
-            )}
-
-            <Link
-              href="/"
-              title="Kembali ke Beranda Ampera"
-              className="flex items-center justify-center gap-2.5 rounded-xl border border-white/25 bg-white/10 px-4 py-2 text-xs sm:text-sm font-semibold text-white shadow-lg backdrop-blur-md transition-all hover:border-amber-300/60 hover:bg-amber-500/30 hover:backdrop-blur-lg active:scale-[0.98]"
-            >
-              <ArrowLeft className="h-[18px] w-[18px] text-amber-300" />
-              <span>Kembali ke Beranda</span>
-            </Link>
-          </div>
         </div>
       </aside>
     </>
