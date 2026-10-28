@@ -4,9 +4,9 @@ import { getSurveiPengajuanAction } from "@/app/actions/survei";
 import SurveiClient from "./SurveiClient";
 
 export const metadata: Metadata = {
-  title: "Survei Kepuasan Masyarakat (IKM) - AMPERA BBPOM Palembang",
+  title: "Survey Kepuasan Pelanggan - BBPOM di Palembang",
   description:
-    "Survei kepuasan masyarakat terhadap kualitas pelayanan petugas dan efektivitas website AMPERA Balai Besar POM di Palembang.",
+    "Survey kepuasan pelanggan terhadap kualitas layanan petugas dan sistem website AMPERA Balai Besar POM di Palembang.",
 };
 
 interface SurveiPageProps {
@@ -30,8 +30,8 @@ export default async function SurveiPage({ searchParams }: SurveiPageProps) {
   }
 
   return (
-    <main className="min-h-screen bg-slate-100/80 dark:bg-slate-950 text-slate-800 dark:text-slate-100 flex flex-col justify-center py-6 sm:py-10 px-3 sm:px-6 lg:px-8 selection:bg-[#ff7a1a] selection:text-white transition-colors duration-300">
-      <div className="w-full max-w-6xl mx-auto">
+    <main className="min-h-screen bg-[#f0f4f9] text-slate-800 flex flex-col justify-center py-6 sm:py-12 px-3 sm:px-6 lg:px-8 selection:bg-blue-600 selection:text-white">
+      <div className="w-full max-w-5xl mx-auto">
         <SurveiClient
           initialKode={kodeParam}
           initialData={initialData}
@@ -41,4 +41,3 @@ export default async function SurveiPage({ searchParams }: SurveiPageProps) {
     </main>
   );
 }
-
