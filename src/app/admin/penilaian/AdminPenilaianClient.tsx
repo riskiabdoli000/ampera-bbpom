@@ -578,7 +578,7 @@ export function AdminPenilaianClient({
             {/* Popover Grid Tanggal */}
             {isDatePickerOpen && (
               <div className="absolute top-full left-0 sm:left-auto sm:right-0 mt-2 z-50 w-[270px] sm:w-[285px] rounded-3xl bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-700 shadow-2xl p-4 animate-fade-in select-none">
-                {/* Tombol Utama: Semua Tanggal */}
+                {/* Tombol Utama: Semua Tanggal (Warna Orange AMPERA) */}
                 <button
                   type="button"
                   onClick={() => {
@@ -586,10 +586,10 @@ export function AdminPenilaianClient({
                     setCurrentPage(1);
                     setIsDatePickerOpen(false);
                   }}
-                  className={`w-full py-2.5 px-4 rounded-xl font-bold text-xs sm:text-sm text-white transition shadow-xs cursor-pointer flex items-center justify-center tracking-wide ${
+                  className={`w-full py-2.5 px-4 rounded-xl font-bold text-xs sm:text-sm text-white transition cursor-pointer flex items-center justify-center tracking-wide bg-gradient-to-r from-[#ff7a1a] to-[#f26a0f] hover:brightness-105 active:scale-[0.99] shadow-cta ${
                     filterTanggal === "ALL"
-                      ? "bg-blue-600 hover:bg-blue-700 ring-2 ring-blue-300 dark:ring-blue-800"
-                      : "bg-blue-600 hover:bg-blue-700 active:scale-[0.99]"
+                      ? "ring-2 ring-orange-300 dark:ring-orange-800"
+                      : ""
                   }`}
                 >
                   Semua Tanggal
@@ -610,8 +610,8 @@ export function AdminPenilaianClient({
                         }}
                         className={`h-8 w-8 sm:h-9 sm:w-9 mx-auto flex items-center justify-center rounded-xl text-xs sm:text-sm font-semibold transition cursor-pointer ${
                           isSelected
-                            ? "bg-blue-600 text-white font-bold shadow-xs"
-                            : "text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 active:scale-95"
+                            ? "bg-gradient-to-r from-[#ff7a1a] to-[#f26a0f] text-white font-bold shadow-xs"
+                            : "text-slate-700 dark:text-slate-200 hover:bg-orange-50 dark:hover:bg-slate-800 hover:text-[#ff7a1a] active:scale-95"
                         }`}
                       >
                         {day}
