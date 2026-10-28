@@ -98,13 +98,13 @@ export default function SurveiClient({
   const [data, setData] = useState<SurveiPengajuanData | null>(initialData);
   const [errorMessage, setErrorMessage] = useState<string | null>(initialError);
 
-  // Form State untuk 5 Pertanyaan
-  const [ratingBintang, setRatingBintang] = useState<number>(0);
+  // Form State untuk 5 Pertanyaan (Default: Terisi Opsi Terbaik / Nilai 5)
+  const [ratingBintang, setRatingBintang] = useState<number>(5);
   const [hoverBintang, setHoverBintang] = useState<number>(0);
-  const [kualitasPelayanan, setKualitasPelayanan] = useState<number>(0);
-  const [manfaatPelayanan, setManfaatPelayanan] = useState<number>(0);
-  const [kualitasWebsite, setKualitasWebsite] = useState<number>(0);
-  const [manfaatWebsite, setManfaatWebsite] = useState<number>(0);
+  const [kualitasPelayanan, setKualitasPelayanan] = useState<number>(5);
+  const [manfaatPelayanan, setManfaatPelayanan] = useState<number>(5);
+  const [kualitasWebsite, setKualitasWebsite] = useState<number>(5);
+  const [manfaatWebsite, setManfaatWebsite] = useState<number>(5);
   const [kritikSaran, setKritikSaran] = useState<string>("");
 
   const [validationError, setValidationError] = useState<string | null>(null);
