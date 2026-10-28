@@ -2,6 +2,7 @@
 
 import { prisma } from "@/lib/prisma";
 import { uploadFileOrDocument } from "@/lib/storage";
+import { triggerPengajuanCreatedNotifications } from "@/lib/whatsapp";
 
 export interface KeterbukaanInformasiFormState {
   nik: string;
@@ -267,7 +268,7 @@ export async function submitKeterbukaanInformasiAction(
     }
 
     // Buat PengajuanLayanan
-    await prisma.pengajuanLayanan.create({
+    const pengajuan = await prisma.pengajuanLayanan.create({
       data: {
         kodePengajuan,
         tamuId: tamu.id,
@@ -278,6 +279,11 @@ export async function submitKeterbukaanInformasiAction(
         ktpUrl,
         status: "MENUNGGU_VERIFIKASI",
       },
+    });
+
+    // Memicu notifikasi WhatsApp ke Tamu & Petugas (asinkron non-blocking)
+    triggerPengajuanCreatedNotifications(pengajuan.id).catch((err) => {
+      console.error("[WA Notif Background Error] Keterbukaan Informasi:", err);
     });
 
     return {

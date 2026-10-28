@@ -1,6 +1,7 @@
 "use server";
 
 import { prisma } from "@/lib/prisma";
+import { triggerPengajuanCreatedNotifications } from "@/lib/whatsapp";
 
 export interface PengujianCepatFormState {
   nik: string;
@@ -224,7 +225,7 @@ export async function submitPengujianCepatAction(
     }
 
     // Buat PengajuanLayanan
-    await prisma.pengajuanLayanan.create({
+    const pengajuan = await prisma.pengajuanLayanan.create({
       data: {
         kodePengajuan,
         tamuId: tamu.id,
@@ -234,6 +235,11 @@ export async function submitPengujianCepatAction(
         rincianProduk: cleanRincian,
         status: "MENUNGGU_VERIFIKASI",
       },
+    });
+
+    // Memicu notifikasi WhatsApp ke Tamu & Petugas (asinkron non-blocking)
+    triggerPengajuanCreatedNotifications(pengajuan.id).catch((err) => {
+      console.error("[WA Notif Background Error] Pengujian Cepat:", err);
     });
 
     return {

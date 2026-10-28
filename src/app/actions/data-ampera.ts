@@ -3,6 +3,10 @@
 import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import { uploadFileOrDocument, deleteImage } from "@/lib/storage";
+import {
+  triggerPengajuanStatusUpdatedNotification,
+  sendRawWhatsAppMessage,
+} from "@/lib/whatsapp";
 
 export type StatusPengajuan = "MENUNGGU_VERIFIKASI" | "DIPROSES" | "SELESAI" | "DITOLAK";
 
@@ -14,6 +18,19 @@ export interface LampiranTindakanItem {
   namaFile: string;
   tipeFile: string;
   ukuranFile: number | null;
+  createdAt: Date;
+}
+
+export interface NotifikasiWaItem {
+  id: number;
+  pengajuanId: number | null;
+  tipePenerima: "TAMU" | "PETUGAS";
+  nomorTujuan: string;
+  namaPenerima: string;
+  pesan: string;
+  status: "TERKIRIM" | "GAGAL" | "MENUNGGU";
+  responGateway: string | null;
+  dikirimPada: Date;
   createdAt: Date;
 }
 
@@ -64,6 +81,9 @@ export interface PengajuanItem {
 
   // Bukti Lampiran Tindakan Petugas BBPOM
   lampiranTindakan: LampiranTindakanItem[];
+
+  // Riwayat Pengiriman Notifikasi WhatsApp
+  notifikasiWa: NotifikasiWaItem[];
 }
 
 export interface PenggunaItem {
@@ -115,6 +135,9 @@ export async function getDataAmperaOverview(): Promise<DataAmperaOverviewRespons
           layanan: true,
           lampiranTindakan: {
             orderBy: { createdAt: "asc" },
+          },
+          notifikasiWa: {
+            orderBy: { createdAt: "desc" },
           },
         },
       }),
@@ -175,6 +198,18 @@ export async function getDataAmperaOverview(): Promise<DataAmperaOverviewRespons
         tipeFile: l.tipeFile,
         ukuranFile: l.ukuranFile,
         createdAt: l.createdAt,
+      })),
+      notifikasiWa: (p.notifikasiWa || []).map((n: any) => ({
+        id: n.id,
+        pengajuanId: n.pengajuanId,
+        tipePenerima: n.tipePenerima,
+        nomorTujuan: n.nomorTujuan,
+        namaPenerima: n.namaPenerima,
+        pesan: n.pesan,
+        status: n.status,
+        responGateway: n.responGateway,
+        dikirimPada: n.dikirimPada,
+        createdAt: n.createdAt,
       })),
     }));
 
@@ -280,6 +315,13 @@ export async function updatePengajuanStatusAction(
         catatanPetugas: catatanPetugas !== undefined ? catatanPetugas : existing.catatanPetugas,
       },
     });
+
+    // Memicu notifikasi WhatsApp update status ke Tamu
+    if (status !== "MENUNGGU_VERIFIKASI") {
+      triggerPengajuanStatusUpdatedNotification(id).catch((err) => {
+        console.error("[WA Notif Background Error] Status Update:", err);
+      });
+    }
 
     try {
       revalidatePath("/admin");
@@ -459,6 +501,13 @@ export async function updatePengajuanTindakanWithLampiranAction(
       },
     });
 
+    // Memicu notifikasi WhatsApp update status ke Tamu
+    if (status !== "MENUNGGU_VERIFIKASI") {
+      triggerPengajuanStatusUpdatedNotification(id).catch((err) => {
+        console.error("[WA Notif Background Error] Status Update With Files:", err);
+      });
+    }
+
     // 4. Query ulang data terupdate dengan seluruh relasi
     const updated = await prisma.pengajuanLayanan.findUnique({
       where: { id },
@@ -467,6 +516,9 @@ export async function updatePengajuanTindakanWithLampiranAction(
         layanan: true,
         lampiranTindakan: {
           orderBy: { createdAt: "asc" },
+        },
+        notifikasiWa: {
+          orderBy: { createdAt: "desc" },
         },
       },
     });
@@ -519,6 +571,18 @@ export async function updatePengajuanTindakanWithLampiranAction(
         tipeFile: l.tipeFile,
         ukuranFile: l.ukuranFile,
         createdAt: l.createdAt,
+      })),
+      notifikasiWa: (updated.notifikasiWa || []).map((n: any) => ({
+        id: n.id,
+        pengajuanId: n.pengajuanId,
+        tipePenerima: n.tipePenerima,
+        nomorTujuan: n.nomorTujuan,
+        namaPenerima: n.namaPenerima,
+        pesan: n.pesan,
+        status: n.status,
+        responGateway: n.responGateway,
+        dikirimPada: n.dikirimPada,
+        createdAt: n.createdAt,
       })),
     };
 
@@ -632,6 +696,9 @@ export async function getServiceLaporanData(
         lampiranTindakan: {
           orderBy: { createdAt: "asc" },
         },
+        notifikasiWa: {
+          orderBy: { createdAt: "desc" },
+        },
       },
     });
 
@@ -679,6 +746,18 @@ export async function getServiceLaporanData(
         tipeFile: l.tipeFile,
         ukuranFile: l.ukuranFile,
         createdAt: l.createdAt,
+      })),
+      notifikasiWa: (p.notifikasiWa || []).map((n: any) => ({
+        id: n.id,
+        pengajuanId: n.pengajuanId,
+        tipePenerima: n.tipePenerima,
+        nomorTujuan: n.nomorTujuan,
+        namaPenerima: n.namaPenerima,
+        pesan: n.pesan,
+        status: n.status,
+        responGateway: n.responGateway,
+        dikirimPada: n.dikirimPada,
+        createdAt: n.createdAt,
       })),
     }));
 
@@ -763,6 +842,90 @@ export async function getServiceLaporanData(
         ditolak: 0,
         totalPengguna: 0,
       },
+    };
+  }
+}
+
+/**
+ * Mengirim ulang pesan notifikasi WhatsApp dari log tertentu
+ */
+export async function resendPengajuanWaNotificationAction(
+  logId: number
+): Promise<{ success: boolean; message: string }> {
+  try {
+    const log = await prisma.notifikasiWaLog.findUnique({
+      where: { id: logId },
+    });
+
+    if (!log) {
+      return { success: false, message: "Catatan log notifikasi WhatsApp tidak ditemukan." };
+    }
+
+    const sendResult = await sendRawWhatsAppMessage(log.nomorTujuan, log.pesan);
+
+    await prisma.notifikasiWaLog.update({
+      where: { id: logId },
+      data: {
+        status: sendResult.success ? "TERKIRIM" : "GAGAL",
+        responGateway: sendResult.error || (sendResult.data ? JSON.stringify(sendResult.data) : "Pesan dikirim ulang"),
+        dikirimPada: new Date(),
+      },
+    });
+
+    if (sendResult.success) {
+      return {
+        success: true,
+        message: `Pesan WhatsApp berhasil dikirim ulang ke ${log.namaPenerima} (${log.nomorTujuan}).`,
+      };
+    } else {
+      return {
+        success: false,
+        message: `Gagal mengirim ulang WhatsApp: ${sendResult.error || "Gateway tidak merespon"}`,
+      };
+    }
+  } catch (err: any) {
+    console.error("[resendPengajuanWaNotificationAction Error]", err);
+    return {
+      success: false,
+      message: err.message || "Terjadi kesalahan sistem saat mengirim ulang pesan WhatsApp.",
+    };
+  }
+}
+
+/**
+ * Memicu pengiriman manual notifikasi status terkini ke WhatsApp Pemohon
+ */
+export async function sendManualPengajuanWaNotificationAction(
+  pengajuanId: number
+): Promise<{ success: boolean; message: string }> {
+  try {
+    const pengajuan = await prisma.pengajuanLayanan.findUnique({
+      where: { id: pengajuanId },
+      include: {
+        tamu: true,
+        layanan: true,
+      },
+    });
+
+    if (!pengajuan) {
+      return { success: false, message: "Data pengajuan tidak ditemukan." };
+    }
+
+    if (!pengajuan.tamu.telepon) {
+      return { success: false, message: "Pemohon tidak memiliki nomor WhatsApp yang tercatat." };
+    }
+
+    await triggerPengajuanStatusUpdatedNotification(pengajuanId);
+
+    return {
+      success: true,
+      message: `Notifikasi status terkini berhasil dikirimkan ke WhatsApp pemohon (${pengajuan.tamu.telepon}).`,
+    };
+  } catch (err: any) {
+    console.error("[sendManualPengajuanWaNotificationAction Error]", err);
+    return {
+      success: false,
+      message: err.message || "Gagal memproses pengiriman notifikasi WhatsApp.",
     };
   }
 }

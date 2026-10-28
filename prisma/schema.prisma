@@ -23,6 +23,17 @@ enum RoleAdmin {
   OPERATOR
 }
 
+enum TipePenerimaWa {
+  TAMU
+  PETUGAS
+}
+
+enum StatusNotifikasiWa {
+  TERKIRIM
+  GAGAL
+  MENUNGGU
+}
+
 // Model Data Tamu / Pemohon (Kunci integrasi dengan Buku Tamu via NIK)
 model Tamu {
   id           Int                @id @default(autoincrement())
@@ -103,6 +114,9 @@ model PengajuanLayanan {
   // Bukti Lampiran Tindakan Petugas BBPOM (Minimal 2 berkas, dinamis)
   lampiranTindakan    LampiranTindakanPetugas[]
 
+  // Riwayat Pengiriman Notifikasi WhatsApp (Tamu & Petugas)
+  notifikasiWa        NotifikasiWaLog[]
+
   createdAt           DateTime        @default(now())
   updatedAt           DateTime        @updatedAt
 
@@ -126,6 +140,30 @@ model LampiranTindakanPetugas {
   createdAt   DateTime         @default(now())
 
   @@index([pengajuanId])
+}
+
+// Riwayat Pengiriman Notifikasi WhatsApp (Dual-Recipient: Tamu & Petugas)
+model NotifikasiWaLog {
+  id            Int                @id @default(autoincrement())
+
+  pengajuanId   Int?
+  pengajuan     PengajuanLayanan?  @relation(fields: [pengajuanId], references: [id], onDelete: Cascade)
+
+  tipePenerima  TipePenerimaWa     // TAMU atau PETUGAS
+  nomorTujuan   String             // Format 628xxxxxxxxxx
+  namaPenerima  String             // Nama Tamu atau Nama Petugas
+  pesan         String             @db.Text
+
+  status        StatusNotifikasiWa @default(MENUNGGU)
+  responGateway String?            @db.Text // Pesan error atau data respon gateway
+
+  dikirimPada   DateTime           @default(now())
+  createdAt     DateTime           @default(now())
+
+  @@index([pengajuanId])
+  @@index([nomorTujuan])
+  @@index([status])
+  @@index([createdAt])
 }
 
 

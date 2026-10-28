@@ -24,14 +24,20 @@ import {
   Eye,
   UploadCloud,
   Plus,
+  RefreshCw,
+  Bell,
+  Check,
   Image as ImageIcon,
 } from "lucide-react";
 import {
   PengajuanItem,
   StatusPengajuan,
   LampiranTindakanItem,
+  NotifikasiWaItem,
   updatePengajuanTindakanWithLampiranAction,
   deletePengajuanAction,
+  resendPengajuanWaNotificationAction,
+  sendManualPengajuanWaNotificationAction,
 } from "@/app/actions/data-ampera";
 
 interface PengajuanDetailModalProps {
@@ -72,6 +78,9 @@ export function PengajuanDetailModal({
   const [isPending, startTransition] = useTransition();
   const [isDeleting, setIsDeleting] = useState(false);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
+  const [waLogs, setWaLogs] = useState<NotifikasiWaItem[]>(pengajuan?.notifikasiWa || []);
+  const [isResendingWa, setIsResendingWa] = useState<number | null>(null);
+  const [isSendingManualWa, setIsSendingManualWa] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -92,6 +101,7 @@ export function PengajuanDetailModal({
       setNewFiles([]);
       setValidationError(null);
       setIsDragging(false);
+      setWaLogs(pengajuan.notifikasiWa || []);
     }
   }, [pengajuan]);
 
@@ -245,6 +255,44 @@ export function PengajuanDetailModal({
           label: "Ditolak",
           bg: "bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-950/40 dark:text-rose-300 dark:border-rose-800",
         };
+    }
+  };
+
+  const handleResendWa = async (logId: number) => {
+    setIsResendingWa(logId);
+    try {
+      const res = await resendPengajuanWaNotificationAction(logId);
+      if (res.success) {
+        onNotify("success", res.message);
+        setWaLogs((prev) =>
+          prev.map((l) =>
+            l.id === logId ? { ...l, status: "TERKIRIM", dikirimPada: new Date() } : l
+          )
+        );
+      } else {
+        onNotify("error", res.message);
+      }
+    } catch (err: any) {
+      onNotify("error", err.message || "Gagal mengirim ulang WhatsApp.");
+    } finally {
+      setIsResendingWa(null);
+    }
+  };
+
+  const handleSendManualWa = async () => {
+    if (!pengajuan) return;
+    setIsSendingManualWa(true);
+    try {
+      const res = await sendManualPengajuanWaNotificationAction(pengajuan.id);
+      if (res.success) {
+        onNotify("success", res.message);
+      } else {
+        onNotify("error", res.message);
+      }
+    } catch (err: any) {
+      onNotify("error", err.message || "Gagal memproses pengiriman notifikasi.");
+    } finally {
+      setIsSendingManualWa(false);
     }
   };
 
@@ -878,6 +926,131 @@ export function PengajuanDetailModal({
                   )}
                 </div>
               </div>
+            </div>
+
+            {/* 5. Notifikasi Otomatis WhatsApp (Dual-Recipient: Tamu & Petugas) */}
+            <div className="rounded-3xl border border-slate-200/80 bg-slate-50/70 p-5 sm:p-6 dark:border-slate-800 dark:bg-slate-800/40 space-y-4">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div className="flex items-center gap-2.5">
+                  <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-400">
+                    <MessageSquare className="h-4 w-4" />
+                  </div>
+                  <div>
+                    <h3 className="text-xs font-extrabold uppercase tracking-wider text-navy-900 dark:text-white">
+                      Notifikasi Otomatis WhatsApp
+                    </h3>
+                    <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                      Pemantauan pengiriman pesan WhatsApp ke Tamu & Petugas Layanan
+                    </p>
+                  </div>
+                </div>
+
+                {pengajuan.tamu.telepon && (
+                  <button
+                    type="button"
+                    onClick={handleSendManualWa}
+                    disabled={isSendingManualWa}
+                    className="inline-flex items-center gap-1.5 rounded-xl border border-emerald-300 bg-white dark:bg-slate-800 px-3 py-1.5 text-xs font-bold text-emerald-700 dark:text-emerald-300 hover:bg-emerald-50 dark:hover:bg-slate-700 transition shadow-2xs disabled:opacity-50 cursor-pointer"
+                    title="Kirim pesan status terbaru ke nomor WhatsApp pemohon"
+                  >
+                    <Send className={`h-3.5 w-3.5 ${isSendingManualWa ? "animate-pulse" : ""}`} />
+                    {isSendingManualWa ? "Mengirim..." : "Kirim Status ke WA Pemohon"}
+                  </button>
+                )}
+              </div>
+
+              {/* Daftar Riwayat Notifikasi */}
+              {waLogs.length > 0 ? (
+                <div className="space-y-2.5">
+                  {waLogs.map((log) => {
+                    const isTamu = log.tipePenerima === "TAMU";
+                    const isSent = log.status === "TERKIRIM";
+                    return (
+                      <div
+                        key={log.id}
+                        className={`flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-2xl border p-3.5 transition ${
+                          isSent
+                            ? "border-emerald-200/80 bg-emerald-50/40 dark:border-emerald-900/50 dark:bg-emerald-950/20"
+                            : "border-rose-200/80 bg-rose-50/40 dark:border-rose-900/50 dark:bg-rose-950/20"
+                        }`}
+                      >
+                        <div className="flex items-start gap-3">
+                          <span
+                            className={`mt-0.5 inline-flex h-2 w-2 rounded-full shrink-0 ${
+                              isSent ? "bg-emerald-500" : "bg-rose-500"
+                            }`}
+                          />
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs font-extrabold text-navy-900 dark:text-white">
+                                {isTamu ? "Penerima: Tamu / Pemohon" : "Penerima: Petugas BBPOM"}
+                              </span>
+                              <span
+                                className={`rounded-full px-2 py-0.5 text-[10px] font-extrabold uppercase ${
+                                  isSent
+                                    ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/60 dark:text-emerald-200"
+                                    : "bg-rose-100 text-rose-800 dark:bg-rose-900/60 dark:text-rose-200"
+                                }`}
+                              >
+                                {isSent ? "Terkirim" : "Gagal"}
+                              </span>
+                            </div>
+                            <p className="text-xs text-slate-600 dark:text-slate-300 mt-0.5">
+                              {log.namaPenerima} • <span className="font-mono">{log.nomorTujuan}</span>
+                            </p>
+                            {!isSent && log.responGateway && (
+                              <p className="text-[11px] text-rose-600 dark:text-rose-400 mt-1 italic">
+                                Info: {log.responGateway}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-2 sm:self-center shrink-0">
+                          <span className="text-[11px] text-slate-400 font-medium">
+                            {new Date(log.dikirimPada || log.createdAt).toLocaleTimeString("id-ID", {
+                              hour: "2-digit",
+                              minute: "2-digit",
+                            })} WIB
+                          </span>
+
+                          {!isSent && (
+                            <button
+                              type="button"
+                              onClick={() => handleResendWa(log.id)}
+                              disabled={isResendingWa === log.id}
+                              className="inline-flex items-center gap-1 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-2.5 py-1 text-[11px] font-bold text-rose-700 dark:text-rose-300 hover:bg-rose-50 dark:hover:bg-slate-700 transition cursor-pointer disabled:opacity-50"
+                              title="Kirim ulang pesan WhatsApp ini"
+                            >
+                              <RefreshCw
+                                className={`h-3 w-3 ${
+                                  isResendingWa === log.id ? "animate-spin" : ""
+                                }`}
+                              />
+                              Kirim Ulang
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="rounded-2xl border border-dashed border-slate-200 bg-white/60 p-4 text-center dark:border-slate-700 dark:bg-slate-900/40">
+                  <p className="text-xs text-slate-500 dark:text-slate-400">
+                    Belum ada riwayat notifikasi otomatis WhatsApp yang tercatat untuk tiket ini.
+                  </p>
+                  {pengajuan.tamu.telepon ? (
+                    <p className="text-[11px] text-slate-400 mt-1">
+                      Pesan akan dikirim otomatis ke <span className="font-mono font-semibold">{pengajuan.tamu.telepon}</span> saat status pengajuan diubah menjadi Diproses atau Selesai.
+                    </p>
+                  ) : (
+                    <p className="text-[11px] text-amber-600 dark:text-amber-400 mt-1 font-medium">
+                      Pemohon tidak mencantumkan nomor WhatsApp pada formulir pengajuan.
+                    </p>
+                  )}
+                </div>
+              )}
             </div>
           </div>
 
