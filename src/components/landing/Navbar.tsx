@@ -165,14 +165,29 @@ export function Navbar() {
 
           {/* Kanan: CTA (desktop) / Hamburger (mobile) */}
           <div className="flex items-center gap-3 z-20">
-            <a
-              href="#layanan"
-              onClick={() => setActiveSection("#layanan")}
+            {/* Theme Toggle */}
+            <button
+              type="button"
+              onClick={toggleTheme}
+              className="w-11 h-11 rounded-full bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-700 text-navy-900 dark:text-white flex items-center justify-center shadow-xs hover:border-brand-orange hover:scale-105 active:scale-95 transition-all duration-200 cursor-pointer focus-visible:outline-2 focus-visible:outline-brand-orange"
+              aria-label={isDark ? "Beralih ke mode terang" : "Beralih ke mode gelap"}
+              title={isDark ? "Beralih ke mode terang" : "Beralih ke mode gelap"}
+            >
+              {isDark ? (
+                <Sun className="w-5 h-5 text-amber-400 transition-transform duration-200 hover:rotate-12" />
+              ) : (
+                <Moon className="w-5 h-5 text-navy-900 dark:text-slate-200 transition-transform duration-200 hover:-rotate-12" />
+              )}
+            </button>
+
+            <Link
+              href="/cindo"
+              onClick={() => setActiveSection("")}
               className={`${ctaClass} max-lg:hidden`}
             >
-              <span>Akses Layanan</span>
+              <span>Cindo</span>
               <ArrowRight className="w-4 h-4 transition-transform duration-200 group-hover:translate-x-1" />
-            </a>
+            </Link>
 
             <button
               type="button"
@@ -213,30 +228,35 @@ export function Navbar() {
               })}
             </nav>
 
-            <a
-              href="#layanan"
+            <Link
+              href="/cindo"
               onClick={() => {
-                setActiveSection("#layanan");
+                setActiveSection("");
                 setMobileMenuOpen(false);
               }}
               className={`${ctaClass} w-full justify-center mt-4`}
             >
-              <span>Akses Layanan</span>
+              <span>Cindo</span>
               <ArrowRight className="w-4 h-4" />
-            </a>
+            </Link>
 
-            <div className="mt-4 flex items-center gap-2 border-t border-slate-100 dark:border-slate-800 pt-4">
-              <div className="flex items-center gap-1.5 text-xs font-semibold text-navy-900 dark:text-slate-100 bg-slate-50 dark:bg-slate-800 px-3.5 py-2 rounded-full">
-                <Globe className="w-3.5 h-3.5" />
-                <span>ID</span>
-              </div>
+            <div className="mt-4 border-t border-slate-100 dark:border-slate-800 pt-4 flex items-center justify-between">
+              <span className="text-xs font-semibold text-slate-600 dark:text-slate-400">
+                Mode Tampilan
+              </span>
+              {/* Night Mode Toggle */}
               <button
                 type="button"
                 onClick={toggleTheme}
-                className="w-9 h-9 rounded-full bg-slate-50 dark:bg-slate-800 flex items-center justify-center cursor-pointer active:scale-95"
+                className="w-11 h-11 rounded-full bg-white dark:bg-slate-800 border border-slate-200/80 dark:border-slate-700 text-navy-900 dark:text-white flex items-center justify-center shadow-xs hover:border-brand-orange hover:scale-105 active:scale-95 transition-all duration-200 cursor-pointer"
                 aria-label={isDark ? "Beralih ke mode terang" : "Beralih ke mode gelap"}
+                title={isDark ? "Beralih ke mode terang" : "Beralih ke mode gelap"}
               >
-                {isDark ? <Sun className="w-4 h-4 text-amber-400" /> : <Moon className="w-4 h-4 text-navy-900" />}
+                {isDark ? (
+                  <Sun className="w-5 h-5 text-amber-400" />
+                ) : (
+                  <Moon className="w-5 h-5 text-navy-900 dark:text-slate-200" />
+                )}
               </button>
             </div>
           </div>

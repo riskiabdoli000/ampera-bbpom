@@ -23,6 +23,17 @@ enum RoleAdmin {
   OPERATOR
 }
 
+enum TipePenerimaWa {
+  TAMU
+  PETUGAS
+}
+
+enum StatusNotifikasiWa {
+  TERKIRIM
+  GAGAL
+  MENUNGGU
+}
+
 // Model Data Tamu / Pemohon (Kunci integrasi dengan Buku Tamu via NIK)
 model Tamu {
   id           Int                @id @default(autoincrement())
@@ -55,6 +66,7 @@ model Layanan {
   isAktif     Boolean            @default(true)
 
   pengajuan   PengajuanLayanan[]
+  petugas     Petugas[]          // Daftar petugas yang ditugaskan pada layanan ini
   createdAt   DateTime           @default(now())
   updatedAt   DateTime           @updatedAt
 }
@@ -75,6 +87,7 @@ model PengajuanLayanan {
   
   // Field Spesifik Layanan 1 (Permintaan Informasi)
   informasiDibutuhkan String?         @db.Text
+  kategoriInformasi   String?
   
   // Field Spesifik Layanan 2 (Pengujian Cepat Ampera)
   // Menyimpan jenis produk yang dicurigai: "Pempek, tekwan, model", "Tahu", "Mie basah", dsb.
@@ -84,9 +97,11 @@ model PengajuanLayanan {
   alasanLainnya       String?         // Isian jika memilih "Yang lain"
   rincianProduk       String?         @db.Text // Lokasi pasar, warung, penjual, tanggal pembelian
   
-  // Field Spesifik Layanan 3 (Pengaduan)
+  // Field Spesifik Layanan 3 (Pengaduan) & Layanan 4 (Keterbukaan Informasi Publik)
   isiPengaduan        String?         @db.Text
-  buktiFotoUrl        String?         // URL foto bukti di Supabase storage
+  buktiFotoUrl        String?         @db.Text // URL foto bukti di Supabase storage
+  ktpUrl              String?         @db.Text // URL scan / foto KTP di Supabase storage
+  dokumenPendukungUrl String?         @db.Text // URL dokumen formulir PDF (Layanan KIP)
   
   // Field Spesifik Layanan 4 (Keterbukaan Informasi Publik)
   rincianInformasiKip String?         @db.Text
@@ -96,6 +111,15 @@ model PengajuanLayanan {
   verifikatorId       Int?
   verifikator         Admin?          @relation(fields: [verifikatorId], references: [id])
 
+  // Bukti Lampiran Tindakan Petugas BBPOM (Minimal 2 berkas, dinamis)
+  lampiranTindakan    LampiranTindakanPetugas[]
+
+  // Riwayat Pengiriman Notifikasi WhatsApp (Tamu & Petugas)
+  notifikasiWa        NotifikasiWaLog[]
+
+  // Survei Kepuasan Masyarakat (IKM)
+  survei              SurveiLayanan?
+
   createdAt           DateTime        @default(now())
   updatedAt           DateTime        @updatedAt
 
@@ -103,6 +127,74 @@ model PengajuanLayanan {
   @@index([tamuId])
   @@index([layananId])
 }
+
+// Bukti Lampiran Tindakan Petugas BBPOM (Foto Hasil Uji, Dokumen BAP, Tanggapan Resmi, dsb.)
+model LampiranTindakanPetugas {
+  id          Int              @id @default(autoincrement())
+  pengajuanId Int
+  pengajuan   PengajuanLayanan @relation(fields: [pengajuanId], references: [id], onDelete: Cascade)
+
+  url         String           @db.Text // URL publik berkas di Supabase Storage / Local
+  storagePath String           @db.Text // Path unik di bucket storage untuk kebutuhan penghapusan
+  namaFile    String           // Nama file asli (misal: "Hasil_Uji_Strip_Boraks.jpg")
+  tipeFile    String           // MIME type (image/jpeg, image/png, application/pdf, etc.)
+  ukuranFile  Int?             // Ukuran file dalam bytes
+
+  createdAt   DateTime         @default(now())
+
+  @@index([pengajuanId])
+}
+
+// Riwayat Pengiriman Notifikasi WhatsApp (Dual-Recipient: Tamu & Petugas)
+model NotifikasiWaLog {
+  id            Int                @id @default(autoincrement())
+
+  pengajuanId   Int?
+  pengajuan     PengajuanLayanan?  @relation(fields: [pengajuanId], references: [id], onDelete: Cascade)
+
+  tipePenerima  TipePenerimaWa     // TAMU atau PETUGAS
+  nomorTujuan   String             // Format 628xxxxxxxxxx
+  namaPenerima  String             // Nama Tamu atau Nama Petugas
+  pesan         String             @db.Text
+
+  status        StatusNotifikasiWa @default(MENUNGGU)
+  responGateway String?            @db.Text // Pesan error atau data respon gateway
+
+  dikirimPada   DateTime           @default(now())
+  createdAt     DateTime           @default(now())
+
+  @@index([pengajuanId])
+  @@index([nomorTujuan])
+  @@index([status])
+  @@index([createdAt])
+}
+
+// Survei Kepuasan Masyarakat (IKM) terhadap Pelayanan & Website AMPERA
+model SurveiLayanan {
+  id                     Int              @id @default(autoincrement())
+  pengajuanId            Int              @unique // Mencegah 1 tiket mengisi survei berulang kali
+  pengajuan              PengajuanLayanan @relation(fields: [pengajuanId], references: [id], onDelete: Cascade)
+
+  // 1. Rating Bintang Keseluruhan (1 - 5)
+  ratingBintang          Int
+
+  // 2. Kategori Pelayanan Petugas
+  kualitasPelayanan      Int              // 1 (Sangat Buruk) s/d 5 (Sangat Baik)
+  manfaatPelayanan       Int              // 1 (Tidak Bermanfaat) s/d 5 (Sangat Bermanfaat)
+
+  // 3. Kategori Sistem & Website AMPERA
+  kualitasWebsite        Int              // 1 (Sangat Buruk) s/d 5 (Sangat Baik)
+  manfaatWebsite         Int              // 1 (Tidak Bermanfaat) s/d 5 (Sangat Bermanfaat)
+
+  // 4. Kritik & Saran Tambahan (Opsional)
+  kritikSaran            String?          @db.Text
+
+  createdAt              DateTime         @default(now())
+
+  @@index([ratingBintang])
+  @@index([createdAt])
+}
+
 
 // Akun Admin & Operator Petugas BBPOM
 model Admin {
@@ -116,4 +208,109 @@ model Admin {
   verifikasi  PengajuanLayanan[]
   createdAt   DateTime           @default(now())
   updatedAt   DateTime           @updatedAt
+}
+
+// Master Data Petugas Pelayanan BBPOM di Palembang
+model Petugas {
+  id        Int      @id @default(autoincrement())
+  nip       String   @unique // Nomor Induk Pegawai (NIP)
+  nama      String   // Nama Lengkap Petugas
+  telepon   String?  // Nomor WhatsApp / Kontak
+  jabatan   String?  // Jabatan / Posisi / Unit Kerja
+  fotoUrl   String?  @db.Text // Foto Profil Petugas
+  fotoPath  String?  @db.Text // Path berkas di storage
+  isAktif   Boolean  @default(true)
+
+  layananId Int?     // Ditugaskan pada Layanan tertentu (opsional)
+  layanan   Layanan? @relation(fields: [layananId], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([nip])
+  @@index([nama])
+  @@index([layananId])
+}
+
+// ==========================================
+// PENGATURAN KONTEN WEBSITE (WEBSITE SETTINGS)
+// ==========================================
+
+// 1. Hero Content Banner
+model HeroKonten {
+  id               Int      @id @default(1)
+  judul            String   @db.Text
+  subjudul         String   @db.Text
+  ctaUtamaLabel    String
+  ctaSekunderLabel String?  @default("")
+  updatedAt        DateTime @updatedAt
+}
+
+model HeroSlide {
+  id        Int      @id @default(autoincrement())
+  title     String
+  alt       String
+  imageUrl  String   @db.Text // URL publik (Supabase Storage / local fallback)
+  imagePath String?  @db.Text // Path di Supabase Storage untuk kebutuhan hapus
+  isActive  Boolean  @default(true)
+  urutan    Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([urutan])
+}
+
+// 2. Video Profil BBPOM
+model VideoProfil {
+  id         Int      @id @default(1)
+  eyebrow    String   @default("VIDEO PROFIL")
+  judul      String   @db.Text
+  deskripsi  String   @db.Text
+  youtubeUrl String   @db.Text // URL asli dari YouTube
+  youtubeId  String   // ID hasil ekstraksi untuk embed
+  updatedAt  DateTime @updatedAt
+}
+
+// 3. Kontak & Lokasi Kantor (sesuai ContactSection)
+model KontakKantor {
+  id             Int      @id @default(1)
+  eyebrow        String   @default("CONTACT DETAIL")
+  judul          String   @default("Visit Our Office")
+  deskripsi      String   @db.Text
+  labelSosmed    String   @default("Media Sosial Resmi BBPOM Palembang:")
+
+  alamat         String   @db.Text
+  email1         String
+  email2         String?
+  telepon        String
+  whatsapp       String
+  whatsappPesan  String   @default("Halo Admin BBPOM Palembang, saya ingin berkonsultasi.") @db.Text
+
+  mapsEmbedUrl   String   @db.Text
+  mapsLinkUrl    String   @db.Text
+
+  instagramUrl   String?  @db.Text
+  facebookUrl    String?  @db.Text
+  tiktokUrl      String?  @db.Text
+  threadsUrl     String?  @db.Text
+  youtubeUrl     String?  @db.Text
+
+  updatedAt      DateTime @updatedAt
+}
+
+// 4. Konten Edukasi Konsumen
+model Edukasi {
+  id          Int      @id @default(autoincrement())
+  judul       String
+  kategori    String   // obat, pangan, kosmetik, cek_klik
+  ringkasan   String   @db.Text
+  konten      String?  @db.Text
+  imageUrl    String?  @db.Text
+  imagePath   String?  @db.Text
+  isPublished Boolean  @default(true)
+  urutan      Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([urutan])
 }
