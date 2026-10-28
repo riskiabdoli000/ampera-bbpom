@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useRef, useEffect } from "react";
 import {
   Star,
   Users,
@@ -16,6 +16,7 @@ import {
   Award,
   RotateCcw,
   Calendar,
+  ChevronDown,
 } from "lucide-react";
 import { PenilaianItem, PenilaianStats } from "@/app/actions/admin-penilaian";
 import { PenilaianDetailModal } from "./PenilaianDetailModal";
@@ -60,6 +61,26 @@ export function AdminPenilaianClient({
   const [filterBulan, setFilterBulan] = useState("ALL");
   const [filterTanggal, setFilterTanggal] = useState("ALL");
   const [filterSort, setFilterSort] = useState("NEWEST");
+  const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
+  const datePickerRef = useRef<HTMLDivElement>(null);
+
+  // Tutup date picker saat klik di luar
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (
+        datePickerRef.current &&
+        !datePickerRef.current.contains(event.target as Node)
+      ) {
+        setIsDatePickerOpen(false);
+      }
+    }
+    if (isDatePickerOpen) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [isDatePickerOpen]);
 
   // Pagination (Maksimum 10 item per halaman)
   const [currentPage, setCurrentPage] = useState(1);
@@ -252,6 +273,7 @@ export function AdminPenilaianClient({
     setFilterBulan("ALL");
     setFilterTanggal("ALL");
     setFilterSort("NEWEST");
+    setIsDatePickerOpen(false);
     setCurrentPage(1);
   };
 
@@ -532,26 +554,73 @@ export function AdminPenilaianClient({
             </select>
           </div>
 
-          {/* Filter Tanggal */}
-          <div className="flex items-center gap-2">
+          {/* Filter Tanggal (Custom Popover Date Picker Sesuai Referensi Gambar) */}
+          <div className="flex items-center gap-2 relative" ref={datePickerRef}>
             <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 shrink-0 w-16">
               Tanggal:
             </span>
-            <select
-              value={filterTanggal}
-              onChange={(e) => {
-                setFilterTanggal(e.target.value);
-                setCurrentPage(1);
-              }}
-              className="w-full rounded-2xl border border-slate-200 bg-slate-50/70 px-3 py-2 text-xs text-slate-800 focus:border-[#ff7a1a] focus:bg-white focus:outline-none dark:border-slate-700 dark:bg-slate-800/60 dark:text-white transition cursor-pointer"
+            <button
+              type="button"
+              onClick={() => setIsDatePickerOpen((prev) => !prev)}
+              className="w-full flex items-center justify-between rounded-2xl border border-slate-200 bg-slate-50/70 px-3 py-2 text-xs text-slate-800 hover:border-slate-300 focus:border-[#ff7a1a] focus:bg-white focus:outline-none dark:border-slate-700 dark:bg-slate-800/60 dark:text-white transition cursor-pointer"
+              aria-expanded={isDatePickerOpen}
             >
-              <option value="ALL">Semua Tanggal</option>
-              {TANGGAL_OPTIONS.map((d) => (
-                <option key={d} value={d}>
-                  Tanggal {d}
-                </option>
-              ))}
-            </select>
+              <span className="font-medium truncate">
+                {filterTanggal === "ALL" ? "Semua Tanggal" : `Tanggal ${filterTanggal}`}
+              </span>
+              <ChevronDown
+                className={`h-3.5 w-3.5 text-slate-400 shrink-0 transition-transform duration-200 ${
+                  isDatePickerOpen ? "rotate-180" : ""
+                }`}
+              />
+            </button>
+
+            {/* Popover Grid Tanggal */}
+            {isDatePickerOpen && (
+              <div className="absolute top-full left-0 sm:left-auto sm:right-0 mt-2 z-50 w-[270px] sm:w-[285px] rounded-3xl bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-700 shadow-2xl p-4 animate-fade-in select-none">
+                {/* Tombol Utama: Semua Tanggal */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setFilterTanggal("ALL");
+                    setCurrentPage(1);
+                    setIsDatePickerOpen(false);
+                  }}
+                  className={`w-full py-2.5 px-4 rounded-xl font-bold text-xs sm:text-sm text-white transition shadow-xs cursor-pointer flex items-center justify-center tracking-wide ${
+                    filterTanggal === "ALL"
+                      ? "bg-blue-600 hover:bg-blue-700 ring-2 ring-blue-300 dark:ring-blue-800"
+                      : "bg-blue-600 hover:bg-blue-700 active:scale-[0.99]"
+                  }`}
+                >
+                  Semua Tanggal
+                </button>
+
+                {/* Grid 7 Kolom Tanggal 1 s.d. 31 */}
+                <div className="grid grid-cols-7 gap-1 sm:gap-1.5 mt-3.5 text-center">
+                  {TANGGAL_OPTIONS.map((day) => {
+                    const isSelected = filterTanggal === day;
+                    return (
+                      <button
+                        key={day}
+                        type="button"
+                        onClick={() => {
+                          setFilterTanggal(day);
+                          setCurrentPage(1);
+                          setIsDatePickerOpen(false);
+                        }}
+                        className={`h-8 w-8 sm:h-9 sm:w-9 mx-auto flex items-center justify-center rounded-xl text-xs sm:text-sm font-semibold transition cursor-pointer ${
+                          isSelected
+                            ? "bg-blue-600 text-white font-bold shadow-xs"
+                            : "text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 active:scale-95"
+                        }`}
+                      >
+                        {day}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Filter Urutan */}
