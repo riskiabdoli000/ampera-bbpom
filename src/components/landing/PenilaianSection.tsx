@@ -52,7 +52,7 @@ export function PenilaianSection({ initialData }: PenilaianSectionProps) {
             </div>
 
             {/* Heading Utama */}
-            <h2 className="text-2xl sm:text-3xl lg:text-4xl font-serif font-bold text-navy-900 dark:text-white leading-[1.15] tracking-tight">
+            <h2 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold text-navy-900 dark:text-white leading-[1.15] tracking-tight">
               Bagaimana Pengalaman Anda?
             </h2>
 
