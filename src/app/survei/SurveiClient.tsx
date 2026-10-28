@@ -572,21 +572,6 @@ export default function SurveiClient({
             </div>
           </div>
 
-          {/* ========================================================= */}
-          {/* KRITIK & SARAN OPSIONAL                                   */}
-          {/* ========================================================= */}
-          <div className="rounded-2xl border border-slate-200/70 bg-slate-50/50 p-4 sm:p-5 space-y-2">
-            <label className="text-xs sm:text-sm font-bold text-slate-800 block">
-              Kritik atau saran untuk peningkatan layanan kami <span className="text-slate-400 font-normal">(Opsional)</span>
-            </label>
-            <textarea
-              rows={3}
-              value={kritikSaran}
-              onChange={(e) => setKritikSaran(e.target.value)}
-              placeholder="Tuliskan masukan atau apresiasi Anda di sini..."
-              className="w-full rounded-xl border border-slate-200 bg-white p-3 text-xs sm:text-sm text-slate-800 placeholder:text-slate-400 focus:border-[#ff7a1a] focus:outline-none transition"
-            />
-          </div>
 
           {/* Validasi Error Alert */}
           {validationError && (
