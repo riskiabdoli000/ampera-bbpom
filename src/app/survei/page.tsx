@@ -1,7 +1,5 @@
 import React from "react";
 import type { Metadata } from "next";
-import { SubpageNavbar } from "@/components/common/SubpageNavbar";
-import { Footer } from "@/components/landing/Footer";
 import { getSurveiPengajuanAction } from "@/app/actions/survei";
 import SurveiClient from "./SurveiClient";
 
@@ -32,20 +30,15 @@ export default async function SurveiPage({ searchParams }: SurveiPageProps) {
   }
 
   return (
-    <main className="min-h-screen bg-gradient-to-b from-[#f2f7ff] via-white to-[#f0f6ff] dark:from-slate-950 dark:via-[#06122e]/40 dark:to-slate-950 text-slate-800 dark:text-slate-100 flex flex-col selection:bg-brand-orange selection:text-white overflow-x-hidden transition-colors duration-300">
-      <SubpageNavbar activePage="layanan" />
-
-      <div className="flex-1 w-full pt-28 sm:pt-32 pb-16 sm:pb-24">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-          <SurveiClient
-            initialKode={kodeParam}
-            initialData={initialData}
-            initialError={initialError}
-          />
-        </div>
+    <main className="min-h-screen bg-slate-100/80 dark:bg-slate-950 text-slate-800 dark:text-slate-100 flex flex-col justify-center py-6 sm:py-10 px-3 sm:px-6 lg:px-8 selection:bg-[#ff7a1a] selection:text-white transition-colors duration-300">
+      <div className="w-full max-w-6xl mx-auto">
+        <SurveiClient
+          initialKode={kodeParam}
+          initialData={initialData}
+          initialError={initialError}
+        />
       </div>
-
-      <Footer />
     </main>
   );
 }
+
