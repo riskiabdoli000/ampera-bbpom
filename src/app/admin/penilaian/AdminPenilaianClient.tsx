@@ -11,12 +11,11 @@ import {
   AlertCircle,
   CheckCircle2,
   FileSpreadsheet,
-  FileText,
   ShieldCheck,
   Globe,
   Award,
-  Filter,
   RotateCcw,
+  Calendar,
 } from "lucide-react";
 import { PenilaianItem, PenilaianStats } from "@/app/actions/admin-penilaian";
 import { PenilaianDetailModal } from "./PenilaianDetailModal";
@@ -29,6 +28,23 @@ interface AdminPenilaianClientProps {
   initialStats: PenilaianStats;
 }
 
+const BULAN_OPTIONS = [
+  { value: "1", label: "Januari" },
+  { value: "2", label: "Februari" },
+  { value: "3", label: "Maret" },
+  { value: "4", label: "April" },
+  { value: "5", label: "Mei" },
+  { value: "6", label: "Juni" },
+  { value: "7", label: "Juli" },
+  { value: "8", label: "Agustus" },
+  { value: "9", label: "September" },
+  { value: "10", label: "Oktober" },
+  { value: "11", label: "November" },
+  { value: "12", label: "Desember" },
+];
+
+const TANGGAL_OPTIONS = Array.from({ length: 31 }, (_, i) => (i + 1).toString());
+
 export function AdminPenilaianClient({
   initialList,
   initialStats,
@@ -40,9 +56,12 @@ export function AdminPenilaianClient({
   const [searchTerm, setSearchTerm] = useState("");
   const [filterLayanan, setFilterLayanan] = useState("ALL");
   const [filterBintang, setFilterBintang] = useState("ALL");
+  const [filterTahun, setFilterTahun] = useState("ALL");
+  const [filterBulan, setFilterBulan] = useState("ALL");
+  const [filterTanggal, setFilterTanggal] = useState("ALL");
   const [filterSort, setFilterSort] = useState("NEWEST");
 
-  // Pagination
+  // Pagination (Maksimum 10 item per halaman)
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
 
@@ -64,53 +83,87 @@ export function AdminPenilaianClient({
     setTimeout(() => setNotification(null), 4000);
   };
 
-  // Filter & Search Logic
-  const filteredList = useMemo(() => {
-    return list.filter((item) => {
-      // 1. Search text
-      if (searchTerm.trim()) {
-        const query = searchTerm.toLowerCase();
-        const matchKode = item.pengajuan.kodePengajuan.toLowerCase().includes(query);
-        const matchNama = item.pengajuan.tamu.nama.toLowerCase().includes(query);
-        const matchInstansi = (
-          item.pengajuan.tamu.asalInstansi ||
-          item.pengajuan.tamu.alamat ||
-          ""
-        )
-          .toLowerCase()
-          .includes(query);
-        if (!matchKode && !matchNama && !matchInstansi) return false;
-      }
-
-      // 2. Filter Layanan
-      if (filterLayanan !== "ALL") {
-        if (item.pengajuan.layanan.kode !== filterLayanan) return false;
-      }
-
-      // 3. Filter Rating Bintang
-      if (filterBintang !== "ALL") {
-        if (item.ratingBintang !== parseInt(filterBintang, 10)) return false;
-      }
-
-      return true;
-    }).sort((a, b) => {
-      if (filterSort === "NEWEST") {
-        return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
-      }
-      if (filterSort === "OLDEST") {
-        return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
-      }
-      if (filterSort === "RATING_DESC") {
-        return b.ratingBintang - a.ratingBintang;
-      }
-      if (filterSort === "RATING_ASC") {
-        return a.ratingBintang - b.ratingBintang;
-      }
-      return 0;
+  // Ekstrak daftar tahun yang tersedia dari data
+  const availableYears = useMemo(() => {
+    const currentYear = new Date().getFullYear();
+    const years = new Set<number>([currentYear]);
+    list.forEach((item) => {
+      const y = new Date(item.createdAt).getFullYear();
+      if (!isNaN(y)) years.add(y);
     });
-  }, [list, searchTerm, filterLayanan, filterBintang, filterSort]);
+    return Array.from(years).sort((a, b) => b - a);
+  }, [list]);
 
-  // Paginated List
+  // Filter & Search Logic (Teks, Layanan, Bintang, Tahun, Bulan, Tanggal)
+  const filteredList = useMemo(() => {
+    return list
+      .filter((item) => {
+        // 1. Search text
+        if (searchTerm.trim()) {
+          const query = searchTerm.toLowerCase();
+          const matchKode = item.pengajuan.kodePengajuan.toLowerCase().includes(query);
+          const matchNama = item.pengajuan.tamu.nama.toLowerCase().includes(query);
+          const matchInstansi = (
+            item.pengajuan.tamu.asalInstansi ||
+            item.pengajuan.tamu.alamat ||
+            ""
+          )
+            .toLowerCase()
+            .includes(query);
+          if (!matchKode && !matchNama && !matchInstansi) return false;
+        }
+
+        // 2. Filter Layanan
+        if (filterLayanan !== "ALL") {
+          if (item.pengajuan.layanan.kode !== filterLayanan) return false;
+        }
+
+        // 3. Filter Rating Bintang
+        if (filterBintang !== "ALL") {
+          if (item.ratingBintang !== parseInt(filterBintang, 10)) return false;
+        }
+
+        // 4. Filter Waktu (Tahun, Bulan, Tanggal)
+        const itemDate = new Date(item.createdAt);
+        if (filterTahun !== "ALL") {
+          if (itemDate.getFullYear().toString() !== filterTahun) return false;
+        }
+        if (filterBulan !== "ALL") {
+          if ((itemDate.getMonth() + 1).toString() !== filterBulan) return false;
+        }
+        if (filterTanggal !== "ALL") {
+          if (itemDate.getDate().toString() !== filterTanggal) return false;
+        }
+
+        return true;
+      })
+      .sort((a, b) => {
+        if (filterSort === "NEWEST") {
+          return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+        }
+        if (filterSort === "OLDEST") {
+          return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+        }
+        if (filterSort === "RATING_DESC") {
+          return b.ratingBintang - a.ratingBintang;
+        }
+        if (filterSort === "RATING_ASC") {
+          return a.ratingBintang - b.ratingBintang;
+        }
+        return 0;
+      });
+  }, [
+    list,
+    searchTerm,
+    filterLayanan,
+    filterBintang,
+    filterTahun,
+    filterBulan,
+    filterTanggal,
+    filterSort,
+  ]);
+
+  // Paginated List (Maksimum 10 per page)
   const totalPages = Math.ceil(filteredList.length / itemsPerPage);
   const paginatedList = useMemo(() => {
     const start = (currentPage - 1) * itemsPerPage;
@@ -195,6 +248,9 @@ export function AdminPenilaianClient({
     setSearchTerm("");
     setFilterLayanan("ALL");
     setFilterBintang("ALL");
+    setFilterTahun("ALL");
+    setFilterBulan("ALL");
+    setFilterTanggal("ALL");
     setFilterSort("NEWEST");
     setCurrentPage(1);
   };
@@ -203,6 +259,9 @@ export function AdminPenilaianClient({
     searchTerm !== "" ||
     filterLayanan !== "ALL" ||
     filterBintang !== "ALL" ||
+    filterTahun !== "ALL" ||
+    filterBulan !== "ALL" ||
+    filterTanggal !== "ALL" ||
     filterSort !== "NEWEST";
 
   return (
@@ -225,7 +284,7 @@ export function AdminPenilaianClient({
         </div>
       )}
 
-      {/* Header Halaman & Tombol Ekspor */}
+      {/* Header Halaman & Tombol Ekspor (HANYA IKON SAJA) */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <span className="text-xs font-black uppercase tracking-widest text-[#ff7a1a] block">
@@ -239,28 +298,28 @@ export function AdminPenilaianClient({
           </p>
         </div>
 
-        {/* Action Buttons: Ekspor Excel & PDF */}
-        <div className="flex items-center gap-2.5 shrink-0">
+        {/* Action Buttons: Ekspor Excel & PDF (Hanya Ikon Saja Sesuai Permintaan) */}
+        <div className="flex items-center gap-2 shrink-0">
           <button
             type="button"
             onClick={() => exportPenilaianExcel(filteredList, stats)}
             disabled={filteredList.length === 0}
-            className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-xs sm:text-sm font-bold text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 shadow-xs transition disabled:opacity-50 cursor-pointer"
-            title="Ekspor seluruh data penilaian terpilih ke Excel"
+            className="flex h-10 w-10 items-center justify-center rounded-2xl border border-slate-200 bg-white text-emerald-600 hover:bg-emerald-50 hover:border-emerald-300 dark:border-slate-700 dark:bg-slate-800 dark:text-emerald-400 dark:hover:bg-emerald-950/40 shadow-xs transition disabled:opacity-50 cursor-pointer"
+            title="Ekspor Laporan ke Excel (.xlsx)"
+            aria-label="Ekspor Laporan ke Excel"
           >
-            <FileSpreadsheet className="h-4 w-4 text-emerald-600" />
-            <span>Excel (.xlsx)</span>
+            <FileSpreadsheet className="h-5 w-5" />
           </button>
 
           <button
             type="button"
             onClick={() => exportPenilaianPdf(filteredList, stats)}
             disabled={filteredList.length === 0}
-            className="inline-flex items-center gap-2 rounded-2xl bg-gradient-to-r from-[#ff7a1a] to-[#f26a0f] px-4.5 py-2.5 text-xs sm:text-sm font-bold text-white shadow-cta hover:brightness-105 transition disabled:opacity-50 cursor-pointer"
-            title="Cetak laporan resmi Indeks Kepuasan Masyarakat ke PDF"
+            className="flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-r from-[#ff7a1a] to-[#f26a0f] text-white shadow-cta hover:brightness-105 active:scale-95 transition disabled:opacity-50 cursor-pointer"
+            title="Cetak Laporan ke PDF"
+            aria-label="Cetak Laporan ke PDF"
           >
-            <Download className="h-4 w-4" />
-            <span>Laporan PDF</span>
+            <Download className="h-5 w-5" />
           </button>
         </div>
       </div>
@@ -370,11 +429,12 @@ export function AdminPenilaianClient({
         </div>
       </div>
 
-      {/* Toolbar Filter & Pencarian */}
-      <div className="rounded-3xl border border-slate-200/80 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900 space-y-4">
+      {/* Toolbar Filter & Pencarian (Termasuk Filter Tahun, Bulan, Tanggal) */}
+      <div className="rounded-3xl border border-slate-200/80 bg-white p-5 sm:p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900 space-y-4">
+        {/* Baris 1: Pencarian Teks, Layanan, dan Rating */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
           {/* Search Input */}
-          <div className="relative">
+          <div className="relative lg:col-span-2">
             <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
             <input
               type="text"
@@ -383,7 +443,7 @@ export function AdminPenilaianClient({
                 setSearchTerm(e.target.value);
                 setCurrentPage(1);
               }}
-              placeholder="Cari Tiket, Nama, Instansi..."
+              placeholder="Cari No. Tiket, Nama Pemohon, Instansi..."
               className="w-full rounded-2xl border border-slate-200 bg-slate-50/70 pl-10 pr-4 py-2.5 text-xs sm:text-sm text-slate-800 placeholder:text-slate-400 focus:border-[#ff7a1a] focus:bg-white focus:outline-none dark:border-slate-700 dark:bg-slate-800/60 dark:text-white transition"
             />
           </div>
@@ -396,13 +456,13 @@ export function AdminPenilaianClient({
                 setFilterLayanan(e.target.value);
                 setCurrentPage(1);
               }}
-              className="w-full rounded-2xl border border-slate-200 bg-slate-50/70 px-3.5 py-2.5 text-xs sm:text-sm text-slate-800 focus:border-[#ff7a1a] focus:bg-white focus:outline-none dark:border-slate-700 dark:bg-slate-800/60 dark:text-white transition"
+              className="w-full rounded-2xl border border-slate-200 bg-slate-50/70 px-3.5 py-2.5 text-xs sm:text-sm text-slate-800 focus:border-[#ff7a1a] focus:bg-white focus:outline-none dark:border-slate-700 dark:bg-slate-800/60 dark:text-white transition cursor-pointer"
             >
               <option value="ALL">Semua Jenis Layanan</option>
               <option value="UJI_CEPAT">Pengujian Cepat</option>
               <option value="INFO">Permintaan Informasi</option>
               <option value="ADUAN">Layanan Pengaduan</option>
-              <option value="KIP">Keterbukaan Informasi Publik (KIP)</option>
+              <option value="KIP">Keterbukaan Informasi Publik</option>
             </select>
           </div>
 
@@ -414,7 +474,7 @@ export function AdminPenilaianClient({
                 setFilterBintang(e.target.value);
                 setCurrentPage(1);
               }}
-              className="w-full rounded-2xl border border-slate-200 bg-slate-50/70 px-3.5 py-2.5 text-xs sm:text-sm text-slate-800 focus:border-[#ff7a1a] focus:bg-white focus:outline-none dark:border-slate-700 dark:bg-slate-800/60 dark:text-white transition"
+              className="w-full rounded-2xl border border-slate-200 bg-slate-50/70 px-3.5 py-2.5 text-xs sm:text-sm text-slate-800 focus:border-[#ff7a1a] focus:bg-white focus:outline-none dark:border-slate-700 dark:bg-slate-800/60 dark:text-white transition cursor-pointer"
             >
               <option value="ALL">Semua Rating Bintang</option>
               <option value="5">⭐⭐⭐⭐⭐ (5 Bintang)</option>
@@ -424,13 +484,85 @@ export function AdminPenilaianClient({
               <option value="1">⭐ (1 Bintang)</option>
             </select>
           </div>
+        </div>
 
-          {/* Filter Sort */}
-          <div>
+        {/* Baris 2: Filter Waktu Berdasarkan Tahun, Bulan, Tanggal & Urutan */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 pt-3 border-t border-slate-100 dark:border-slate-800">
+          {/* Filter Tahun */}
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 shrink-0 w-16">
+              Tahun:
+            </span>
+            <select
+              value={filterTahun}
+              onChange={(e) => {
+                setFilterTahun(e.target.value);
+                setCurrentPage(1);
+              }}
+              className="w-full rounded-2xl border border-slate-200 bg-slate-50/70 px-3 py-2 text-xs text-slate-800 focus:border-[#ff7a1a] focus:bg-white focus:outline-none dark:border-slate-700 dark:bg-slate-800/60 dark:text-white transition cursor-pointer"
+            >
+              <option value="ALL">Semua Tahun</option>
+              {availableYears.map((year) => (
+                <option key={year} value={year.toString()}>
+                  Tahun {year}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Filter Bulan */}
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 shrink-0 w-16">
+              Bulan:
+            </span>
+            <select
+              value={filterBulan}
+              onChange={(e) => {
+                setFilterBulan(e.target.value);
+                setCurrentPage(1);
+              }}
+              className="w-full rounded-2xl border border-slate-200 bg-slate-50/70 px-3 py-2 text-xs text-slate-800 focus:border-[#ff7a1a] focus:bg-white focus:outline-none dark:border-slate-700 dark:bg-slate-800/60 dark:text-white transition cursor-pointer"
+            >
+              <option value="ALL">Semua Bulan</option>
+              {BULAN_OPTIONS.map((m) => (
+                <option key={m.value} value={m.value}>
+                  {m.label}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Filter Tanggal */}
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 shrink-0 w-16">
+              Tanggal:
+            </span>
+            <select
+              value={filterTanggal}
+              onChange={(e) => {
+                setFilterTanggal(e.target.value);
+                setCurrentPage(1);
+              }}
+              className="w-full rounded-2xl border border-slate-200 bg-slate-50/70 px-3 py-2 text-xs text-slate-800 focus:border-[#ff7a1a] focus:bg-white focus:outline-none dark:border-slate-700 dark:bg-slate-800/60 dark:text-white transition cursor-pointer"
+            >
+              <option value="ALL">Semua Tanggal</option>
+              {TANGGAL_OPTIONS.map((d) => (
+                <option key={d} value={d}>
+                  Tanggal {d}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Filter Urutan */}
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 shrink-0 w-16">
+              Urutan:
+            </span>
             <select
               value={filterSort}
               onChange={(e) => setFilterSort(e.target.value)}
-              className="w-full rounded-2xl border border-slate-200 bg-slate-50/70 px-3.5 py-2.5 text-xs sm:text-sm text-slate-800 focus:border-[#ff7a1a] focus:bg-white focus:outline-none dark:border-slate-700 dark:bg-slate-800/60 dark:text-white transition"
+              className="w-full rounded-2xl border border-slate-200 bg-slate-50/70 px-3 py-2 text-xs text-slate-800 focus:border-[#ff7a1a] focus:bg-white focus:outline-none dark:border-slate-700 dark:bg-slate-800/60 dark:text-white transition cursor-pointer"
             >
               <option value="NEWEST">Terbaru Diisi</option>
               <option value="OLDEST">Terlama Diisi</option>
@@ -441,7 +573,7 @@ export function AdminPenilaianClient({
         </div>
 
         {/* Indicator Filter Aktif & Reset */}
-        <div className="flex items-center justify-between pt-1 border-t border-slate-100 dark:border-slate-800 text-xs text-slate-500">
+        <div className="flex items-center justify-between pt-1 border-t border-slate-100 dark:border-slate-800 text-xs text-slate-500 dark:text-slate-400">
           <span>
             Menampilkan <strong>{filteredList.length}</strong> data evaluasi kepuasan masyarakat
           </span>
@@ -457,7 +589,7 @@ export function AdminPenilaianClient({
         </div>
       </div>
 
-      {/* Tabel Data Penilaian */}
+      {/* Tabel Data Penilaian (Maksimum 10 baris per halaman) */}
       <div className="rounded-3xl border border-slate-200/80 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse text-xs">
@@ -619,17 +751,15 @@ export function AdminPenilaianClient({
           </table>
         </div>
 
-        {/* Pagination */}
-        {totalPages > 1 && (
-          <div className="p-4 border-t border-slate-100 dark:border-slate-800">
-            <AdminPagination
-              currentPage={currentPage}
-              totalPages={totalPages}
-              totalItems={filteredList.length}
-              itemsPerPage={itemsPerPage}
-              onPageChange={setCurrentPage}
-            />
-          </div>
+        {/* Footer Pagination (Selalu Tampil Jika Ada Data, Maksimal 10 Baris per Halaman) */}
+        {filteredList.length > 0 && (
+          <AdminPagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            totalItems={filteredList.length}
+            itemsPerPage={itemsPerPage}
+            onPageChange={setCurrentPage}
+          />
         )}
       </div>
 
