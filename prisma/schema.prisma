@@ -100,6 +100,9 @@ model PengajuanLayanan {
   verifikatorId       Int?
   verifikator         Admin?          @relation(fields: [verifikatorId], references: [id])
 
+  // Bukti Lampiran Tindakan Petugas BBPOM (Minimal 2 berkas, dinamis)
+  lampiranTindakan    LampiranTindakanPetugas[]
+
   createdAt           DateTime        @default(now())
   updatedAt           DateTime        @updatedAt
 
@@ -107,6 +110,24 @@ model PengajuanLayanan {
   @@index([tamuId])
   @@index([layananId])
 }
+
+// Bukti Lampiran Tindakan Petugas BBPOM (Foto Hasil Uji, Dokumen BAP, Tanggapan Resmi, dsb.)
+model LampiranTindakanPetugas {
+  id          Int              @id @default(autoincrement())
+  pengajuanId Int
+  pengajuan   PengajuanLayanan @relation(fields: [pengajuanId], references: [id], onDelete: Cascade)
+
+  url         String           @db.Text // URL publik berkas di Supabase Storage / Local
+  storagePath String           @db.Text // Path unik di bucket storage untuk kebutuhan penghapusan
+  namaFile    String           // Nama file asli (misal: "Hasil_Uji_Strip_Boraks.jpg")
+  tipeFile    String           // MIME type (image/jpeg, image/png, application/pdf, etc.)
+  ukuranFile  Int?             // Ukuran file dalam bytes
+
+  createdAt   DateTime         @default(now())
+
+  @@index([pengajuanId])
+}
+
 
 // Akun Admin & Operator Petugas BBPOM
 model Admin {

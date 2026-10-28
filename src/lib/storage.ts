@@ -72,11 +72,12 @@ export type UploadFolder =
   | "aduan"
   | "kip"
   | "ktp"
-  | "layanan";
+  | "layanan"
+  | "tindakan";
 
 /**
- * Kompresi gambar cerdas menggunakan Sharp ke target ukuran ~200KB
- * Mengonversi gambar ke format WebP modern dengan resolusi maksimal 1920px (Full HD).
+ * Kompresi gambar cerdas menggunakan Sharp ke target ukuran tertentu (default ~200KB, atau ~100KB khusus lampiran tindakan)
+ * Mengonversi gambar ke format WebP modern dengan resolusi responsif.
  */
 export async function compressImageToTarget(
   inputBuffer: Buffer,
@@ -87,9 +88,13 @@ export async function compressImageToTarget(
 
   const metadata = await pipeline.metadata();
   const width = metadata.width || 1920;
-  const maxWidth = width > 1920 ? 1920 : width;
+  const initialMax = targetSizeKB <= 100 ? 1440 : 1920;
+  const maxWidth = width > initialMax ? initialMax : width;
 
-  const qualitySteps = [82, 75, 68, 58, 48, 38];
+  const qualitySteps =
+    targetSizeKB <= 100
+      ? [75, 65, 55, 45, 35, 25]
+      : [82, 75, 68, 58, 48, 38];
   let finalBuffer: Buffer | null = null;
 
   for (const quality of qualitySteps) {
@@ -105,11 +110,11 @@ export async function compressImageToTarget(
     }
   }
 
-  if (finalBuffer && finalBuffer.length > targetBytes && maxWidth > 1440) {
+  if (finalBuffer && finalBuffer.length > targetBytes && maxWidth > 1080) {
     const candidate = await sharp(inputBuffer)
       .rotate()
-      .resize({ width: 1440, fit: "inside", withoutEnlargement: true })
-      .webp({ quality: 60, effort: 4 })
+      .resize({ width: 1080, fit: "inside", withoutEnlargement: true })
+      .webp({ quality: targetSizeKB <= 100 ? 40 : 60, effort: 4 })
       .toBuffer();
     finalBuffer = candidate;
   }
@@ -123,12 +128,13 @@ export async function compressImageToTarget(
 
 /**
  * Upload gambar atau dokumen PDF ke Supabase Storage (atau fallback lokal jika service role key belum diisi).
- * Jika file adalah gambar, otomatis dikompresi ke format WebP ~200KB.
+ * Jika file adalah gambar, otomatis dikompresi ke format WebP (~100KB untuk folder 'tindakan', ~200KB untuk lainnya).
  * Jika file adalah PDF, disimpan utuh dengan MIME application/pdf.
  */
 export async function uploadFileOrDocument(
   file: File,
-  folder: UploadFolder = "layanan"
+  folder: UploadFolder = "layanan",
+  targetSizeKB?: number
 ): Promise<UploadResult> {
   const originalSize = file.size;
   const rawArrayBuffer = await file.arrayBuffer();
@@ -142,12 +148,15 @@ export async function uploadFileOrDocument(
   let contentType = file.type || "application/octet-stream";
   let ext = file.name.split(".").pop()?.toLowerCase() || "bin";
 
+  // Khusus upload bukti lampiran tindakan petugas (folder 'tindakan'), kompresi ditargetkan ke ~100KB
+  const effectiveTargetKB = targetSizeKB ?? (folder === "tindakan" ? 100 : 200);
+
   if (isPdf) {
     contentType = "application/pdf";
     ext = "pdf";
   } else if (file.type.startsWith("image/") || /\.(jpe?g|png|webp)$/i.test(file.name)) {
     try {
-      const compressionResult = await compressImageToTarget(rawBuffer, 200);
+      const compressionResult = await compressImageToTarget(rawBuffer, effectiveTargetKB);
       uploadBuffer = compressionResult.buffer;
       contentType = compressionResult.contentType;
       ext = compressionResult.ext;

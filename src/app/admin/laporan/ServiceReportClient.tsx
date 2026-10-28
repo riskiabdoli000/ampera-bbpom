@@ -15,6 +15,7 @@ import {
   UserCheck,
   Inbox,
   FileText,
+  FileCheck,
   Check,
   XCircle,
   ExternalLink,
@@ -26,6 +27,7 @@ import {
   Mail,
   MapPin,
   Building2,
+  FileSpreadsheet,
 } from "lucide-react";
 import {
   PengajuanItem,
@@ -34,6 +36,10 @@ import {
   StatusPengajuan,
   updatePengajuanStatusAction,
 } from "@/app/actions/data-ampera";
+import {
+  exportToExcelProfessional,
+  exportToPdfOfficial,
+} from "@/lib/export-service";
 import { PengajuanDetailModal } from "../data-ampera/PengajuanDetailModal";
 import { PenggunaDetailModal } from "../data-ampera/PenggunaDetailModal";
 import { AdminPagination } from "@/components/admin/AdminPagination";
@@ -93,6 +99,10 @@ export function ServiceReportClient({
     type: "success" | "error";
     message: string;
   } | null>(null);
+
+  // Export Loading States
+  const [isExportingExcel, setIsExportingExcel] = useState(false);
+  const [isExportingPdf, setIsExportingPdf] = useState(false);
 
   useEffect(() => {
     if (feedback) {
@@ -250,69 +260,56 @@ export function ServiceReportClient({
     }
   };
 
-  // Export to CSV specific to this service
-  const handleExportCSV = () => {
-    let csvContent = "\uFEFF"; // BOM for Excel UTF-8
-    if (activeTab === "PENGAJUAN") {
-      csvContent +=
-        "No,Kode Pengajuan,Tanggal Masuk,Status,Nama Pemohon,NIK,Telepon,Email,Alamat/Instansi,Rincian Layanan,Catatan Petugas\n";
-      filteredPengajuan.forEach((p, idx) => {
-        let rincian = "-";
-        if (serviceCode === "INFO") {
-          rincian = `[${p.kategoriInformasi || "Umum"}] ${p.informasiDibutuhkan || ""}`;
-        } else if (serviceCode === "UJI_CEPAT") {
-          rincian = `Produk: ${p.produkDicurigai || "-"}, Alasan: ${p.alasanKecurigaan || "-"}, Rincian: ${p.rincianProduk || "-"}`;
-        } else if (serviceCode === "ADUAN") {
-          rincian = p.isiPengaduan || "-";
-        } else if (serviceCode === "KIP") {
-          rincian = `Info: ${p.rincianInformasiKip || "-"}, Tujuan: ${p.tujuanPenggunaanKip || "-"}`;
-        }
-
-        const row = [
-          idx + 1,
-          `"${p.kodePengajuan}"`,
-          `"${new Date(p.createdAt).toLocaleString("id-ID")}"`,
-          `"${p.status}"`,
-          `"${p.tamu.nama.replace(/"/g, '""')}"`,
-          `"'${p.tamu.nik}"`,
-          `"${p.tamu.telepon || "-"}"`,
-          `"${p.tamu.email || "-"}"`,
-          `"${(p.tamu.alamat || p.tamu.asalInstansi || "-").replace(/"/g, '""')}"`,
-          `"${rincian.replace(/"/g, '""').replace(/\n/g, " ")}"`,
-          `"${(p.catatanPetugas || "-").replace(/"/g, '""').replace(/\n/g, " ")}"`,
-        ];
-        csvContent += row.join(",") + "\n";
+  // Export to Excel (.xlsx)
+  const handleExportExcel = async () => {
+    try {
+      setIsExportingExcel(true);
+      await exportToExcelProfessional({
+        activeTab,
+        pengajuanList: filteredPengajuan,
+        penggunaList: filteredPengguna,
+        stats,
+        serviceTitle: `Laporan Layanan: ${serviceName}`,
       });
-    } else {
-      csvContent +=
-        "No,Nama Lengkap,NIK,Telepon,Email,Alamat,Instansi,Pengajuan Layanan Ini,Terdaftar Sejak\n";
-      filteredPengguna.forEach((u, idx) => {
-        const row = [
-          idx + 1,
-          `"${u.nama.replace(/"/g, '""')}"`,
-          `"'${u.nik}"`,
-          `"${u.telepon || "-"}"`,
-          `"${u.email || "-"}"`,
-          `"${(u.alamat || "-").replace(/"/g, '""')}"`,
-          `"${(u.asalInstansi || "-").replace(/"/g, '""')}"`,
-          u.totalPengajuan,
-          `"${new Date(u.createdAt).toLocaleDateString("id-ID")}"`,
-        ];
-        csvContent += row.join(",") + "\n";
+      setFeedback({
+        type: "success",
+        message: `Berkas Excel (.xlsx) laporan ${serviceName} berhasil diunduh.`,
       });
+    } catch (err: any) {
+      console.error("Gagal export excel:", err);
+      setFeedback({
+        type: "error",
+        message: "Gagal mengekspor berkas Excel.",
+      });
+    } finally {
+      setIsExportingExcel(false);
     }
+  };
 
-    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.setAttribute(
-      "download",
-      `laporan-${serviceCode.toLowerCase()}-${new Date().toISOString().slice(0, 10)}.csv`
-    );
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+  // Export to PDF Resmi
+  const handleExportPdf = async () => {
+    try {
+      setIsExportingPdf(true);
+      await exportToPdfOfficial({
+        activeTab,
+        pengajuanList: filteredPengajuan,
+        penggunaList: filteredPengguna,
+        stats,
+        serviceTitle: `Laporan Layanan: ${serviceName}`,
+      });
+      setFeedback({
+        type: "success",
+        message: `Dokumen PDF resmi laporan ${serviceName} ber-kop BBPOM berhasil diunduh.`,
+      });
+    } catch (err: any) {
+      console.error("Gagal export pdf:", err);
+      setFeedback({
+        type: "error",
+        message: "Gagal mengekspor dokumen PDF.",
+      });
+    } finally {
+      setIsExportingPdf(false);
+    }
   };
 
   const getStatusBadgeStyle = (status: StatusPengajuan) => {
@@ -377,15 +374,36 @@ export function ServiceReportClient({
           </div>
         </div>
 
-        {/* Action Button: Orange Gradient CTA */}
+        {/* Action Buttons: Unduh Excel & PDF (Icon Only) */}
         <div className="shrink-0 flex items-center gap-2">
           <button
             type="button"
-            onClick={handleExportCSV}
-            className="inline-flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-[#ff7a1a] to-[#f26a0f] px-5 py-3 text-xs sm:text-sm font-bold text-white shadow-cta hover:brightness-110 transition-all hover:-translate-y-0.5 active:translate-y-0 cursor-pointer whitespace-nowrap"
+            onClick={handleExportExcel}
+            disabled={isExportingExcel}
+            aria-label="Unduh Excel (.xlsx)"
+            title="Unduh format spreadsheet Microsoft Excel (.xlsx)"
+            className="inline-flex h-11 w-11 sm:h-12 sm:w-12 items-center justify-center rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm hover:shadow-md transition-all hover:-translate-y-0.5 active:translate-y-0 cursor-pointer disabled:opacity-60 disabled:hover:translate-y-0"
           >
-            <Download className="h-4 w-4 stroke-[2.5]" />
-            <span>Unduh Rekap CSV</span>
+            {isExportingExcel ? (
+              <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+            ) : (
+              <FileSpreadsheet className="h-5 w-5 stroke-[2.2]" />
+            )}
+          </button>
+
+          <button
+            type="button"
+            onClick={handleExportPdf}
+            disabled={isExportingPdf}
+            aria-label="Unduh Dokumen PDF"
+            title="Unduh dokumen laporan resmi format PDF (A4 Landscape)"
+            className="inline-flex h-11 w-11 sm:h-12 sm:w-12 items-center justify-center rounded-2xl bg-gradient-to-r from-[#ff7a1a] to-[#f26a0f] text-white shadow-cta hover:brightness-110 transition-all hover:-translate-y-0.5 active:translate-y-0 cursor-pointer disabled:opacity-60 disabled:hover:translate-y-0"
+          >
+            {isExportingPdf ? (
+              <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+            ) : (
+              <Download className="h-5 w-5 stroke-[2.5]" />
+            )}
           </button>
         </div>
       </div>
@@ -783,6 +801,12 @@ export function ServiceReportClient({
                             >
                               {st.label}
                             </span>
+                            {item.lampiranTindakan && item.lampiranTindakan.length > 0 && (
+                              <div className="flex items-center justify-center gap-1.5 text-[11px] font-bold text-emerald-600 dark:text-emerald-400 mt-1.5">
+                                <FileCheck className="h-3.5 w-3.5 shrink-0" />
+                                <span>{item.lampiranTindakan.length} Bukti Tindakan</span>
+                              </div>
+                            )}
                           </td>
 
                           {/* 7. Aksi Detail */}

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useTransition } from "react";
+import React, { useState, useTransition, useRef, useEffect } from "react";
 import Image from "next/image";
 import {
   X,
@@ -22,11 +22,15 @@ import {
   FileCheck,
   ShieldCheck,
   Eye,
+  UploadCloud,
+  Plus,
+  Image as ImageIcon,
 } from "lucide-react";
 import {
   PengajuanItem,
   StatusPengajuan,
-  updatePengajuanStatusAction,
+  LampiranTindakanItem,
+  updatePengajuanTindakanWithLampiranAction,
   deletePengajuanAction,
 } from "@/app/actions/data-ampera";
 
@@ -37,6 +41,14 @@ interface PengajuanDetailModalProps {
   onStatusUpdated: (updated: PengajuanItem) => void;
   onDeleted: (deletedId: number) => void;
   onNotify: (type: "success" | "error", message: string) => void;
+}
+
+interface NewFileItem {
+  id: string;
+  file: File;
+  previewUrl: string;
+  isPdf: boolean;
+  sizeFormatted: string;
 }
 
 export function PengajuanDetailModal({
@@ -51,35 +63,141 @@ export function PengajuanDetailModal({
     pengajuan?.status || "MENUNGGU_VERIFIKASI"
   );
   const [catatanPetugas, setCatatanPetugas] = useState(pengajuan?.catatanPetugas || "");
+  const [existingLampiran, setExistingLampiran] = useState<LampiranTindakanItem[]>([]);
+  const [deletedLampiranIds, setDeletedLampiranIds] = useState<number[]>([]);
+  const [newFiles, setNewFiles] = useState<NewFileItem[]>([]);
+  const [validationError, setValidationError] = useState<string | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
+
   const [isPending, startTransition] = useTransition();
   const [isDeleting, setIsDeleting] = useState(false);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
 
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const formatFileSize = (bytes?: number | null) => {
+    if (!bytes || bytes === 0) return "0 KB";
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  };
+
   // Sync state saat modal dibuka dengan pengajuan baru
-  React.useEffect(() => {
+  useEffect(() => {
     if (pengajuan) {
       setSelectedStatus(pengajuan.status);
       setCatatanPetugas(pengajuan.catatanPetugas || "");
+      setExistingLampiran(pengajuan.lampiranTindakan || []);
+      setDeletedLampiranIds([]);
+      setNewFiles([]);
+      setValidationError(null);
+      setIsDragging(false);
     }
   }, [pengajuan]);
 
+  // Bersihkan object URLs saat unmount atau newFiles dibersihkan
+  useEffect(() => {
+    return () => {
+      newFiles.forEach((item) => {
+        if (item.previewUrl) URL.revokeObjectURL(item.previewUrl);
+      });
+    };
+  }, [newFiles]);
+
   if (!isOpen || !pengajuan) return null;
 
+  // Hitung jumlah lampiran aktif
+  const remainingExisting = existingLampiran.filter((l) => !deletedLampiranIds.includes(l.id));
+  const totalLampiran = remainingExisting.length + newFiles.length;
+
+  const handleAddFiles = (filesList: FileList | File[]) => {
+    const incoming = Array.from(filesList);
+    const added: NewFileItem[] = [];
+    let err: string | null = null;
+
+    for (const file of incoming) {
+      if (file.size > 10 * 1024 * 1024) {
+        err = `Berkas "${file.name}" melebihi batas ukuran maksimal 10MB.`;
+        continue;
+      }
+      const isPdf = file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf");
+      const isImg = file.type.startsWith("image/") || /\.(jpe?g|png|webp)$/i.test(file.name);
+      if (!isPdf && !isImg) {
+        err = `Format berkas "${file.name}" tidak didukung. Harap unggah gambar (JPG, PNG, WebP) atau PDF.`;
+        continue;
+      }
+
+      const previewUrl = isImg ? URL.createObjectURL(file) : "";
+      added.push({
+        id: `${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+        file,
+        previewUrl,
+        isPdf,
+        sizeFormatted: formatFileSize(file.size),
+      });
+    }
+
+    if (err) {
+      setValidationError(err);
+    } else {
+      setValidationError(null);
+    }
+
+    if (added.length > 0) {
+      setNewFiles((prev) => [...prev, ...added]);
+    }
+  };
+
+  const handleRemoveNewFile = (fileId: string) => {
+    setNewFiles((prev) => {
+      const target = prev.find((item) => item.id === fileId);
+      if (target?.previewUrl) URL.revokeObjectURL(target.previewUrl);
+      return prev.filter((item) => item.id !== fileId);
+    });
+  };
+
+  const handleDeleteExistingLampiran = (lampiranId: number) => {
+    setDeletedLampiranIds((prev) => (prev.includes(lampiranId) ? prev : [...prev, lampiranId]));
+  };
+
+  const handleRestoreExistingLampiran = (lampiranId: number) => {
+    setDeletedLampiranIds((prev) => prev.filter((id) => id !== lampiranId));
+  };
+
   const handleUpdateStatus = () => {
-    startTransition(async () => {
-      const res = await updatePengajuanStatusAction(
-        pengajuan.id,
-        selectedStatus,
-        catatanPetugas
+    // Validasi frontend minimal 2 lampiran jika status diproses/selesai atau ada catatan/berkas
+    const isUnderAction =
+      selectedStatus === "DIPROSES" ||
+      selectedStatus === "SELESAI" ||
+      catatanPetugas.trim().length > 0 ||
+      totalLampiran > 0;
+
+    if (isUnderAction && totalLampiran < 2) {
+      setValidationError(
+        `Bukti lampiran tindakan petugas minimal 2 berkas (saat ini ${totalLampiran} berkas). Silakan lampirkan minimal 2 berkas bukti sebelum menyimpan.`
       );
-      if (res.success) {
+      return;
+    }
+    setValidationError(null);
+
+    startTransition(async () => {
+      const formData = new FormData();
+      formData.append("id", String(pengajuan.id));
+      formData.append("status", selectedStatus);
+      formData.append("catatanPetugas", catatanPetugas);
+      formData.append("deletedLampiranIds", JSON.stringify(deletedLampiranIds));
+
+      for (const item of newFiles) {
+        formData.append("lampiranFiles", item.file);
+      }
+
+      const res = await updatePengajuanTindakanWithLampiranAction(formData);
+      if (res.success && res.updatedPengajuan) {
         onNotify("success", res.message);
-        onStatusUpdated({
-          ...pengajuan,
-          status: selectedStatus,
-          catatanPetugas: catatanPetugas || null,
-        });
+        onStatusUpdated(res.updatedPengajuan);
+        onClose();
       } else {
+        setValidationError(res.message);
         onNotify("error", res.message);
       }
     });
@@ -434,10 +552,30 @@ export function PengajuanDetailModal({
             )}
 
             {/* 4. Tindakan Petugas & Perubahan Status */}
-            <div className="rounded-3xl border border-slate-200/80 bg-slate-50/70 p-5 sm:p-6 dark:border-slate-800 dark:bg-slate-800/40 space-y-4">
-              <h3 className="flex items-center gap-2 text-xs font-extrabold uppercase tracking-wider text-navy-900 dark:text-white">
-                <ShieldCheck className="h-4 w-4 text-[#ff7a1a]" /> Tindakan Petugas BBPOM
-              </h3>
+            <div className="rounded-3xl border border-slate-200/80 bg-slate-50/70 p-5 sm:p-6 dark:border-slate-800 dark:bg-slate-800/40 space-y-5">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <h3 className="flex items-center gap-2 text-xs font-extrabold uppercase tracking-wider text-navy-900 dark:text-white">
+                  <ShieldCheck className="h-4 w-4 text-[#ff7a1a]" /> Tindakan Petugas BBPOM
+                </h3>
+
+                {/* Indikator Counter Minimal 2 Lampiran */}
+                {totalLampiran >= 2 ? (
+                  <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-bold text-emerald-700 dark:border-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300">
+                    <CheckCircle2 className="h-3.5 w-3.5" /> {totalLampiran} Lampiran Terpenuhi (Bisa ditambah lagi)
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-xs font-bold text-amber-800 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-300">
+                    <AlertCircle className="h-3.5 w-3.5" /> Wajib Min. 2 Lampiran (Saat ini: {totalLampiran}/2)
+                  </span>
+                )}
+              </div>
+
+              {validationError && (
+                <div className="rounded-2xl border border-rose-200 bg-rose-50 p-4 text-xs font-semibold text-rose-800 dark:border-rose-900/60 dark:bg-rose-950/40 dark:text-rose-300 flex items-start gap-2.5">
+                  <AlertCircle className="h-4 w-4 shrink-0 mt-0.5 text-rose-600 dark:text-rose-400" />
+                  <span>{validationError}</span>
+                </div>
+              )}
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
@@ -475,10 +613,269 @@ export function PengajuanDetailModal({
                   <textarea
                     rows={3}
                     value={catatanPetugas}
-                    onChange={(e) => setCatatanPetugas(e.target.value)}
+                    onChange={(e) => {
+                      setCatatanPetugas(e.target.value);
+                      if (validationError) setValidationError(null);
+                    }}
                     placeholder="Contoh: Sampel telah diuji dengan test kit Rapid Boraks/Formalin dengan hasil Negatif. Atau tanggapan resmi jawaban informasi."
                     className="w-full rounded-2xl border border-slate-200 bg-white p-4 text-xs sm:text-sm text-navy-900 placeholder-slate-400 focus:border-brand-orange focus:outline-none dark:border-slate-700 dark:bg-slate-800 dark:text-white leading-relaxed"
                   />
+                </div>
+              </div>
+
+              {/* Area Upload Bukti Lampiran Tindakan Petugas */}
+              <div className="space-y-3 pt-3 border-t border-slate-200/80 dark:border-slate-700/80">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <span className="text-xs font-extrabold uppercase tracking-wider text-slate-700 dark:text-slate-300 block">
+                      Bukti Lampiran Tindakan (Foto Hasil Uji Lab / Berita Acara / LHU)
+                    </span>
+                    <span className="text-[11px] text-slate-500 dark:text-slate-400">
+                      Minimal 2 lampiran bukti • Mendukung banyak lampiran (&gt;2) • Foto dikompresi ke ~100KB • PDF disimpan utuh
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    className="inline-flex items-center gap-1.5 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:border-brand-orange px-3 py-1.5 text-xs font-bold text-navy-900 dark:text-white transition shadow-2xs cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-700"
+                  >
+                    <Plus className="h-3.5 w-3.5 text-[#ff7a1a]" /> Tambah Berkas
+                  </button>
+                </div>
+
+                <input
+                  type="file"
+                  multiple
+                  ref={fileInputRef}
+                  onChange={(e) => {
+                    if (e.target.files && e.target.files.length > 0) {
+                      handleAddFiles(e.target.files);
+                      e.target.value = "";
+                    }
+                  }}
+                  accept="image/jpeg,image/png,image/webp,application/pdf,.pdf"
+                  className="hidden"
+                />
+
+                {/* Dropzone Container */}
+                <div
+                  onDragOver={(e) => {
+                    e.preventDefault();
+                    setIsDragging(true);
+                  }}
+                  onDragLeave={() => setIsDragging(false)}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    setIsDragging(false);
+                    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+                      handleAddFiles(e.dataTransfer.files);
+                    }
+                  }}
+                  onClick={() => fileInputRef.current?.click()}
+                  className={`group relative flex flex-col items-center justify-center rounded-2xl border-2 border-dashed p-5 text-center transition cursor-pointer ${
+                    isDragging
+                      ? "border-brand-orange bg-orange-50/50 dark:bg-orange-950/20"
+                      : "border-slate-300/80 bg-white hover:border-brand-orange/70 hover:bg-orange-50/20 dark:border-slate-700 dark:bg-slate-800/80 dark:hover:bg-slate-800"
+                  }`}
+                >
+                  <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-orange-50 text-[#ff7a1a] dark:bg-orange-950/40 dark:text-orange-400 group-hover:scale-105 transition">
+                    <UploadCloud className="h-6 w-6" />
+                  </div>
+                  <div className="mt-2 text-xs font-bold text-navy-900 dark:text-white">
+                    Seret & letakkan berkas di sini, atau <span className="text-[#ff7a1a] underline">pilih dari perangkat</span>
+                  </div>
+                  <div className="mt-1 text-[11px] text-slate-400 dark:text-slate-500">
+                    JPG, PNG, WebP (kompresi otomatis ~100KB) atau PDF (Maksimal 10 MB per berkas)
+                  </div>
+                </div>
+
+                {/* List Lampiran Tersimpan & Draft Baru */}
+                <div className="space-y-3 pt-1">
+                  {/* 1. Berkas Tersimpan Sebelumnya */}
+                  {existingLampiran.length > 0 && (
+                    <div className="space-y-2">
+                      <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block">
+                        Lampiran Tersimpan ({remainingExisting.length} aktif
+                        {deletedLampiranIds.length > 0 ? `, ${deletedLampiranIds.length} dihapus` : ""})
+                      </span>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                        {existingLampiran.map((item) => {
+                          const isDeleted = deletedLampiranIds.includes(item.id);
+                          const isPdf =
+                            item.tipeFile === "application/pdf" ||
+                            item.namaFile.toLowerCase().endsWith(".pdf");
+
+                          if (isDeleted) {
+                            return (
+                              <div
+                                key={`existing-${item.id}`}
+                                className="flex items-center justify-between rounded-2xl border border-rose-200/80 bg-rose-50/60 p-3 dark:border-rose-900/60 dark:bg-rose-950/20 opacity-75"
+                              >
+                                <div className="flex items-center gap-2.5 min-w-0">
+                                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-rose-100 text-rose-600 text-xs font-bold">
+                                    <Trash2 className="h-4 w-4" />
+                                  </div>
+                                  <div className="truncate">
+                                    <span className="block text-xs font-bold text-slate-500 line-through truncate">
+                                      {item.namaFile}
+                                    </span>
+                                    <span className="text-[10px] text-rose-600 font-semibold">
+                                      Akan dihapus saat disimpan
+                                    </span>
+                                  </div>
+                                </div>
+                                <button
+                                  type="button"
+                                  onClick={() => handleRestoreExistingLampiran(item.id)}
+                                  className="shrink-0 text-xs font-bold text-slate-600 hover:text-navy-900 underline px-2 py-1 cursor-pointer"
+                                  title="Batalkan penghapusan"
+                                >
+                                  Batal
+                                </button>
+                              </div>
+                            );
+                          }
+
+                          return (
+                            <div
+                              key={`existing-${item.id}`}
+                              className="flex items-center justify-between rounded-2xl border border-slate-200/90 bg-white p-3 dark:border-slate-700/80 dark:bg-slate-800 shadow-2xs group"
+                            >
+                              <div className="flex items-center gap-2.5 min-w-0">
+                                {isPdf ? (
+                                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-sky-100 text-sky-700 dark:bg-sky-950 dark:text-sky-300 font-extrabold text-[11px]">
+                                    PDF
+                                  </div>
+                                ) : (
+                                  <div
+                                    className="relative h-9 w-9 shrink-0 overflow-hidden rounded-xl bg-slate-100 dark:bg-slate-900 border cursor-pointer hover:opacity-85 transition"
+                                    onClick={() => setPreviewImage(item.url)}
+                                    title="Klik untuk pratinjau"
+                                  >
+                                    <Image
+                                      src={item.url}
+                                      alt={item.namaFile}
+                                      fill
+                                      className="object-cover"
+                                    />
+                                  </div>
+                                )}
+                                <div className="truncate">
+                                  <span className="block text-xs font-bold text-navy-900 dark:text-white truncate">
+                                    {item.namaFile}
+                                  </span>
+                                  <span className="text-[10px] text-slate-400">
+                                    {formatFileSize(item.ukuranFile)} • Tersimpan
+                                  </span>
+                                </div>
+                              </div>
+
+                              <div className="flex items-center gap-1 shrink-0">
+                                {isPdf ? (
+                                  <a
+                                    href={item.url}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="flex h-8 w-8 items-center justify-center rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-700 cursor-pointer transition"
+                                    title="Buka PDF"
+                                  >
+                                    <Download className="h-3.5 w-3.5" />
+                                  </a>
+                                ) : (
+                                  <button
+                                    type="button"
+                                    onClick={() => setPreviewImage(item.url)}
+                                    className="flex h-8 w-8 items-center justify-center rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-700 cursor-pointer transition"
+                                    title="Lihat Pratinjau"
+                                  >
+                                    <Eye className="h-3.5 w-3.5" />
+                                  </button>
+                                )}
+                                <button
+                                  type="button"
+                                  onClick={() => handleDeleteExistingLampiran(item.id)}
+                                  className="flex h-8 w-8 items-center justify-center rounded-xl border border-slate-200 text-rose-500 hover:bg-rose-50 hover:border-rose-300 dark:border-slate-700 dark:hover:bg-rose-950/40 cursor-pointer transition"
+                                  title="Hapus berkas ini"
+                                >
+                                  <Trash2 className="h-3.5 w-3.5" />
+                                </button>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* 2. Berkas Baru Ditambahkan (Draft) */}
+                  {newFiles.length > 0 && (
+                    <div className="space-y-2">
+                      <span className="text-[11px] font-bold text-[#ff7a1a] uppercase tracking-wider block">
+                        Berkas Baru Diunggah ({newFiles.length} berkas)
+                      </span>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                        {newFiles.map((item) => (
+                          <div
+                            key={item.id}
+                            className="flex items-center justify-between rounded-2xl border border-orange-200 bg-orange-50/40 p-3 dark:border-orange-900/60 dark:bg-orange-950/20 shadow-2xs"
+                          >
+                            <div className="flex items-center gap-2.5 min-w-0">
+                              {item.isPdf ? (
+                                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-sky-100 text-sky-700 dark:bg-sky-950 dark:text-sky-300 font-extrabold text-[11px]">
+                                  PDF
+                                </div>
+                              ) : (
+                                <div
+                                  className="relative h-9 w-9 shrink-0 overflow-hidden rounded-xl bg-slate-100 dark:bg-slate-900 border cursor-pointer hover:opacity-85 transition"
+                                  onClick={() => item.previewUrl && setPreviewImage(item.previewUrl)}
+                                  title="Klik untuk pratinjau"
+                                >
+                                  {item.previewUrl ? (
+                                    <img
+                                      src={item.previewUrl}
+                                      alt={item.file.name}
+                                      className="h-full w-full object-cover"
+                                    />
+                                  ) : (
+                                    <ImageIcon className="h-4 w-4 text-slate-400" />
+                                  )}
+                                </div>
+                              )}
+                              <div className="truncate">
+                                <span className="block text-xs font-bold text-navy-900 dark:text-white truncate">
+                                  {item.file.name}
+                                </span>
+                                <span className="text-[10px] text-orange-600 dark:text-orange-400 font-semibold">
+                                  {item.sizeFormatted} • Siap diupload (~100KB)
+                                </span>
+                              </div>
+                            </div>
+
+                            <div className="flex items-center gap-1 shrink-0">
+                              {!item.isPdf && item.previewUrl && (
+                                <button
+                                  type="button"
+                                  onClick={() => setPreviewImage(item.previewUrl)}
+                                  className="flex h-8 w-8 items-center justify-center rounded-xl border border-orange-200 text-slate-700 hover:bg-orange-100/50 dark:border-slate-700 dark:text-slate-300 cursor-pointer transition"
+                                  title="Pratinjau Gambar"
+                                >
+                                  <Eye className="h-3.5 w-3.5" />
+                                </button>
+                              )}
+                              <button
+                                type="button"
+                                onClick={() => handleRemoveNewFile(item.id)}
+                                className="flex h-8 w-8 items-center justify-center rounded-xl border border-rose-200 text-rose-500 hover:bg-rose-50 dark:border-rose-900 cursor-pointer transition"
+                                title="Batal unggah berkas ini"
+                              >
+                                <X className="h-4 w-4" />
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -540,12 +937,11 @@ export function PengajuanDetailModal({
             >
               <X className="h-5 w-5" />
             </button>
-            <div className="relative h-[72vh] w-[72vw] max-w-4xl">
-              <Image
+            <div className="relative h-[72vh] w-[72vw] max-w-4xl flex items-center justify-center p-2">
+              <img
                 src={previewImage}
                 alt="Preview Bukti"
-                fill
-                className="object-contain"
+                className="max-h-full max-w-full object-contain rounded-2xl"
               />
             </div>
           </div>

@@ -2,8 +2,20 @@
 
 import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
+import { uploadFileOrDocument, deleteImage } from "@/lib/storage";
 
 export type StatusPengajuan = "MENUNGGU_VERIFIKASI" | "DIPROSES" | "SELESAI" | "DITOLAK";
+
+export interface LampiranTindakanItem {
+  id: number;
+  pengajuanId: number;
+  url: string;
+  storagePath: string;
+  namaFile: string;
+  tipeFile: string;
+  ukuranFile: number | null;
+  createdAt: Date;
+}
 
 export interface PengajuanItem {
   id: number;
@@ -49,6 +61,9 @@ export interface PengajuanItem {
 
   rincianInformasiKip: string | null;
   tujuanPenggunaanKip: string | null;
+
+  // Bukti Lampiran Tindakan Petugas BBPOM
+  lampiranTindakan: LampiranTindakanItem[];
 }
 
 export interface PenggunaItem {
@@ -98,6 +113,9 @@ export async function getDataAmperaOverview(): Promise<DataAmperaOverviewRespons
         include: {
           tamu: true,
           layanan: true,
+          lampiranTindakan: {
+            orderBy: { createdAt: "asc" },
+          },
         },
       }),
       prisma.tamu.findMany({
@@ -148,6 +166,16 @@ export async function getDataAmperaOverview(): Promise<DataAmperaOverviewRespons
       dokumenPendukungUrl: p.dokumenPendukungUrl,
       rincianInformasiKip: p.rincianInformasiKip,
       tujuanPenggunaanKip: p.tujuanPenggunaanKip,
+      lampiranTindakan: (p.lampiranTindakan || []).map((l: any) => ({
+        id: l.id,
+        pengajuanId: l.pengajuanId,
+        url: l.url,
+        storagePath: l.storagePath,
+        namaFile: l.namaFile,
+        tipeFile: l.tipeFile,
+        ukuranFile: l.ukuranFile,
+        createdAt: l.createdAt,
+      })),
     }));
 
     const penggunaList: PenggunaItem[] = rawTamu.map((t) => ({
@@ -217,7 +245,9 @@ export async function getDataAmperaOverview(): Promise<DataAmperaOverviewRespons
 }
 
 /**
- * Memperbarui status verifikasi pengajuan layanan dan catatan/tanggapan dari petugas
+ * Memperbarui status verifikasi pengajuan layanan secara cepat dari tabel admin.
+ * Safeguard: Jika status diubah menjadi SELESAI, sistem memvalidasi bahwa pengajuan
+ * sudah memiliki minimal 2 berkas bukti lampiran tindakan petugas.
  */
 export async function updatePengajuanStatusAction(
   id: number,
@@ -227,10 +257,20 @@ export async function updatePengajuanStatusAction(
   try {
     const existing = await prisma.pengajuanLayanan.findUnique({
       where: { id },
+      include: {
+        lampiranTindakan: true,
+      },
     });
 
     if (!existing) {
       return { success: false, message: "Data pengajuan tidak ditemukan." };
+    }
+
+    if (status === "SELESAI" && existing.lampiranTindakan.length < 2) {
+      return {
+        success: false,
+        message: `Pengajuan belum dapat diselesaikan. Petugas wajib melampirkan minimal 2 bukti lampiran tindakan (saat ini ${existing.lampiranTindakan.length} berkas). Silakan buka modal detail untuk mengunggah bukti lampiran.`,
+      };
     }
 
     await prisma.pengajuanLayanan.update({
@@ -266,12 +306,270 @@ export async function updatePengajuanStatusAction(
 }
 
 /**
- * Menghapus data pengajuan layanan (jika data testing atau salah input)
+ * Memperbarui tindakan petugas BBPOM lengkap beserta Bukti Lampiran (Minimal 2 lampiran, dinamis).
+ * Menerima FormData yang memuat status, catatanPetugas, deletedLampiranIds (JSON), dan lampiranFiles.
+ */
+export async function updatePengajuanTindakanWithLampiranAction(
+  formData: FormData
+): Promise<{
+  success: boolean;
+  message: string;
+  updatedPengajuan?: PengajuanItem;
+}> {
+  try {
+    const rawId = formData.get("id");
+    const id = typeof rawId === "string" ? parseInt(rawId, 10) : Number(rawId);
+    if (!id || isNaN(id)) {
+      return { success: false, message: "ID pengajuan tidak valid." };
+    }
+
+    const status = (formData.get("status") as StatusPengajuan) || "MENUNGGU_VERIFIKASI";
+    const catatanPetugas = (formData.get("catatanPetugas") as string) || "";
+
+    const rawDeletedIds = formData.get("deletedLampiranIds");
+    let deletedLampiranIds: number[] = [];
+    if (typeof rawDeletedIds === "string" && rawDeletedIds.trim()) {
+      try {
+        deletedLampiranIds = JSON.parse(rawDeletedIds);
+      } catch {
+        deletedLampiranIds = [];
+      }
+    }
+
+    const rawFiles = formData.getAll("lampiranFiles");
+    const validNewFiles = rawFiles.filter(
+      (f): f is File => f instanceof File && f.size > 0
+    );
+
+    const existingPengajuan = await prisma.pengajuanLayanan.findUnique({
+      where: { id },
+      include: {
+        tamu: true,
+        layanan: true,
+        lampiranTindakan: {
+          orderBy: { createdAt: "asc" },
+        },
+      },
+    });
+
+    if (!existingPengajuan) {
+      return { success: false, message: "Data pengajuan tidak ditemukan." };
+    }
+
+    // Hitung sisa lampiran lama yang tidak dihapus
+    const remainingExisting = existingPengajuan.lampiranTindakan.filter(
+      (l) => !deletedLampiranIds.includes(l.id)
+    );
+
+    const totalFinalLampiran = remainingExisting.length + validNewFiles.length;
+
+    // VALIDASI: Minimal 2 lampiran bukti jika petugas menyimpan tindakan (status DIPROSES, SELESAI, atau ada catatan)
+    const isUnderAction =
+      status === "DIPROSES" ||
+      status === "SELESAI" ||
+      catatanPetugas.trim().length > 0 ||
+      validNewFiles.length > 0 ||
+      existingPengajuan.lampiranTindakan.length > 0;
+
+    if (isUnderAction && totalFinalLampiran < 2) {
+      return {
+        success: false,
+        message: `Bukti lampiran tindakan petugas minimal 2 berkas (saat ini baru ${totalFinalLampiran} berkas). Silakan lampirkan minimal 2 berkas bukti sebelum menyimpan.`,
+      };
+    }
+
+    // 1. Hapus berkas lama yang ditandai untuk dihapus
+    if (deletedLampiranIds.length > 0) {
+      const itemsToDelete = existingPengajuan.lampiranTindakan.filter((l) =>
+        deletedLampiranIds.includes(l.id)
+      );
+
+      for (const item of itemsToDelete) {
+        try {
+          await deleteImage(item.storagePath || item.url);
+        } catch (delErr) {
+          console.warn("[deleteImage error]", delErr);
+        }
+        await prisma.lampiranTindakanPetugas.delete({
+          where: { id: item.id },
+        });
+      }
+    }
+
+    // 2. Upload berkas bukti lampiran baru (kompresi gambar ke target ~100KB, simpan dokumen PDF utuh)
+    const newRecords: Array<{
+      url: string;
+      storagePath: string;
+      namaFile: string;
+      tipeFile: string;
+      ukuranFile: number;
+    }> = [];
+
+    for (const file of validNewFiles) {
+      if (file.size > 10 * 1024 * 1024) {
+        return {
+          success: false,
+          message: `Berkas "${file.name}" melebihi batas ukuran maksimal 10MB.`,
+        };
+      }
+
+      const isAllowed =
+        file.type === "application/pdf" ||
+        file.type.startsWith("image/") ||
+        /\.(jpe?g|png|webp|pdf)$/i.test(file.name);
+
+      if (!isAllowed) {
+        return {
+          success: false,
+          message: `Format berkas "${file.name}" tidak didukung. Harap unggah gambar (JPG, PNG, WebP) atau PDF.`,
+        };
+      }
+
+      const uploadRes = await uploadFileOrDocument(file, "tindakan", 100);
+      newRecords.push({
+        url: uploadRes.url,
+        storagePath: uploadRes.path,
+        namaFile: file.name,
+        tipeFile:
+          file.type ||
+          (file.name.toLowerCase().endsWith(".pdf") ? "application/pdf" : "image/jpeg"),
+        ukuranFile: uploadRes.compressedSize || file.size,
+      });
+    }
+
+    if (newRecords.length > 0) {
+      await prisma.lampiranTindakanPetugas.createMany({
+        data: newRecords.map((r) => ({
+          pengajuanId: id,
+          url: r.url,
+          storagePath: r.storagePath,
+          namaFile: r.namaFile,
+          tipeFile: r.tipeFile,
+          ukuranFile: r.ukuranFile,
+        })),
+      });
+    }
+
+    // 3. Update status dan catatan petugas
+    await prisma.pengajuanLayanan.update({
+      where: { id },
+      data: {
+        status,
+        catatanPetugas: catatanPetugas.trim() || null,
+      },
+    });
+
+    // 4. Query ulang data terupdate dengan seluruh relasi
+    const updated = await prisma.pengajuanLayanan.findUnique({
+      where: { id },
+      include: {
+        tamu: true,
+        layanan: true,
+        lampiranTindakan: {
+          orderBy: { createdAt: "asc" },
+        },
+      },
+    });
+
+    if (!updated) {
+      return { success: false, message: "Gagal mengambil data pengajuan yang diperbarui." };
+    }
+
+    const updatedPengajuan: PengajuanItem = {
+      id: updated.id,
+      kodePengajuan: updated.kodePengajuan,
+      status: updated.status as StatusPengajuan,
+      catatanPetugas: updated.catatanPetugas,
+      createdAt: updated.createdAt,
+      updatedAt: updated.updatedAt,
+      layanan: {
+        id: updated.layanan.id,
+        kode: updated.layanan.kode,
+        nama: updated.layanan.nama,
+      },
+      tamu: {
+        id: updated.tamu.id,
+        nik: updated.tamu.nik,
+        nama: updated.tamu.nama,
+        email: updated.tamu.email,
+        telepon: updated.tamu.telepon,
+        alamat: updated.tamu.alamat,
+        asalInstansi: updated.tamu.asalInstansi,
+        umur: updated.tamu.umur,
+      },
+      informasiDibutuhkan: updated.informasiDibutuhkan,
+      kategoriInformasi: updated.kategoriInformasi,
+      produkDicurigai: updated.produkDicurigai,
+      produkLainnya: updated.produkLainnya,
+      alasanKecurigaan: updated.alasanKecurigaan,
+      alasanLainnya: updated.alasanLainnya,
+      rincianProduk: updated.rincianProduk,
+      isiPengaduan: updated.isiPengaduan,
+      buktiFotoUrl: updated.buktiFotoUrl,
+      ktpUrl: updated.ktpUrl,
+      dokumenPendukungUrl: updated.dokumenPendukungUrl,
+      rincianInformasiKip: updated.rincianInformasiKip,
+      tujuanPenggunaanKip: updated.tujuanPenggunaanKip,
+      lampiranTindakan: (updated.lampiranTindakan || []).map((l: any) => ({
+        id: l.id,
+        pengajuanId: l.pengajuanId,
+        url: l.url,
+        storagePath: l.storagePath,
+        namaFile: l.namaFile,
+        tipeFile: l.tipeFile,
+        ukuranFile: l.ukuranFile,
+        createdAt: l.createdAt,
+      })),
+    };
+
+    try {
+      revalidatePath("/admin");
+      revalidatePath("/admin/data-ampera");
+      revalidatePath("/admin/laporan/informasi");
+      revalidatePath("/admin/laporan/pengujian-cepat");
+      revalidatePath("/admin/laporan/pengaduan");
+      revalidatePath("/admin/laporan/kip");
+    } catch {
+      // Ignore outside request context
+    }
+
+    return {
+      success: true,
+      message: `Tindakan petugas #${updated.kodePengajuan} berhasil disimpan (${totalFinalLampiran} bukti lampiran).`,
+      updatedPengajuan,
+    };
+  } catch (err: any) {
+    console.error("[updatePengajuanTindakanWithLampiranAction Error]", err);
+    return {
+      success: false,
+      message: err.message || "Gagal memperbarui tindakan dan bukti lampiran petugas.",
+    };
+  }
+}
+
+/**
+ * Menghapus data pengajuan layanan beserta berkas fisiknya di storage
  */
 export async function deletePengajuanAction(
   id: number
 ): Promise<{ success: boolean; message: string }> {
   try {
+    const existing = await prisma.pengajuanLayanan.findUnique({
+      where: { id },
+      include: {
+        lampiranTindakan: true,
+      },
+    });
+
+    if (existing) {
+      for (const l of existing.lampiranTindakan) {
+        await deleteImage(l.storagePath || l.url).catch(() => {});
+      }
+      if (existing.buktiFotoUrl) await deleteImage(existing.buktiFotoUrl).catch(() => {});
+      if (existing.ktpUrl) await deleteImage(existing.ktpUrl).catch(() => {});
+      if (existing.dokumenPendukungUrl) await deleteImage(existing.dokumenPendukungUrl).catch(() => {});
+    }
+
     const deleted = await prisma.pengajuanLayanan.delete({
       where: { id },
     });
@@ -331,6 +629,9 @@ export async function getServiceLaporanData(
       include: {
         tamu: true,
         layanan: true,
+        lampiranTindakan: {
+          orderBy: { createdAt: "asc" },
+        },
       },
     });
 
@@ -369,6 +670,16 @@ export async function getServiceLaporanData(
       dokumenPendukungUrl: p.dokumenPendukungUrl,
       rincianInformasiKip: p.rincianInformasiKip,
       tujuanPenggunaanKip: p.tujuanPenggunaanKip,
+      lampiranTindakan: (p.lampiranTindakan || []).map((l: any) => ({
+        id: l.id,
+        pengajuanId: l.pengajuanId,
+        url: l.url,
+        storagePath: l.storagePath,
+        namaFile: l.namaFile,
+        tipeFile: l.tipeFile,
+        ukuranFile: l.ukuranFile,
+        createdAt: l.createdAt,
+      })),
     }));
 
     // Kumpulkan pengguna unik yang mengajukan layanan ini
