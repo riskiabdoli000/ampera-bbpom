@@ -67,19 +67,17 @@ export async function sendRawWhatsAppMessage(
 
   try {
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 4000); // 4 detik timeout
+    const timeoutId = setTimeout(() => controller.abort(), 6000); // 6 detik timeout
 
-    const res = await fetch(`${waUrl}/send-message`, {
+    const res = await fetch(`${waUrl}/send`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         "x-api-key": waSecret,
       },
       body: JSON.stringify({
-        to: formattedTo,
-        message: message,
-        phone: formattedTo,
         target: formattedTo,
+        message: message,
       }),
       signal: controller.signal,
     });
@@ -94,7 +92,14 @@ export async function sendRawWhatsAppMessage(
       };
     }
 
-    const data = await res.json().catch(() => ({}));
+    const data = (await res.json().catch(() => ({}))) as any;
+    if (data && data.status === false) {
+      return {
+        success: false,
+        error: data.error || data.detail || "Gateway menolak pengiriman pesan",
+      };
+    }
+
     return {
       success: true,
       data,
