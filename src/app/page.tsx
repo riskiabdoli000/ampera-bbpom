@@ -2,6 +2,7 @@ import React from "react";
 import { Navbar } from "@/components/landing/Navbar";
 import { HeroSection } from "@/components/landing/HeroSection";
 import { SpeedBadgesSection } from "@/components/landing/SpeedBadgesSection";
+import { PenilaianSection } from "@/components/landing/PenilaianSection";
 import { ServicesSection } from "@/components/landing/ServicesSection";
 import { EducationSection } from "@/components/landing/EducationSection";
 import { VideoSection } from "@/components/landing/VideoSection";
@@ -11,16 +12,19 @@ import { getLandingHeroData } from "@/app/actions/settings-hero";
 import { getLandingServicesData } from "@/app/actions/admin-layanan";
 import { getVideoSettings } from "@/app/actions/settings-video";
 import { getKontakSettings } from "@/app/actions/settings-kontak";
+import { getLandingPenilaianData } from "@/app/actions/landing-penilaian";
 
 export const dynamic = "force-dynamic";
 
 export default async function Home() {
-  const [heroData, servicesData, videoData, contactData] = await Promise.all([
-    getLandingHeroData(),
-    getLandingServicesData(),
-    getVideoSettings(),
-    getKontakSettings(),
-  ]);
+  const [heroData, servicesData, videoData, contactData, penilaianData] =
+    await Promise.all([
+      getLandingHeroData(),
+      getLandingServicesData(),
+      getVideoSettings(),
+      getKontakSettings(),
+      getLandingPenilaianData(),
+    ]);
 
   return (
     <main className="min-h-screen bg-white dark:bg-slate-950 text-slate-800 dark:text-slate-100 flex flex-col selection:bg-teal-700 selection:text-white overflow-x-hidden transition-colors duration-300">
@@ -35,6 +39,9 @@ export default async function Home() {
 
       {/* Badge Kecepatan Layanan (Compact Strip) */}
       <SpeedBadgesSection />
+
+      {/* Section Penilaian & Indeks Kepuasan Masyarakat (IKM) */}
+      <PenilaianSection initialData={penilaianData} />
 
       {/* Section Edukasi & Literasi Konsumen */}
       <EducationSection />
