@@ -419,12 +419,7 @@ export default function SurveiClient({
         >
           {/* Header Form */}
           <div className="space-y-1 border-b border-slate-100 pb-4">
-            <Link
-              href="/"
-              className="inline-flex items-center gap-1 text-xs font-semibold text-[#ea580c] hover:text-[#c2410c] transition mb-2 cursor-pointer"
-            >
-              <ChevronLeft className="h-4 w-4" /> Kembali
-            </Link>
+           
             <h2 className="text-xl sm:text-2xl font-black text-slate-900 font-brand">
               Survey Kepuasan Pelanggan
             </h2>
@@ -446,7 +441,7 @@ export default function SurveiClient({
               </label>
             </div>
 
-            <div className="pl-8 pt-0.5 flex items-center gap-1.5 sm:gap-2">
+            <div className="py-2 flex items-center justify-center gap-2 sm:gap-3">
               {[1, 2, 3, 4, 5].map((star) => (
                 <button
                   key={star}
@@ -454,13 +449,13 @@ export default function SurveiClient({
                   onClick={() => setRatingBintang(star)}
                   onMouseEnter={() => setHoverBintang(star)}
                   onMouseLeave={() => setHoverBintang(0)}
-                  className="p-1 transition-transform hover:scale-110 active:scale-95 cursor-pointer focus:outline-none"
+                  className="p-1 transition-transform hover:scale-115 active:scale-95 cursor-pointer focus:outline-none"
                   title={`${star} Bintang`}
                 >
                   <Star
-                    className={`h-7 w-7 sm:h-8 sm:w-8 transition-colors ${
+                    className={`h-8 w-8 sm:h-9 sm:w-9 transition-colors ${
                       star <= activeBintang
-                        ? "fill-amber-400 text-amber-400"
+                        ? "fill-amber-400 text-amber-400 drop-shadow-xs"
                         : "text-slate-300 fill-transparent"
                     }`}
                   />
