@@ -10,6 +10,7 @@ import {
   CertificateState,
   CindoUser,
   TopikModuleProgress,
+  SurveyProgressState,
 } from "./cindoTypes";
 import { getRandom10Soal } from "./bankSoal";
 import { DAFTAR_MATERI_CINDO } from "./materiData";
@@ -40,6 +41,12 @@ export const DEFAULT_POST_TEST: PostTestState = {
   canRemedial: false,
 };
 
+export const DEFAULT_SURVEY_STATE: SurveyProgressState = {
+  completed: false,
+  rating: 5,
+  saran: "",
+};
+
 export const DEFAULT_TOPIK_PROGRESS: TopikModuleProgress = {
   preTest: {
     completed: false,
@@ -62,6 +69,8 @@ export const DEFAULT_TOPIK_PROGRESS: TopikModuleProgress = {
     canRemedial: false,
     jawaban: {},
   },
+  survey: DEFAULT_SURVEY_STATE,
+  certificate: null,
 };
 
 export const DEFAULT_SESI: SesiCindo = {
@@ -477,12 +486,18 @@ export function clearCindoSession(): void {
 export function getTopikModuleProgress(topikId: number): TopikModuleProgress {
   const sesi = getSesiCindo();
   if (sesi.topikProgress && sesi.topikProgress[topikId]) {
-    return sesi.topikProgress[topikId];
+    const tp = sesi.topikProgress[topikId];
+    return {
+      ...tp,
+      survey: tp.survey || { ...DEFAULT_SURVEY_STATE },
+    };
   }
   return {
     preTest: { ...DEFAULT_TOPIK_PROGRESS.preTest, jawaban: {} },
     materi: { ...DEFAULT_TOPIK_PROGRESS.materi },
     postTest: { ...DEFAULT_TOPIK_PROGRESS.postTest, jawaban: {} },
+    survey: { ...DEFAULT_SURVEY_STATE },
+    certificate: null,
   };
 }
 
@@ -496,11 +511,7 @@ export function submitTopikPreTest(
   soalList: SoalKuis[]
 ): SesiCindo {
   const sesi = getSesiCindo();
-  const currentTopikProgress = sesi.topikProgress?.[topikId] || {
-    preTest: { ...DEFAULT_TOPIK_PROGRESS.preTest, jawaban: {} },
-    materi: { ...DEFAULT_TOPIK_PROGRESS.materi },
-    postTest: { ...DEFAULT_TOPIK_PROGRESS.postTest, jawaban: {} },
-  };
+  const currentTopikProgress = getTopikModuleProgress(topikId);
 
   let jumlahBenar = 0;
   soalList.forEach((soal) => {
@@ -547,11 +558,7 @@ export function markTopikMateriCompleted(
   activeTab: "pdf" | "video" = "pdf"
 ): SesiCindo {
   const sesi = getSesiCindo();
-  const currentTopikProgress = sesi.topikProgress?.[topikId] || {
-    preTest: { ...DEFAULT_TOPIK_PROGRESS.preTest, jawaban: {} },
-    materi: { ...DEFAULT_TOPIK_PROGRESS.materi },
-    postTest: { ...DEFAULT_TOPIK_PROGRESS.postTest, jawaban: {} },
-  };
+  const currentTopikProgress = getTopikModuleProgress(topikId);
 
   const updatedTopik: TopikModuleProgress = {
     ...currentTopikProgress,
@@ -595,11 +602,7 @@ export function submitTopikPostTest(
   soalList: SoalKuis[]
 ): SesiCindo {
   const sesi = getSesiCindo();
-  const currentTopikProgress = sesi.topikProgress?.[topikId] || {
-    preTest: { ...DEFAULT_TOPIK_PROGRESS.preTest, jawaban: {} },
-    materi: { ...DEFAULT_TOPIK_PROGRESS.materi },
-    postTest: { ...DEFAULT_TOPIK_PROGRESS.postTest, jawaban: {} },
-  };
+  const currentTopikProgress = getTopikModuleProgress(topikId);
 
   let jumlahBenar = 0;
   soalList.forEach((soal) => {
@@ -613,6 +616,18 @@ export function submitTopikPostTest(
   const isPassed = skor >= 80;
   const newAttemptCount = (currentTopikProgress.postTest?.attemptCount || 0) + 1;
   const canRemedial = !isPassed && newAttemptCount < 2;
+  const randomHex = Math.random().toString(36).substring(2, 7).toUpperCase();
+  const dateCode = new Date().toISOString().slice(0, 10).replace(/-/g, "");
+
+  // Penerbitan sertifikat per topik (tersedia setelah menyelesaikan post-test)
+  const topikCert = currentTopikProgress.certificate || {
+    nomorSertifikat: `CINDO/TOP-${topikId}/${dateCode}/${randomHex}`,
+    tanggalTerbit: new Date().toLocaleDateString("id-ID", {
+      day: "numeric",
+      month: "long",
+      year: "numeric",
+    }),
+  };
 
   const updatedTopik: TopikModuleProgress = {
     ...currentTopikProgress,
@@ -627,6 +642,7 @@ export function submitTopikPostTest(
       jawaban,
       selesaiPada: new Date().toISOString(),
     },
+    certificate: topikCert,
   };
 
   const updatedTopikProgress = {
@@ -634,11 +650,9 @@ export function submitTopikPostTest(
     [topikId]: updatedTopik,
   };
 
-  // Penerbitan sertifikat jika minimal ada topik yang lulus
+  // Penerbitan sertifikat sesi jika minimal ada topik yang lulus
   let cert = sesi.certificate;
   if (isPassed && !cert) {
-    const randomHex = Math.random().toString(36).substring(2, 7).toUpperCase();
-    const dateCode = new Date().toISOString().slice(0, 10).replace(/-/g, "");
     cert = {
       nomorSertifikat: `CINDO/BBPOM/${dateCode}/${randomHex}`,
       tanggalTerbit: new Date().toLocaleDateString("id-ID", {
@@ -664,11 +678,7 @@ export function submitTopikPostTest(
  */
 export function resetTopikPostTestRemedial(topikId: number): SesiCindo {
   const sesi = getSesiCindo();
-  const currentTopikProgress = sesi.topikProgress?.[topikId] || {
-    preTest: { ...DEFAULT_TOPIK_PROGRESS.preTest, jawaban: {} },
-    materi: { ...DEFAULT_TOPIK_PROGRESS.materi },
-    postTest: { ...DEFAULT_TOPIK_PROGRESS.postTest, jawaban: {} },
-  };
+  const currentTopikProgress = getTopikModuleProgress(topikId);
 
   const updatedTopik: TopikModuleProgress = {
     ...currentTopikProgress,
@@ -687,6 +697,56 @@ export function resetTopikPostTestRemedial(topikId: number): SesiCindo {
   const updatedSesi: SesiCindo = {
     ...sesi,
     topikProgress: updatedTopikProgress,
+  };
+
+  saveSesiCindo(updatedSesi);
+  return updatedSesi;
+}
+
+/**
+ * Submit Survei Kepuasan Pengguna per Topik
+ * Aturan Alur: Pre-Test -> Materi -> Post-Test -> Survey -> Akses Sertifikat
+ */
+export function submitTopikSurvey(
+  topikId: number,
+  rating: number = 5,
+  saran: string = ""
+): SesiCindo {
+  const sesi = getSesiCindo();
+  const currentTopikProgress = getTopikModuleProgress(topikId);
+
+  const randomHex = Math.random().toString(36).substring(2, 7).toUpperCase();
+  const dateCode = new Date().toISOString().slice(0, 10).replace(/-/g, "");
+
+  const topikCert = currentTopikProgress.certificate || {
+    nomorSertifikat: `CINDO/TOP-${topikId}/${dateCode}/${randomHex}`,
+    tanggalTerbit: new Date().toLocaleDateString("id-ID", {
+      day: "numeric",
+      month: "long",
+      year: "numeric",
+    }),
+  };
+
+  const updatedTopik: TopikModuleProgress = {
+    ...currentTopikProgress,
+    survey: {
+      completed: true,
+      rating,
+      saran,
+      selesaiPada: new Date().toISOString(),
+    },
+    certificate: topikCert,
+  };
+
+  const updatedTopikProgress = {
+    ...(sesi.topikProgress || {}),
+    [topikId]: updatedTopik,
+  };
+
+  const updatedSesi: SesiCindo = {
+    ...sesi,
+    topikProgress: updatedTopikProgress,
+    certificate: sesi.certificate || topikCert,
   };
 
   saveSesiCindo(updatedSesi);
