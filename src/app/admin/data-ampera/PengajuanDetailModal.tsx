@@ -27,6 +27,7 @@ import {
   RefreshCw,
   Bell,
   Check,
+  Star,
   Image as ImageIcon,
 } from "lucide-react";
 import {
@@ -1049,6 +1050,142 @@ export function PengajuanDetailModal({
                       Pemohon tidak mencantumkan nomor WhatsApp pada formulir pengajuan.
                     </p>
                   )}
+                </div>
+              )}
+            </div>
+
+            {/* 6. Hasil Survei Kepuasan Masyarakat (IKM) */}
+            <div className="rounded-3xl border border-slate-200/80 bg-slate-50/70 p-5 sm:p-6 dark:border-slate-800 dark:bg-slate-800/40 space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2.5">
+                  <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-amber-500/10 text-amber-500 dark:bg-amber-500/20">
+                    <Star className="h-4 w-4 fill-amber-500 text-amber-500" />
+                  </div>
+                  <div>
+                    <h3 className="text-xs font-extrabold uppercase tracking-wider text-navy-900 dark:text-white">
+                      Survei Kepuasan Masyarakat (IKM)
+                    </h3>
+                    <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                      Ulasan dan penilaian langsung dari pemohon layanan
+                    </p>
+                  </div>
+                </div>
+
+                {pengajuan.survei && (
+                  <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-3 py-1 text-xs font-black text-amber-800 dark:bg-amber-950/60 dark:text-amber-300 border border-amber-300">
+                    ⭐ {pengajuan.survei.ratingBintang}/5 Bintang
+                  </span>
+                )}
+              </div>
+
+              {pengajuan.survei ? (
+                <div className="space-y-3.5 rounded-2xl border border-amber-200/80 bg-amber-50/30 p-4 dark:border-amber-900/40 dark:bg-amber-950/10">
+                  {/* Rating Bintang */}
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-slate-500 dark:text-slate-400 font-medium">
+                      Tingkat Kepuasan Menyeluruh:
+                    </span>
+                    <div className="flex text-amber-400">
+                      {[1, 2, 3, 4, 5].map((star) => (
+                        <Star
+                          key={star}
+                          className={`h-4 w-4 ${
+                            star <= pengajuan.survei!.ratingBintang
+                              ? "fill-amber-400 text-amber-400"
+                              : "text-slate-300 dark:text-slate-600"
+                          }`}
+                        />
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* 4 Aspek Penilaian */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                    <div className="rounded-xl bg-white p-3 border border-slate-200/80 dark:bg-slate-900 dark:border-slate-800">
+                      <span className="text-slate-400 block text-[11px]">Kualitas Pelayanan Petugas:</span>
+                      <span className="font-bold text-navy-900 dark:text-white mt-0.5 block">
+                        {pengajuan.survei.kualitasPelayanan === 5
+                          ? "🟢 Sangat Baik (5/5)"
+                          : pengajuan.survei.kualitasPelayanan === 4
+                          ? "🔵 Baik (4/5)"
+                          : pengajuan.survei.kualitasPelayanan === 3
+                          ? "🟡 Cukup (3/5)"
+                          : pengajuan.survei.kualitasPelayanan === 2
+                          ? "🟠 Buruk (2/5)"
+                          : "🔴 Sangat Buruk (1/5)"}
+                      </span>
+                    </div>
+
+                    <div className="rounded-xl bg-white p-3 border border-slate-200/80 dark:bg-slate-900 dark:border-slate-800">
+                      <span className="text-slate-400 block text-[11px]">Kebermanfaatan Pelayanan:</span>
+                      <span className="font-bold text-navy-900 dark:text-white mt-0.5 block">
+                        {pengajuan.survei.manfaatPelayanan === 5
+                          ? "🟢 Sangat Bermanfaat (5/5)"
+                          : pengajuan.survei.manfaatPelayanan === 4
+                          ? "🔵 Bermanfaat (4/5)"
+                          : pengajuan.survei.manfaatPelayanan === 3
+                          ? "🟡 Cukup Bermanfaat (3/5)"
+                          : pengajuan.survei.manfaatPelayanan === 2
+                          ? "🟠 Kurang Bermanfaat (2/5)"
+                          : "🔴 Tidak Bermanfaat (1/5)"}
+                      </span>
+                    </div>
+
+                    <div className="rounded-xl bg-white p-3 border border-slate-200/80 dark:bg-slate-900 dark:border-slate-800">
+                      <span className="text-slate-400 block text-[11px]">Kualitas Website AMPERA:</span>
+                      <span className="font-bold text-navy-900 dark:text-white mt-0.5 block">
+                        {pengajuan.survei.kualitasWebsite === 5
+                          ? "🟢 Sangat Baik (5/5)"
+                          : pengajuan.survei.kualitasWebsite === 4
+                          ? "🔵 Baik (4/5)"
+                          : pengajuan.survei.kualitasWebsite === 3
+                          ? "🟡 Cukup (3/5)"
+                          : pengajuan.survei.kualitasWebsite === 2
+                          ? "🟠 Buruk (2/5)"
+                          : "🔴 Sangat Buruk (1/5)"}
+                      </span>
+                    </div>
+
+                    <div className="rounded-xl bg-white p-3 border border-slate-200/80 dark:bg-slate-900 dark:border-slate-800">
+                      <span className="text-slate-400 block text-[11px]">Kebermanfaatan Website:</span>
+                      <span className="font-bold text-navy-900 dark:text-white mt-0.5 block">
+                        {pengajuan.survei.manfaatWebsite === 5
+                          ? "🟢 Sangat Bermanfaat (5/5)"
+                          : pengajuan.survei.manfaatWebsite === 4
+                          ? "🔵 Bermanfaat (4/5)"
+                          : pengajuan.survei.manfaatWebsite === 3
+                          ? "🟡 Cukup Bermanfaat (3/5)"
+                          : pengajuan.survei.manfaatWebsite === 2
+                          ? "🟠 Kurang Bermanfaat (2/5)"
+                          : "🔴 Tidak Bermanfaat (1/5)"}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Kritik & Saran */}
+                  {pengajuan.survei.kritikSaran && (
+                    <div className="rounded-xl bg-white p-3.5 border border-slate-200/80 dark:bg-slate-900 dark:border-slate-800 text-xs">
+                      <span className="text-slate-400 block text-[11px] font-semibold mb-1">
+                        Kritik & Masukan Pemohon:
+                      </span>
+                      <p className="text-slate-700 dark:text-slate-300 italic whitespace-pre-wrap leading-relaxed">
+                        &ldquo;{pengajuan.survei.kritikSaran}&rdquo;
+                      </p>
+                    </div>
+                  )}
+
+                  <div className="text-[10px] text-slate-400">
+                    Disubmit pada: {new Date(pengajuan.survei.createdAt).toLocaleString("id-ID")}
+                  </div>
+                </div>
+              ) : (
+                <div className="rounded-2xl border border-dashed border-slate-200 bg-white/60 p-4 text-center dark:border-slate-700 dark:bg-slate-900/40">
+                  <p className="text-xs text-slate-500 dark:text-slate-400">
+                    Pemohon belum mengisi formulir survei kepuasan untuk tiket ini.
+                  </p>
+                  <p className="text-[11px] text-slate-400 mt-1">
+                    Tautan survei otomatis dikirimkan ke WhatsApp pemohon saat status tiket ditandai Selesai.
+                  </p>
                 </div>
               )}
             </div>

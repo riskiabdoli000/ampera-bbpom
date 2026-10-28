@@ -117,6 +117,9 @@ model PengajuanLayanan {
   // Riwayat Pengiriman Notifikasi WhatsApp (Tamu & Petugas)
   notifikasiWa        NotifikasiWaLog[]
 
+  // Survei Kepuasan Masyarakat (IKM)
+  survei              SurveiLayanan?
+
   createdAt           DateTime        @default(now())
   updatedAt           DateTime        @updatedAt
 
@@ -163,6 +166,32 @@ model NotifikasiWaLog {
   @@index([pengajuanId])
   @@index([nomorTujuan])
   @@index([status])
+  @@index([createdAt])
+}
+
+// Survei Kepuasan Masyarakat (IKM) terhadap Pelayanan & Website AMPERA
+model SurveiLayanan {
+  id                     Int              @id @default(autoincrement())
+  pengajuanId            Int              @unique // Mencegah 1 tiket mengisi survei berulang kali
+  pengajuan              PengajuanLayanan @relation(fields: [pengajuanId], references: [id], onDelete: Cascade)
+
+  // 1. Rating Bintang Keseluruhan (1 - 5)
+  ratingBintang          Int
+
+  // 2. Kategori Pelayanan Petugas
+  kualitasPelayanan      Int              // 1 (Sangat Buruk) s/d 5 (Sangat Baik)
+  manfaatPelayanan       Int              // 1 (Tidak Bermanfaat) s/d 5 (Sangat Bermanfaat)
+
+  // 3. Kategori Sistem & Website AMPERA
+  kualitasWebsite        Int              // 1 (Sangat Buruk) s/d 5 (Sangat Baik)
+  manfaatWebsite         Int              // 1 (Tidak Bermanfaat) s/d 5 (Sangat Bermanfaat)
+
+  // 4. Kritik & Saran Tambahan (Opsional)
+  kritikSaran            String?          @db.Text
+
+  createdAt              DateTime         @default(now())
+
+  @@index([ratingBintang])
   @@index([createdAt])
 }
 

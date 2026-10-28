@@ -34,6 +34,17 @@ export interface NotifikasiWaItem {
   createdAt: Date;
 }
 
+export interface SurveiLayananItem {
+  id: number;
+  ratingBintang: number;
+  kualitasPelayanan: number;
+  manfaatPelayanan: number;
+  kualitasWebsite: number;
+  manfaatWebsite: number;
+  kritikSaran: string | null;
+  createdAt: Date;
+}
+
 export interface PengajuanItem {
   id: number;
   kodePengajuan: string;
@@ -84,6 +95,9 @@ export interface PengajuanItem {
 
   // Riwayat Pengiriman Notifikasi WhatsApp
   notifikasiWa: NotifikasiWaItem[];
+
+  // Hasil Survei Kepuasan Masyarakat (IKM)
+  survei?: SurveiLayananItem | null;
 }
 
 export interface PenggunaItem {
@@ -139,6 +153,7 @@ export async function getDataAmperaOverview(): Promise<DataAmperaOverviewRespons
           notifikasiWa: {
             orderBy: { createdAt: "desc" },
           },
+          survei: true,
         },
       }),
       prisma.tamu.findMany({
@@ -211,6 +226,18 @@ export async function getDataAmperaOverview(): Promise<DataAmperaOverviewRespons
         dikirimPada: n.dikirimPada,
         createdAt: n.createdAt,
       })),
+      survei: p.survei
+        ? {
+            id: p.survei.id,
+            ratingBintang: p.survei.ratingBintang,
+            kualitasPelayanan: p.survei.kualitasPelayanan,
+            manfaatPelayanan: p.survei.manfaatPelayanan,
+            kualitasWebsite: p.survei.kualitasWebsite,
+            manfaatWebsite: p.survei.manfaatWebsite,
+            kritikSaran: p.survei.kritikSaran,
+            createdAt: p.survei.createdAt,
+          }
+        : null,
     }));
 
     const penggunaList: PenggunaItem[] = rawTamu.map((t) => ({
@@ -520,6 +547,7 @@ export async function updatePengajuanTindakanWithLampiranAction(
         notifikasiWa: {
           orderBy: { createdAt: "desc" },
         },
+        survei: true,
       },
     });
 
@@ -584,6 +612,18 @@ export async function updatePengajuanTindakanWithLampiranAction(
         dikirimPada: n.dikirimPada,
         createdAt: n.createdAt,
       })),
+      survei: updated.survei
+        ? {
+            id: updated.survei.id,
+            ratingBintang: updated.survei.ratingBintang,
+            kualitasPelayanan: updated.survei.kualitasPelayanan,
+            manfaatPelayanan: updated.survei.manfaatPelayanan,
+            kualitasWebsite: updated.survei.kualitasWebsite,
+            manfaatWebsite: updated.survei.manfaatWebsite,
+            kritikSaran: updated.survei.kritikSaran,
+            createdAt: updated.survei.createdAt,
+          }
+        : null,
     };
 
     try {
@@ -699,6 +739,7 @@ export async function getServiceLaporanData(
         notifikasiWa: {
           orderBy: { createdAt: "desc" },
         },
+        survei: true,
       },
     });
 
@@ -759,6 +800,18 @@ export async function getServiceLaporanData(
         dikirimPada: n.dikirimPada,
         createdAt: n.createdAt,
       })),
+      survei: p.survei
+        ? {
+            id: p.survei.id,
+            ratingBintang: p.survei.ratingBintang,
+            kualitasPelayanan: p.survei.kualitasPelayanan,
+            manfaatPelayanan: p.survei.manfaatPelayanan,
+            kualitasWebsite: p.survei.kualitasWebsite,
+            manfaatWebsite: p.survei.manfaatWebsite,
+            kritikSaran: p.survei.kritikSaran,
+            createdAt: p.survei.createdAt,
+          }
+        : null,
     }));
 
     // Kumpulkan pengguna unik yang mengajukan layanan ini

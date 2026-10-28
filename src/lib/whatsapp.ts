@@ -304,6 +304,17 @@ export function buildTamuStatusUpdateMessage(pengajuan: {
   const statusLabel = statusLabels[pengajuan.status] || pengajuan.status;
   const waktuUpdate = formatTanggalWib(new Date());
 
+  // Bagian survei khusus untuk status SELESAI
+  let surveiSection = "";
+  if (pengajuan.status === "SELESAI") {
+    const surveiUrl = `${getAppUrl()}/survei?kode=${encodeURIComponent(pengajuan.kodePengajuan)}`;
+    surveiSection = `
+⭐ *SURVEI KEPUASAN PELAYANAN:*
+Untuk terus meningkatkan kualitas pelayanan publik dan sistem informasi kami, mohon kesediaan Bapak/Ibu untuk meluangkan waktu 1 menit mengisi survei kepuasan pada tautan berikut:
+👉 ${surveiUrl}
+`;
+  }
+
   return `🏛️ *BALAI BESAR POM DI PALEMBANG*
 *Pembaruan Status Layanan AMPERA*
 ────────────────────────────
@@ -315,8 +326,8 @@ Permohonan Anda pada *${pengajuan.layanan.nama}* dengan nomor tiket \`${pengajua
 📅 *Waktu Pembaruan:* ${waktuUpdate}
 
 📝 *CATATAN / HASIL PEMERIKSAAN PETUGAS:*
-${pengajuan.catatanPetugas || "Permohonan Anda sedang dalam penanganan petugas berwenang BBPOM Palembang."}
-
+${pengajuan.catatanPetugas || "Permohonan Anda telah selesai ditindaklanjuti oleh petugas BBPOM Palembang."}
+${surveiSection}
 ────────────────────────────
 *Balai Besar POM di Palembang*
 📸 Instagram: @bpom.palembang
