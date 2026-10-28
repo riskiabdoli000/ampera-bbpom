@@ -21,6 +21,7 @@ import {
   FlaskConical,
   AlertTriangle,
   FileLock,
+  Star,
 } from "lucide-react";
 
 interface AdminSidebarProps {
@@ -36,6 +37,7 @@ export function AdminSidebar({ isOpen, onClose }: AdminSidebarProps) {
   const isDataAmperaActive = pathname === "/admin/data-ampera";
   const isLayananActive = pathname.startsWith("/admin/layanan");
   const isPetugasActive = pathname.startsWith("/admin/petugas");
+  const isPenilaianActive = pathname.startsWith("/admin/penilaian");
   const isSettingsPath = pathname.startsWith("/admin/settings");
   const isLaporanPath = pathname.startsWith("/admin/laporan");
 
@@ -62,6 +64,7 @@ export function AdminSidebar({ isOpen, onClose }: AdminSidebarProps) {
   const masterItems = [
     { title: "Data Layanan", href: "/admin/layanan", icon: ClipboardList, active: isLayananActive },
     { title: "Data Petugas", href: "/admin/petugas", icon: Users, active: isPetugasActive },
+    { title: "Data Penilaian", href: "/admin/penilaian", icon: Star, active: isPenilaianActive },
   ];
 
   const websiteSubItems = [
