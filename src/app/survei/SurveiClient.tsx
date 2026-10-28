@@ -7,10 +7,10 @@ import {
   CheckCircle2,
   AlertCircle,
   Search,
-  ArrowRight,
   ChevronLeft,
   HeartHandshake,
   Home,
+  Send,
 } from "lucide-react";
 import {
   SurveiPengajuanData,
@@ -41,7 +41,7 @@ const SKALA_MANFAAT = [
 ];
 
 /**
- * Komponen Radio Button Horizontal yang simpel, rapi, dan bersih
+ * Komponen Radio Button Horizontal dengan tema warna Orange khas BBPOM Palembang
  */
 function RadioItem({
   name,
@@ -64,11 +64,11 @@ function RadioItem({
       <div
         className={`h-4.5 w-4.5 rounded-full border flex items-center justify-center transition-all ${
           checked
-            ? "border-blue-600 bg-white"
+            ? "border-[#ff7a1a] bg-white ring-2 ring-[#ff7a1a]/20"
             : "border-slate-300 bg-white group-hover:border-slate-400"
         }`}
       >
-        {checked && <div className="h-2.5 w-2.5 rounded-full bg-blue-600" />}
+        {checked && <div className="h-2.5 w-2.5 rounded-full bg-[#ff7a1a]" />}
       </div>
       <span
         className={`text-xs sm:text-sm transition-colors ${
@@ -94,12 +94,11 @@ export default function SurveiClient({
   initialData,
   initialError,
 }: SurveiClientProps) {
-  const [currentStep, setCurrentStep] = useState<number>(1);
   const [kodeInput, setKodeInput] = useState(initialKode);
   const [data, setData] = useState<SurveiPengajuanData | null>(initialData);
   const [errorMessage, setErrorMessage] = useState<string | null>(initialError);
 
-  // Form State
+  // Form State untuk 5 Pertanyaan
   const [ratingBintang, setRatingBintang] = useState<number>(0);
   const [hoverBintang, setHoverBintang] = useState<number>(0);
   const [kualitasPelayanan, setKualitasPelayanan] = useState<number>(0);
@@ -108,7 +107,7 @@ export default function SurveiClient({
   const [manfaatWebsite, setManfaatWebsite] = useState<number>(0);
   const [kritikSaran, setKritikSaran] = useState<string>("");
 
-  const [stepError, setStepError] = useState<string | null>(null);
+  const [validationError, setValidationError] = useState<string | null>(null);
   const [isSearching, startSearching] = useTransition();
   const [isSubmitting, startSubmitting] = useTransition();
   const [isSuccessSubmitted, setIsSuccessSubmitted] = useState<boolean>(false);
@@ -122,7 +121,7 @@ export default function SurveiClient({
     }
 
     setErrorMessage(null);
-    setStepError(null);
+    setValidationError(null);
 
     startSearching(async () => {
       const res = await getSurveiPengajuanAction(kodeInput);
@@ -135,73 +134,61 @@ export default function SurveiClient({
     });
   };
 
-  // Navigasi Selanjutnya per Langkah
-  const handleNextStep = () => {
-    setStepError(null);
+  // Handler Submit Langsung 5 Pertanyaan
+  const handleSubmitSurvei = (e: React.FormEvent) => {
+    e.preventDefault();
+    setValidationError(null);
 
-    if (currentStep === 1) {
-      if (ratingBintang === 0) {
-        setStepError("Mohon berikan penilaian bintang pada Pertanyaan 1.");
-        return;
-      }
-      if (kualitasPelayanan === 0) {
-        setStepError("Mohon pilih opsi penilaian pada Pertanyaan 2.");
-        return;
-      }
-      setCurrentStep(2);
-    } else if (currentStep === 2) {
-      if (manfaatPelayanan === 0) {
-        setStepError("Mohon pilih opsi penilaian pada Pertanyaan 3.");
-        return;
-      }
-      if (kualitasWebsite === 0) {
-        setStepError("Mohon pilih opsi penilaian pada Pertanyaan 4.");
-        return;
-      }
-      setCurrentStep(3);
-    } else if (currentStep === 3) {
-      if (manfaatWebsite === 0) {
-        setStepError("Mohon pilih opsi penilaian pada Pertanyaan 5.");
-        return;
-      }
+    if (!data) return;
 
-      // Submit Form
-      if (!data) return;
-      startSubmitting(async () => {
-        const res = await submitSurveiAction({
-          kodePengajuan: data.kodePengajuan,
-          ratingBintang,
-          kualitasPelayanan,
-          manfaatPelayanan,
-          kualitasWebsite,
-          manfaatWebsite,
-          kritikSaran,
-        });
+    if (ratingBintang === 0) {
+      setValidationError("Mohon berikan penilaian bintang pada Pertanyaan 1.");
+      return;
+    }
+    if (kualitasPelayanan === 0) {
+      setValidationError("Mohon pilih penilaian pada Pertanyaan 2 (Kualitas Pelayanan Petugas).");
+      return;
+    }
+    if (manfaatPelayanan === 0) {
+      setValidationError("Mohon pilih penilaian pada Pertanyaan 3 (Kebermanfaatan Pelayanan Petugas).");
+      return;
+    }
+    if (kualitasWebsite === 0) {
+      setValidationError("Mohon pilih penilaian pada Pertanyaan 4 (Kualitas Sistem & Website AMPERA).");
+      return;
+    }
+    if (manfaatWebsite === 0) {
+      setValidationError("Mohon pilih penilaian pada Pertanyaan 5 (Kebermanfaatan Website AMPERA).");
+      return;
+    }
 
-        if (res.success) {
-          setIsSuccessSubmitted(true);
-        } else {
-          setStepError(res.message);
-        }
+    startSubmitting(async () => {
+      const res = await submitSurveiAction({
+        kodePengajuan: data.kodePengajuan,
+        ratingBintang,
+        kualitasPelayanan,
+        manfaatPelayanan,
+        kualitasWebsite,
+        manfaatWebsite,
+        kritikSaran,
       });
-    }
-  };
 
-  const handlePrevStep = () => {
-    setStepError(null);
-    if (currentStep > 1) {
-      setCurrentStep(currentStep - 1);
-    }
+      if (res.success) {
+        setIsSuccessSubmitted(true);
+      } else {
+        setValidationError(res.message);
+      }
+    });
   };
 
   const activeBintang = hoverBintang || ratingBintang;
 
   /* ========================================================================= */
-  /* KARTU KIRI: INFORMASI WEBSITE (SIMPEL & ELEGAN SESUAI MOCKUP)             */
+  /* KARTU KIRI: INFORMASI WEBSITE (SIMPEL & ELEGAN, AKSEN ORANGE)              */
   /* ========================================================================= */
   const renderLeftCard = () => (
-    <div className="rounded-3xl border border-slate-100 bg-white p-7 sm:p-9 shadow-[0_4px_24px_rgba(0,0,0,0.03)] flex flex-col justify-between h-full min-h-[460px] sm:min-h-[500px]">
-      <div className="space-y-6 sm:space-y-8">
+    <div className="rounded-3xl border border-slate-100 bg-white p-7 sm:p-9 shadow-[0_4px_24px_rgba(0,0,0,0.03)] flex flex-col justify-between space-y-6 lg:sticky lg:top-8">
+      <div className="space-y-6 sm:space-y-7">
         {/* Logo BPOM & Identitas */}
         <div className="flex items-center gap-3">
           <img
@@ -220,8 +207,8 @@ export default function SurveiClient({
         </div>
 
         {/* Teks Utama */}
-        <div className="space-y-3 pt-2">
-          <h1 className="text-2xl sm:text-3xl font-black text-[#1e3a8a] leading-[1.25] font-brand">
+        <div className="space-y-3">
+          <h1 className="text-2xl sm:text-3xl font-black text-slate-900 leading-[1.25] font-brand">
             Terima kasih telah menggunakan layanan kami!
           </h1>
           <p className="text-xs sm:text-sm text-slate-500 leading-relaxed max-w-sm">
@@ -230,10 +217,10 @@ export default function SurveiClient({
 
           {/* Info Singkat Tiket */}
           {data && (
-            <div className="mt-4 pt-3 border-t border-slate-100 space-y-1.5 text-xs">
+            <div className="mt-4 pt-3.5 border-t border-slate-100 space-y-2 text-xs">
               <div className="flex items-center justify-between">
                 <span className="text-slate-400">Nomor Tiket:</span>
-                <span className="font-mono font-bold text-blue-600 bg-blue-50/80 px-2 py-0.5 rounded-md">
+                <span className="font-mono font-bold text-[#ff7a1a] bg-orange-50 px-2 py-0.5 rounded-md border border-orange-100">
                   {data.kodePengajuan}
                 </span>
               </div>
@@ -254,13 +241,13 @@ export default function SurveiClient({
         </div>
       </div>
 
-      {/* Catatan Kaki Bergaya Tulisan Tangan di Bawah */}
-      <div className="pt-8">
-        <p className="text-sm sm:text-base font-semibold italic text-blue-700/85 -rotate-1 tracking-tight select-none">
+      {/* Catatan Kaki Bergaya Tulisan Tangan Tema Orange */}
+      <div className="pt-6 border-t border-slate-50">
+        <p className="text-sm sm:text-base font-semibold italic text-[#ea580c] -rotate-1 tracking-tight select-none">
           Bersama kita wujudkan layanan yang lebih baik
         </p>
         <svg
-          className="w-40 sm:w-44 h-3 text-blue-500/70 mt-1"
+          className="w-40 sm:w-44 h-3 text-[#ff7a1a]/80 mt-1"
           viewBox="0 0 170 12"
           fill="none"
         >
@@ -276,31 +263,31 @@ export default function SurveiClient({
   );
 
   /* ========================================================================= */
-  /* KARTU KANAN: JIKA SUKSES DISUBMIT                                         */
+  /* KARTU KANAN: STATE 1 (SUKSES SETELAH SUBMIT)                               */
   /* ========================================================================= */
   if (isSuccessSubmitted) {
     return (
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 sm:gap-6 items-stretch">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 sm:gap-6 items-start">
         <div className="lg:col-span-5">{renderLeftCard()}</div>
         <div className="lg:col-span-7">
-          <div className="rounded-3xl border border-slate-100 bg-white p-8 sm:p-12 text-center shadow-[0_4px_24px_rgba(0,0,0,0.03)] h-full flex flex-col items-center justify-center animate-fade-up">
-            <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-600">
+          <div className="rounded-3xl border border-slate-100 bg-white p-8 sm:p-12 text-center shadow-[0_4px_24px_rgba(0,0,0,0.03)] flex flex-col items-center justify-center animate-fade-up">
+            <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-orange-50 text-[#ff7a1a]">
               <HeartHandshake className="h-8 w-8" />
             </div>
 
-            <h2 className="mt-5 text-2xl font-black text-[#1e3a8a] font-brand">
+            <h2 className="mt-5 text-2xl font-black text-slate-900 font-brand">
               Terima Kasih Banyak!
             </h2>
 
             <p className="mt-2 text-xs sm:text-sm text-slate-500 max-w-md leading-relaxed">
               Survei kepuasan Anda untuk tiket{" "}
-              <strong className="font-mono text-blue-600">{data?.kodePengajuan}</strong> telah berhasil kami terima dan tersimpan ke dalam sistem IKM BBPOM di Palembang.
+              <strong className="font-mono text-[#ff7a1a]">{data?.kodePengajuan}</strong> telah berhasil kami terima dan tersimpan ke dalam sistem IKM BBPOM di Palembang.
             </p>
 
             <div className="mt-6">
               <Link
                 href="/"
-                className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-5 py-2.5 text-xs sm:text-sm font-bold text-white hover:bg-blue-700 transition"
+                className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-[#ff7a1a] to-[#f26a0f] px-5 py-2.5 text-xs sm:text-sm font-bold text-white shadow-sm hover:brightness-105 transition"
               >
                 <Home className="h-4 w-4" /> Kembali ke Halaman Utama
               </Link>
@@ -312,24 +299,24 @@ export default function SurveiClient({
   }
 
   /* ========================================================================= */
-  /* KARTU KANAN: JIKA TIKET INI SUDAH PERNAH DIISI SURVEI                     */
+  /* KARTU KANAN: STATE 2 (SUDAH PERNAH DIISI SEBELUMNYA)                       */
   /* ========================================================================= */
   if (data && data.sudahSurvei) {
     return (
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 sm:gap-6 items-stretch">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 sm:gap-6 items-start">
         <div className="lg:col-span-5">{renderLeftCard()}</div>
         <div className="lg:col-span-7">
-          <div className="rounded-3xl border border-slate-100 bg-white p-8 sm:p-12 text-center shadow-[0_4px_24px_rgba(0,0,0,0.03)] h-full flex flex-col items-center justify-center animate-fade-up">
-            <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-blue-50 text-blue-600">
+          <div className="rounded-3xl border border-slate-100 bg-white p-8 sm:p-12 text-center shadow-[0_4px_24px_rgba(0,0,0,0.03)] flex flex-col items-center justify-center animate-fade-up">
+            <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-orange-50 text-[#ff7a1a]">
               <CheckCircle2 className="h-8 w-8" />
             </div>
 
-            <h2 className="mt-5 text-2xl font-black text-[#1e3a8a] font-brand">
+            <h2 className="mt-5 text-2xl font-black text-slate-900 font-brand">
               Survei Sudah Pernah Diisi
             </h2>
 
             <p className="mt-2 text-xs sm:text-sm text-slate-500 max-w-md leading-relaxed">
-              Terima kasih, Bapak/Ibu <strong className="text-slate-800">{data.namaPemohon}</strong>. Ulasan kepuasan untuk nomor tiket <strong className="font-mono text-blue-600">{data.kodePengajuan}</strong> telah tersimpan sebelumnya.
+              Terima kasih, Bapak/Ibu <strong className="text-slate-800">{data.namaPemohon}</strong>. Ulasan kepuasan untuk nomor tiket <strong className="font-mono text-[#ff7a1a]">{data.kodePengajuan}</strong> telah tersimpan sebelumnya.
             </p>
 
             {data.dataSurvei && (
@@ -368,15 +355,15 @@ export default function SurveiClient({
   }
 
   /* ========================================================================= */
-  /* KARTU KANAN: PENCARIAN TIKET MANUAL (JIKA BELUM ADA DATA TIKET VALID)    */
+  /* KARTU KANAN: STATE 3 (PENCARIAN TIKET MANUAL)                             */
   /* ========================================================================= */
   if (!data) {
     return (
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 sm:gap-6 items-stretch">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 sm:gap-6 items-start">
         <div className="lg:col-span-5">{renderLeftCard()}</div>
         <div className="lg:col-span-7">
-          <div className="rounded-3xl border border-slate-100 bg-white p-7 sm:p-10 shadow-[0_4px_24px_rgba(0,0,0,0.03)] h-full flex flex-col justify-center animate-fade-up">
-            <h2 className="text-2xl font-black text-[#1e3a8a] font-brand">
+          <div className="rounded-3xl border border-slate-100 bg-white p-7 sm:p-10 shadow-[0_4px_24px_rgba(0,0,0,0.03)] animate-fade-up">
+            <h2 className="text-2xl font-black text-slate-900 font-brand">
               Survey Kepuasan Pelanggan
             </h2>
             <p className="text-xs sm:text-sm text-slate-500 mt-1.5 leading-relaxed">
@@ -391,7 +378,7 @@ export default function SurveiClient({
                   value={kodeInput}
                   onChange={(e) => setKodeInput(e.target.value.toUpperCase())}
                   placeholder="Contoh: AMP-ADU-202610-1849"
-                  className="w-full rounded-xl border border-slate-200 bg-slate-50/60 pl-10 pr-4 py-2.5 text-xs sm:text-sm font-mono font-semibold uppercase tracking-wider text-slate-800 focus:border-blue-500 focus:bg-white focus:outline-none transition"
+                  className="w-full rounded-xl border border-slate-200 bg-slate-50/60 pl-10 pr-4 py-2.5 text-xs sm:text-sm font-mono font-semibold uppercase tracking-wider text-slate-800 focus:border-[#ff7a1a] focus:bg-white focus:outline-none transition"
                 />
               </div>
 
@@ -405,7 +392,7 @@ export default function SurveiClient({
               <button
                 type="submit"
                 disabled={isSearching}
-                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-6 py-2.5 text-xs sm:text-sm font-bold text-white hover:bg-blue-700 transition disabled:opacity-50 cursor-pointer"
+                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#ff7a1a] to-[#f26a0f] px-6 py-2.5 text-xs sm:text-sm font-bold text-white shadow-sm hover:brightness-105 transition disabled:opacity-50 cursor-pointer"
               >
                 {isSearching ? "Mencari..." : "Buka Survei →"}
               </button>
@@ -417,310 +404,223 @@ export default function SurveiClient({
   }
 
   /* ========================================================================= */
-  /* KARTU KANAN: FORMULIR MULTI-STEP SURVEI (PERSIS MOCKUP GAMBAR USER)       */
+  /* KARTU KANAN: STATE 4 (LANGSUNG TAMPIL 5 PERTANYAAN, TEMA ORANGE)          */
   /* ========================================================================= */
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 sm:gap-6 items-stretch animate-fade-up">
+    <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 sm:gap-6 items-start animate-fade-up">
       {/* SISI KIRI: INFORMASI WEBSITE */}
       <div className="lg:col-span-5">{renderLeftCard()}</div>
 
-      {/* SISI KANAN: PERTANYAAN SURVEI */}
+      {/* SISI KANAN: FORM 5 PERTANYAAN LANGSUNG */}
       <div className="lg:col-span-7">
-        <div className="rounded-3xl border border-slate-100 bg-white p-7 sm:p-9 shadow-[0_4px_24px_rgba(0,0,0,0.03)] h-full flex flex-col justify-between space-y-6">
-          <div className="space-y-6">
-            {/* Top Bar: Tombol Kembali & Stepper (1) --- (2) --- (3) */}
-            <div className="flex items-center justify-between border-b border-slate-100 pb-4">
-              {currentStep > 1 ? (
-                <button
-                  type="button"
-                  onClick={handlePrevStep}
-                  className="inline-flex items-center gap-1 text-xs sm:text-sm font-semibold text-blue-600 hover:text-blue-700 transition cursor-pointer"
-                >
-                  <ChevronLeft className="h-4 w-4" /> Kembali
-                </button>
-              ) : (
-                <Link
-                  href="/"
-                  className="inline-flex items-center gap-1 text-xs sm:text-sm font-semibold text-blue-600 hover:text-blue-700 transition cursor-pointer"
-                >
-                  <ChevronLeft className="h-4 w-4" /> Kembali
-                </Link>
-              )}
-
-              {/* Stepper Dots & Line */}
-              <div className="flex items-center gap-2">
-                {/* Step 1 */}
-                <div
-                  className={`flex h-6 w-6 sm:h-7 sm:w-7 items-center justify-center rounded-full text-xs font-bold transition-all ${
-                    currentStep >= 1
-                      ? "bg-blue-600 text-white"
-                      : "border border-slate-300 text-slate-400 bg-white"
-                  }`}
-                >
-                  1
-                </div>
-
-                <div
-                  className={`h-0.5 w-6 sm:w-10 transition-colors ${
-                    currentStep >= 2 ? "bg-blue-600" : "bg-slate-200"
-                  }`}
-                />
-
-                {/* Step 2 */}
-                <div
-                  className={`flex h-6 w-6 sm:h-7 sm:w-7 items-center justify-center rounded-full text-xs font-bold transition-all ${
-                    currentStep >= 2
-                      ? "bg-blue-600 text-white"
-                      : "border border-slate-300 text-slate-400 bg-white"
-                  }`}
-                >
-                  2
-                </div>
-
-                <div
-                  className={`h-0.5 w-6 sm:w-10 transition-colors ${
-                    currentStep >= 3 ? "bg-blue-600" : "bg-slate-200"
-                  }`}
-                />
-
-                {/* Step 3 */}
-                <div
-                  className={`flex h-6 w-6 sm:h-7 sm:w-7 items-center justify-center rounded-full text-xs font-bold transition-all ${
-                    currentStep >= 3
-                      ? "bg-blue-600 text-white"
-                      : "border border-slate-300 text-slate-400 bg-white"
-                  }`}
-                >
-                  3
-                </div>
-              </div>
-            </div>
-
-            {/* Judul & Pengantar Form */}
-            <div>
-              <h2 className="text-xl sm:text-2xl font-black text-[#1e3a8a] font-brand">
-                Survey Kepuasan Pelanggan
-              </h2>
-              <p className="text-xs sm:text-sm text-slate-500 mt-1 leading-relaxed">
-                Mohon luangkan waktu untuk mengisi survei berikut. Semua jawaban Anda akan sangat membantu kami.
-              </p>
-            </div>
-
-            {/* KONTEN LANGKAH 1 */}
-            {currentStep === 1 && (
-              <div className="space-y-4 animate-fade-in">
-                {/* Pertanyaan 1: Rating Bintang */}
-                <div className="rounded-2xl border border-blue-100/60 bg-[#f8fafd] p-4 sm:p-5 space-y-3">
-                  <div className="flex items-start gap-2.5">
-                    <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-blue-600 text-white text-xs font-bold mt-0.5">
-                      1
-                    </div>
-                    <label className="text-xs sm:text-sm font-bold text-slate-800 leading-snug">
-                      Bagaimana pendapat Anda tentang kualitas layanan yang Anda terima?
-                    </label>
-                  </div>
-
-                  <div className="pl-8 pt-1 flex items-center gap-1.5 sm:gap-2">
-                    {[1, 2, 3, 4, 5].map((star) => (
-                      <button
-                        key={star}
-                        type="button"
-                        onClick={() => setRatingBintang(star)}
-                        onMouseEnter={() => setHoverBintang(star)}
-                        onMouseLeave={() => setHoverBintang(0)}
-                        className="p-1 transition-transform hover:scale-110 active:scale-95 cursor-pointer focus:outline-none"
-                        title={`${star} Bintang`}
-                      >
-                        <Star
-                          className={`h-7 w-7 sm:h-8 sm:w-8 transition-colors ${
-                            star <= activeBintang
-                              ? "fill-amber-400 text-amber-400"
-                              : "text-slate-300 fill-transparent"
-                          }`}
-                        />
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Pertanyaan 2: Kualitas Pelayanan (Radio Horizontal) */}
-                <div className="rounded-2xl border border-blue-100/60 bg-[#f8fafd] p-4 sm:p-5 space-y-3">
-                  <div className="flex items-start gap-2.5">
-                    <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-blue-600 text-white text-xs font-bold mt-0.5">
-                      2
-                    </div>
-                    <label className="text-xs sm:text-sm font-bold text-slate-800 leading-snug">
-                      Bagaimana kualitas pelayanan yang diberikan oleh petugas kepada Anda?
-                    </label>
-                  </div>
-
-                  <div className="pl-8 flex flex-wrap items-center gap-4 sm:gap-6 pt-1">
-                    {SKALA_KUALITAS.map((opt) => (
-                      <RadioItem
-                        key={opt.value}
-                        name="kualitasPelayanan"
-                        value={opt.value}
-                        checked={kualitasPelayanan === opt.value}
-                        onChange={() => setKualitasPelayanan(opt.value)}
-                        label={opt.label}
-                      />
-                    ))}
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* KONTEN LANGKAH 2 */}
-            {currentStep === 2 && (
-              <div className="space-y-4 animate-fade-in">
-                {/* Pertanyaan 3: Manfaat Pelayanan */}
-                <div className="rounded-2xl border border-blue-100/60 bg-[#f8fafd] p-4 sm:p-5 space-y-3">
-                  <div className="flex items-start gap-2.5">
-                    <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-blue-600 text-white text-xs font-bold mt-0.5">
-                      3
-                    </div>
-                    <label className="text-xs sm:text-sm font-bold text-slate-800 leading-snug">
-                      Seberapa bermanfaat pelayanan yang Anda terima dari petugas bagi Anda?
-                    </label>
-                  </div>
-
-                  <div className="pl-8 flex flex-wrap items-center gap-4 sm:gap-6 pt-1">
-                    {SKALA_MANFAAT.map((opt) => (
-                      <RadioItem
-                        key={opt.value}
-                        name="manfaatPelayanan"
-                        value={opt.value}
-                        checked={manfaatPelayanan === opt.value}
-                        onChange={() => setManfaatPelayanan(opt.value)}
-                        label={opt.label}
-                      />
-                    ))}
-                  </div>
-                </div>
-
-                {/* Pertanyaan 4: Kualitas Website AMPERA */}
-                <div className="rounded-2xl border border-blue-100/60 bg-[#f8fafd] p-4 sm:p-5 space-y-3">
-                  <div className="flex items-start gap-2.5">
-                    <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-blue-600 text-white text-xs font-bold mt-0.5">
-                      4
-                    </div>
-                    <label className="text-xs sm:text-sm font-bold text-slate-800 leading-snug">
-                      Bagaimana kualitas sistem dan website AMPERA?
-                    </label>
-                  </div>
-
-                  <div className="pl-8 flex flex-wrap items-center gap-4 sm:gap-6 pt-1">
-                    {SKALA_KUALITAS.map((opt) => (
-                      <RadioItem
-                        key={opt.value}
-                        name="kualitasWebsite"
-                        value={opt.value}
-                        checked={kualitasWebsite === opt.value}
-                        onChange={() => setKualitasWebsite(opt.value)}
-                        label={opt.label}
-                      />
-                    ))}
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* KONTEN LANGKAH 3 */}
-            {currentStep === 3 && (
-              <div className="space-y-4 animate-fade-in">
-                {/* Pertanyaan 5: Manfaat Website AMPERA */}
-                <div className="rounded-2xl border border-blue-100/60 bg-[#f8fafd] p-4 sm:p-5 space-y-3">
-                  <div className="flex items-start gap-2.5">
-                    <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-blue-600 text-white text-xs font-bold mt-0.5">
-                      5
-                    </div>
-                    <label className="text-xs sm:text-sm font-bold text-slate-800 leading-snug">
-                      Seberapa bermanfaat sistem dan website AMPERA bagi Anda?
-                    </label>
-                  </div>
-
-                  <div className="pl-8 flex flex-wrap items-center gap-4 sm:gap-6 pt-1">
-                    {SKALA_MANFAAT.map((opt) => (
-                      <RadioItem
-                        key={opt.value}
-                        name="manfaatWebsite"
-                        value={opt.value}
-                        checked={manfaatWebsite === opt.value}
-                        onChange={() => setManfaatWebsite(opt.value)}
-                        label={opt.label}
-                      />
-                    ))}
-                  </div>
-                </div>
-
-                {/* Kritik & Saran Opsional */}
-                <div className="rounded-2xl border border-blue-100/60 bg-[#f8fafd] p-4 sm:p-5 space-y-2.5">
-                  <label className="text-xs sm:text-sm font-bold text-slate-800 block">
-                    Kritik atau saran untuk peningkatan layanan kami <span className="text-slate-400 font-normal">(Opsional)</span>
-                  </label>
-                  <textarea
-                    rows={3}
-                    value={kritikSaran}
-                    onChange={(e) => setKritikSaran(e.target.value)}
-                    placeholder="Tuliskan masukan atau apresiasi Anda di sini..."
-                    className="w-full rounded-xl border border-slate-200 bg-white p-3 text-xs sm:text-sm text-slate-800 placeholder:text-slate-400 focus:border-blue-500 focus:outline-none transition"
-                  />
-                </div>
-              </div>
-            )}
-
-            {/* Pesan Validasi Error */}
-            {stepError && (
-              <div className="flex items-center gap-2 rounded-xl bg-rose-50 p-3 text-xs font-medium text-rose-700 border border-rose-200">
-                <AlertCircle className="h-4 w-4 shrink-0" />
-                <span>{stepError}</span>
-              </div>
-            )}
+        <form
+          onSubmit={handleSubmitSurvei}
+          className="rounded-3xl border border-slate-100 bg-white p-6 sm:p-9 shadow-[0_4px_24px_rgba(0,0,0,0.03)] space-y-6"
+        >
+          {/* Header Form */}
+          <div className="space-y-1 border-b border-slate-100 pb-4">
+            <Link
+              href="/"
+              className="inline-flex items-center gap-1 text-xs font-semibold text-[#ea580c] hover:text-[#c2410c] transition mb-2 cursor-pointer"
+            >
+              <ChevronLeft className="h-4 w-4" /> Kembali
+            </Link>
+            <h2 className="text-xl sm:text-2xl font-black text-slate-900 font-brand">
+              Survey Kepuasan Pelanggan
+            </h2>
+            <p className="text-xs sm:text-sm text-slate-500 leading-relaxed">
+              Mohon luangkan waktu untuk mengisi survei berikut. Semua jawaban Anda akan sangat membantu kami.
+            </p>
           </div>
 
-          {/* Bottom Bar: Tombol Navigasi Persis Seperti Mockup */}
-          <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-100">
-            {currentStep > 1 ? (
-              <button
-                type="button"
-                onClick={handlePrevStep}
-                className="rounded-xl border border-blue-200 px-5 py-2 text-xs sm:text-sm font-semibold text-blue-600 hover:bg-blue-50 transition cursor-pointer"
-              >
-                Sebelumnya
-              </button>
-            ) : (
-              <button
-                type="button"
-                onClick={() => {
-                  // Jika ingin lewati ke pertanyaan berikutnya
-                  handleNextStep();
-                }}
-                className="rounded-xl border border-blue-200 px-5 py-2 text-xs sm:text-sm font-semibold text-blue-600 hover:bg-blue-50 transition cursor-pointer"
-              >
-                Lewati
-              </button>
-            )}
+          {/* ========================================================= */}
+          {/* PERTANYAAN 1: RATING BINTANG KESELURUHAN (1 - 5 ⭐) */}
+          {/* ========================================================= */}
+          <div className="rounded-2xl border border-orange-100/70 bg-[#fffbf7] p-4 sm:p-5 space-y-3">
+            <div className="flex items-start gap-2.5">
+              <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[#ff7a1a] text-white text-xs font-bold mt-0.5">
+                1
+              </div>
+              <label className="text-xs sm:text-sm font-bold text-slate-800 leading-snug">
+                Bagaimana pendapat Anda tentang kualitas layanan yang Anda terima? <span className="text-rose-500">*</span>
+              </label>
+            </div>
 
+            <div className="pl-8 pt-0.5 flex items-center gap-1.5 sm:gap-2">
+              {[1, 2, 3, 4, 5].map((star) => (
+                <button
+                  key={star}
+                  type="button"
+                  onClick={() => setRatingBintang(star)}
+                  onMouseEnter={() => setHoverBintang(star)}
+                  onMouseLeave={() => setHoverBintang(0)}
+                  className="p-1 transition-transform hover:scale-110 active:scale-95 cursor-pointer focus:outline-none"
+                  title={`${star} Bintang`}
+                >
+                  <Star
+                    className={`h-7 w-7 sm:h-8 sm:w-8 transition-colors ${
+                      star <= activeBintang
+                        ? "fill-amber-400 text-amber-400"
+                        : "text-slate-300 fill-transparent"
+                    }`}
+                  />
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* ========================================================= */}
+          {/* PERTANYAAN 2: KUALITAS PELAYANAN PETUGAS                  */}
+          {/* ========================================================= */}
+          <div className="rounded-2xl border border-orange-100/70 bg-[#fffbf7] p-4 sm:p-5 space-y-3">
+            <div className="flex items-start gap-2.5">
+              <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[#ff7a1a] text-white text-xs font-bold mt-0.5">
+                2
+              </div>
+              <label className="text-xs sm:text-sm font-bold text-slate-800 leading-snug">
+                Bagaimana kualitas pelayanan yang diberikan oleh petugas kepada Anda? <span className="text-rose-500">*</span>
+              </label>
+            </div>
+
+            <div className="pl-8 flex flex-wrap items-center gap-4 sm:gap-6 pt-1">
+              {SKALA_KUALITAS.map((opt) => (
+                <RadioItem
+                  key={opt.value}
+                  name="kualitasPelayanan"
+                  value={opt.value}
+                  checked={kualitasPelayanan === opt.value}
+                  onChange={() => setKualitasPelayanan(opt.value)}
+                  label={opt.label}
+                />
+              ))}
+            </div>
+          </div>
+
+          {/* ========================================================= */}
+          {/* PERTANYAAN 3: KEBERMANFAATAN PELAYANAN PETUGAS            */}
+          {/* ========================================================= */}
+          <div className="rounded-2xl border border-orange-100/70 bg-[#fffbf7] p-4 sm:p-5 space-y-3">
+            <div className="flex items-start gap-2.5">
+              <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[#ff7a1a] text-white text-xs font-bold mt-0.5">
+                3
+              </div>
+              <label className="text-xs sm:text-sm font-bold text-slate-800 leading-snug">
+                Seberapa bermanfaat pelayanan yang Anda terima dari petugas bagi Anda? <span className="text-rose-500">*</span>
+              </label>
+            </div>
+
+            <div className="pl-8 flex flex-wrap items-center gap-4 sm:gap-6 pt-1">
+              {SKALA_MANFAAT.map((opt) => (
+                <RadioItem
+                  key={opt.value}
+                  name="manfaatPelayanan"
+                  value={opt.value}
+                  checked={manfaatPelayanan === opt.value}
+                  onChange={() => setManfaatPelayanan(opt.value)}
+                  label={opt.label}
+                />
+              ))}
+            </div>
+          </div>
+
+          {/* ========================================================= */}
+          {/* PERTANYAAN 4: KUALITAS SISTEM & WEBSITE AMPERA            */}
+          {/* ========================================================= */}
+          <div className="rounded-2xl border border-orange-100/70 bg-[#fffbf7] p-4 sm:p-5 space-y-3">
+            <div className="flex items-start gap-2.5">
+              <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[#ff7a1a] text-white text-xs font-bold mt-0.5">
+                4
+              </div>
+              <label className="text-xs sm:text-sm font-bold text-slate-800 leading-snug">
+                Bagaimana kualitas sistem dan website AMPERA? <span className="text-rose-500">*</span>
+              </label>
+            </div>
+
+            <div className="pl-8 flex flex-wrap items-center gap-4 sm:gap-6 pt-1">
+              {SKALA_KUALITAS.map((opt) => (
+                <RadioItem
+                  key={opt.value}
+                  name="kualitasWebsite"
+                  value={opt.value}
+                  checked={kualitasWebsite === opt.value}
+                  onChange={() => setKualitasWebsite(opt.value)}
+                  label={opt.label}
+                />
+              ))}
+            </div>
+          </div>
+
+          {/* ========================================================= */}
+          {/* PERTANYAAN 5: KEBERMANFAATAN WEBSITE AMPERA               */}
+          {/* ========================================================= */}
+          <div className="rounded-2xl border border-orange-100/70 bg-[#fffbf7] p-4 sm:p-5 space-y-3">
+            <div className="flex items-start gap-2.5">
+              <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[#ff7a1a] text-white text-xs font-bold mt-0.5">
+                5
+              </div>
+              <label className="text-xs sm:text-sm font-bold text-slate-800 leading-snug">
+                Seberapa bermanfaat sistem dan website AMPERA bagi Anda? <span className="text-rose-500">*</span>
+              </label>
+            </div>
+
+            <div className="pl-8 flex flex-wrap items-center gap-4 sm:gap-6 pt-1">
+              {SKALA_MANFAAT.map((opt) => (
+                <RadioItem
+                  key={opt.value}
+                  name="manfaatWebsite"
+                  value={opt.value}
+                  checked={manfaatWebsite === opt.value}
+                  onChange={() => setManfaatWebsite(opt.value)}
+                  label={opt.label}
+                />
+              ))}
+            </div>
+          </div>
+
+          {/* ========================================================= */}
+          {/* KRITIK & SARAN OPSIONAL                                   */}
+          {/* ========================================================= */}
+          <div className="rounded-2xl border border-slate-200/70 bg-slate-50/50 p-4 sm:p-5 space-y-2">
+            <label className="text-xs sm:text-sm font-bold text-slate-800 block">
+              Kritik atau saran untuk peningkatan layanan kami <span className="text-slate-400 font-normal">(Opsional)</span>
+            </label>
+            <textarea
+              rows={3}
+              value={kritikSaran}
+              onChange={(e) => setKritikSaran(e.target.value)}
+              placeholder="Tuliskan masukan atau apresiasi Anda di sini..."
+              className="w-full rounded-xl border border-slate-200 bg-white p-3 text-xs sm:text-sm text-slate-800 placeholder:text-slate-400 focus:border-[#ff7a1a] focus:outline-none transition"
+            />
+          </div>
+
+          {/* Validasi Error Alert */}
+          {validationError && (
+            <div className="flex items-center gap-2 rounded-xl bg-rose-50 p-3.5 text-xs font-medium text-rose-700 border border-rose-200">
+              <AlertCircle className="h-4 w-4 shrink-0" />
+              <span>{validationError}</span>
+            </div>
+          )}
+
+          {/* Tombol Submit Langsung (Kirim Penilaian) */}
+          <div className="pt-2 flex justify-end">
             <button
-              type="button"
-              onClick={handleNextStep}
+              type="submit"
               disabled={isSubmitting}
-              className="inline-flex items-center gap-1.5 rounded-xl bg-blue-600 px-6 py-2 text-xs sm:text-sm font-bold text-white shadow-sm hover:bg-blue-700 transition disabled:opacity-50 cursor-pointer"
+              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#ff7a1a] to-[#f26a0f] px-8 py-3 text-sm font-bold text-white shadow-md shadow-orange-500/20 hover:brightness-105 active:scale-[0.99] transition disabled:opacity-50 cursor-pointer"
             >
-              {currentStep === 3 ? (
-                isSubmitting ? (
-                  "Mengirimkan..."
-                ) : (
-                  <>Kirim Survei →</>
-                )
+              {isSubmitting ? (
+                <>
+                  <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                  Mengirimkan Penilaian...
+                </>
               ) : (
                 <>
-                  Selanjutnya <ArrowRight className="h-4 w-4" />
+                  <Send className="h-4 w-4" /> Kirim Penilaian Survei
                 </>
               )}
             </button>
           </div>
-        </div>
+        </form>
       </div>
     </div>
   );
