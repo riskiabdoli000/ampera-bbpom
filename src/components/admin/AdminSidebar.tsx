@@ -23,6 +23,8 @@ import {
   FileLock,
   Star,
   Award,
+  MessageSquareHeart,
+  UserCog,
 } from "lucide-react";
 
 interface AdminSidebarProps {
@@ -42,11 +44,14 @@ export function AdminSidebar({ isOpen, onClose }: AdminSidebarProps) {
   const isGardaAmperaActive = pathname.startsWith("/admin/garda-ampera");
   const isSettingsPath = pathname.startsWith("/admin/settings");
   const isLaporanPath = pathname.startsWith("/admin/laporan");
+  const isPengaturanAkunActive = pathname.startsWith("/admin/pengaturan-akun");
 
   // Website Settings submenu collapse state
   const [settingsOpen, setSettingsOpen] = useState(pathname.startsWith("/admin/settings"));
   // Data Laporan Pengguna submenu collapse state (buka otomatis jika sedang berada di menu laporan)
   const [laporanOpen, setLaporanOpen] = useState(pathname.startsWith("/admin/laporan"));
+  // Garda Ampera submenu collapse state (buka otomatis jika sedang berada di menu garda-ampera)
+  const [gardaOpen, setGardaOpen] = useState(pathname.startsWith("/admin/garda-ampera"));
 
   const menuItems = [
     { title: "Dashboard", href: "/admin", icon: LayoutDashboard, active: isDashboardActive },
@@ -67,8 +72,16 @@ export function AdminSidebar({ isOpen, onClose }: AdminSidebarProps) {
     { title: "Data Layanan", href: "/admin/layanan", icon: ClipboardList, active: isLayananActive },
     { title: "Data Petugas", href: "/admin/petugas", icon: Users, active: isPetugasActive },
     { title: "Data Penilaian", href: "/admin/penilaian", icon: Star, active: isPenilaianActive },
-    { title: "Garda Ampera", href: "/admin/garda-ampera", icon: Award, active: isGardaAmperaActive },
   ];
+
+  const gardaSubItems = [
+    { title: "Dashboard Garda Ampera", href: "/admin/garda-ampera/dashboard", icon: LayoutDashboard },
+    { title: "Manajemen Garda Ampera", href: "/admin/garda-ampera", icon: Award },
+    { title: "Hasil Evaluasi", href: "/admin/garda-ampera/evaluasi", icon: MessageSquareHeart },
+  ];
+
+  const isAnyGardaSubActive = gardaSubItems.some((item) => pathname === item.href);
+  const isGardaParentActive = isGardaAmperaActive && (!gardaOpen || !isAnyGardaSubActive);
 
   const websiteSubItems = [
     { title: "Hero Content", href: "/admin/settings/hero", icon: Sparkles },
@@ -116,7 +129,7 @@ export function AdminSidebar({ isOpen, onClose }: AdminSidebarProps) {
       window.removeEventListener("resize", updateIndicator);
       clearTimeout(timer);
     };
-  }, [pathname, settingsOpen, laporanOpen]);
+  }, [pathname, settingsOpen, laporanOpen, gardaOpen]);
 
   const handleLinkClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
     if (navRef.current) {
@@ -137,6 +150,10 @@ export function AdminSidebar({ isOpen, onClose }: AdminSidebarProps) {
 
   const handleLaporanToggle = () => {
     setLaporanOpen((prev) => !prev);
+  };
+
+  const handleGardaToggle = () => {
+    setGardaOpen((prev) => !prev);
   };
 
   const renderLink = (item: { title: string; href: string; icon: React.ElementType; active?: boolean }) => {
@@ -303,6 +320,70 @@ export function AdminSidebar({ isOpen, onClose }: AdminSidebarProps) {
               </div>
 
               {masterItems.map(renderLink)}
+
+              {/* Garda Ampera (Collapsible Navlink with 2 Sub-items: Dashboard & Manajemen) */}
+              <div>
+                <button
+                  type="button"
+                  onClick={handleGardaToggle}
+                  data-active={isGardaParentActive ? "true" : "false"}
+                  className={`group relative z-10 flex w-full items-center justify-between py-3 pl-4 pr-5 text-sm transition-colors duration-200 cursor-pointer ${
+                    isGardaParentActive
+                      ? "font-bold text-[#0b2a6b] dark:text-blue-400"
+                      : isGardaAmperaActive
+                      ? "mr-4 rounded-xl font-semibold text-white hover:bg-white/15"
+                      : "mr-4 rounded-xl font-medium text-white hover:bg-white/15"
+                  }`}
+                >
+                  <div className="flex items-center gap-3">
+                    <Award
+                      className={`h-[19px] w-[19px] shrink-0 transition-colors duration-200 ${
+                        isGardaParentActive
+                          ? "text-[#0b2a6b] dark:text-blue-400"
+                          : "text-white/90 group-hover:text-white"
+                      }`}
+                    />
+                    <span>Garda Ampera</span>
+                  </div>
+                  {gardaOpen ? (
+                    <ChevronDown className="h-4 w-4 text-white/80 transition-colors group-hover:text-white" />
+                  ) : (
+                    <ChevronRight className="h-4 w-4 text-white/80 transition-colors group-hover:text-white" />
+                  )}
+                </button>
+
+                {/* 2 Sub-items: Dashboard Garda Ampera & Manajemen Garda Ampera */}
+                {gardaOpen && (
+                  <div className="mt-1 space-y-1 pl-3">
+                    {gardaSubItems.map((sub) => {
+                      const SubIcon = sub.icon;
+                      const active = pathname === sub.href;
+                      return (
+                        <Link
+                          key={sub.href}
+                          href={sub.href}
+                          onClick={handleLinkClick}
+                          data-active={active ? "true" : "false"}
+                          className={`group relative z-10 flex items-center gap-2.5 py-2.5 pl-5 pr-5 text-[13px] transition-colors duration-200 ${
+                            active
+                              ? "font-bold text-[#0b2a6b] dark:text-blue-400"
+                              : "mr-4 rounded-xl font-medium text-white hover:bg-white/15"
+                          }`}
+                        >
+                          <SubIcon
+                            className={`h-4 w-4 shrink-0 transition-colors duration-200 ${
+                              active
+                                ? "text-[#0b2a6b] dark:text-blue-400"
+                                : "text-white/90 group-hover:text-white"
+                            }`}
+                          />
+                          <span>{sub.title}</span>
+                        </Link>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
             </div>
           </div>
 
@@ -371,6 +452,14 @@ export function AdminSidebar({ isOpen, onClose }: AdminSidebarProps) {
                   </div>
                 )}
               </div>
+
+              {/* Pengaturan Akun */}
+              {renderLink({
+                title: "Pengaturan Akun",
+                href: "/admin/pengaturan-akun",
+                icon: UserCog,
+                active: isPengaturanAkunActive,
+              })}
             </div>
           </div>
         </nav>

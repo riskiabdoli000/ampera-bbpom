@@ -60,6 +60,18 @@ export default async function AdminDashboardPage() {
     createdAt: Date;
   }> = [];
 
+  // Rentang waktu hari ini (Zona Waktu Indonesia Barat / Asia/Jakarta)
+  const now = new Date();
+  const formatter = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Jakarta",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  });
+  const todayStr = formatter.format(now);
+  const startOfToday = new Date(`${todayStr}T00:00:00+07:00`);
+  const endOfToday = new Date(`${todayStr}T23:59:59.999+07:00`);
+
   try {
     const [tCount, mCount, pCount, sCount, dCount, recents, pList, pTotal, pAktif, allList] =
       await Promise.all([
@@ -69,7 +81,12 @@ export default async function AdminDashboardPage() {
         prisma.pengajuanLayanan.count({ where: { status: "SELESAI" } }),
         prisma.pengajuanLayanan.count({ where: { status: "DITOLAK" } }),
         prisma.pengajuanLayanan.findMany({
-          take: 8,
+          where: {
+            createdAt: {
+              gte: startOfToday,
+              lte: endOfToday,
+            },
+          },
           orderBy: { createdAt: "desc" },
           include: {
             tamu: true,
@@ -115,20 +132,21 @@ export default async function AdminDashboardPage() {
       p.rincianInformasiKip ||
       "Permohonan Layanan";
 
+    const jamWib = new Date(p.createdAt).toLocaleTimeString("id-ID", {
+      timeZone: "Asia/Jakarta",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+
     const diffMs = Date.now() - new Date(p.createdAt).getTime();
     const diffMins = Math.floor(diffMs / (1000 * 60));
     const diffHours = Math.floor(diffMins / 60);
-    const diffDays = Math.floor(diffHours / 24);
 
-    let waktu = "Baru saja";
+    let waktu = `${jamWib} WIB`;
     if (diffMins < 60) {
-      waktu = `${Math.max(1, diffMins)} menit lalu`;
+      waktu = `${Math.max(1, diffMins)} menit lalu (${jamWib} WIB)`;
     } else if (diffHours < 24) {
-      waktu = `${diffHours} jam lalu`;
-    } else if (diffDays === 1) {
-      waktu = "Kemarin";
-    } else {
-      waktu = `${diffDays} hari lalu`;
+      waktu = `${diffHours} jam lalu (${jamWib} WIB)`;
     }
 
     let statusKey: "MENUNGGU" | "DIPROSES" | "SELESAI" | "DITOLAK" = "MENUNGGU";
@@ -483,9 +501,14 @@ export default async function AdminDashboardPage() {
       {/* Row: Pengajuan Layanan Terkini Table Card (Full Width) */}
       <div className={`${card} p-5`}>
         <div className="flex items-center justify-between">
-          <h2 className="text-base font-bold text-[#0f2257] dark:text-white">
-            Pengajuan Layanan Terkini
-          </h2>
+          <div className="flex items-center gap-2.5">
+            <h2 className="text-base font-bold text-[#0f2257] dark:text-white">
+              Pengajuan Layanan Terkini
+            </h2>
+            <span className="rounded-full bg-blue-50 px-2.5 py-0.5 text-[11px] font-bold text-[#1664e8] dark:bg-blue-950/60 dark:text-blue-300">
+              Hari Ini ({recentSubmissions.length})
+            </span>
+          </div>
           <Link
             href="/admin/data-ampera"
             className="text-xs font-semibold text-[#1664e8] transition hover:underline"
@@ -511,7 +534,7 @@ export default async function AdminDashboardPage() {
                     colSpan={4}
                     className="py-10 text-center text-xs text-slate-400 dark:text-slate-500"
                   >
-                    Belum ada pengajuan layanan yang tercatat dalam sistem database.
+                    Belum ada pengajuan layanan yang masuk pada hari ini.
                   </td>
                 </tr>
               ) : (
