@@ -279,7 +279,7 @@ export async function exportToExcelProfessional({
 
     worksheet.mergeCells("A2:I2");
     const subTitleCell = worksheet.getCell("A2");
-    subTitleCell.value = "DIREKTORI PENGGUNA TERDAFTAR (DATA TAMU AMPERA BBPOM)";
+    subTitleCell.value = "DIREKTORI PENGGUNA TERDAFTAR (DATA PENGGUNA AMPERA BBPOM)";
     subTitleCell.font = { name: "Segoe UI", size: 11, bold: true, color: { argb: "FFFF7A1A" } };
     subTitleCell.alignment = { vertical: "middle", horizontal: "center" };
 

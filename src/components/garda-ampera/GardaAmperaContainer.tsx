@@ -12,6 +12,7 @@ import {
 import {
   getGardaPublicDataAction,
   submitGardaPesertaAssessmentAction,
+  getNextGardaNomorSertifikatAction,
 } from "@/app/actions/garda-ampera";
 import { StepProgress } from "./StepProgress";
 import { BiodataForm } from "./BiodataForm";
@@ -48,8 +49,10 @@ export function GardaAmperaContainer() {
 
   useEffect(() => {
     getGardaPublicDataAction().then((res) => {
-      setSoalPre(res.preTestSoal || []);
-      setSoalPost(res.postTestSoal || []);
+      const pre = res.preTestSoal || [];
+      const post = res.postTestSoal || pre;
+      setSoalPre((existing) => (existing.length > 0 ? existing : pre));
+      setSoalPost((existing) => (existing.length > 0 ? existing : post));
       setMateriModules(res.modules || []);
     });
   }, []);
@@ -93,8 +96,9 @@ export function GardaAmperaContainer() {
 
   // Sertifikat number & date
   const [nomorSertifikat, setNomorSertifikat] = useState<string>(() => {
-    const randomDigits = Math.floor(1000 + Math.random() * 9000);
-    return `BBPOM-PLG/GARDA/2026/X/${randomDigits}`;
+    const ROMAN_MONTHS = ["I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X", "XI", "XII"];
+    const d = new Date();
+    return `001/GARDAAMPERA/BBPOMPLG/${ROMAN_MONTHS[d.getMonth()]}/${d.getFullYear()}`;
   });
   const [tanggalLulus, setTanggalLulus] = useState<string>(() => {
     return new Date().toLocaleDateString("id-ID", {
@@ -103,6 +107,17 @@ export function GardaAmperaContainer() {
       year: "numeric",
     });
   });
+
+  // Ambil nomor sertifikat berurutan berikutnya dari database
+  useEffect(() => {
+    getNextGardaNomorSertifikatAction()
+      .then((nextNo) => {
+        if (nextNo) {
+          setNomorSertifikat((prev) => (prev.startsWith("001/") ? nextNo : prev));
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   // =========================================================================
   // 1. HYDRATION: Pulihkan progres saat browser di-refresh oleh pengguna
@@ -116,6 +131,10 @@ export function GardaAmperaContainer() {
           setStep(saved.step);
           if (Array.isArray(saved.completedSteps)) {
             setCompletedSteps(new Set(saved.completedSteps));
+          }
+          if (Array.isArray(saved.soalPre) && saved.soalPre.length > 0) {
+            setSoalPre(saved.soalPre);
+            setSoalPost(saved.soalPre);
           }
           if (saved.biodata) setBiodata(saved.biodata);
           if (saved.preTestAnswers) setPreTestAnswers(saved.preTestAnswers);
@@ -163,6 +182,8 @@ export function GardaAmperaContainer() {
       step,
       completedSteps: Array.from(completedSteps),
       biodata,
+      soalPre,
+      soalPost,
       preTestAnswers,
       preTestScore,
       preTestSubmitted,
@@ -193,6 +214,8 @@ export function GardaAmperaContainer() {
     step,
     completedSteps,
     biodata,
+    soalPre,
+    soalPost,
     preTestAnswers,
     preTestScore,
     preTestSubmitted,
@@ -302,19 +325,13 @@ export function GardaAmperaContainer() {
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
-  const handleRetryPostTest = async () => {
+  const handleRetryPostTest = () => {
     setPostTestAnswers({});
     setPostTestScore(null);
     setPostTestSubmitted(false);
     setPostTestAttempts((prev) => prev + 1);
-    try {
-      const res = await getGardaPublicDataAction();
-      if (res.postTestSoal && res.postTestSoal.length > 0) {
-        setSoalPost(res.postTestSoal);
-      }
-    } catch {
-      // fallback
-    }
+    // Tetap gunakan paket 10 butir soal yang sama persis dengan Pre-Test beserta urutan nomornya
+    setSoalPost(soalPre);
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
@@ -334,7 +351,7 @@ export function GardaAmperaContainer() {
 
     // Simpan data lengkap peserta ke database via Server Action
     try {
-      await submitGardaPesertaAssessmentAction({
+      const res = await submitGardaPesertaAssessmentAction({
         biodata,
         preTestScore: preTestScore ?? 0,
         postTestScore: postTestScore ?? 0,
@@ -343,6 +360,9 @@ export function GardaAmperaContainer() {
         nomorSertifikat,
         evaluasi: data,
       });
+      if (res && res.nomorSertifikat) {
+        setNomorSertifikat(res.nomorSertifikat);
+      }
     } catch (err) {
       console.warn("Gagal sinkron assessment ke server action:", err);
     }
@@ -382,6 +402,14 @@ export function GardaAmperaContainer() {
         setPostTestAttempts(1);
         setEvaluasiData(null);
         setEvaluasiSubmitted(false);
+        // Muat paket 10 soal acak baru dari bank soal saat reset total
+        getGardaPublicDataAction().then((res) => {
+          const pre = res.preTestSoal || [];
+          const post = res.postTestSoal || pre;
+          setSoalPre(pre);
+          setSoalPost(post);
+          setMateriModules(res.modules || []);
+        });
         window.scrollTo({ top: 0, behavior: "smooth" });
       },
     });

@@ -540,7 +540,7 @@ export function ServiceReportClient({
               }`}
             >
               <Users className="h-4 w-4" />
-              <span>Data Pemohon / Tamu ({stats.totalPengguna})</span>
+              <span>Data Pemohon ({stats.totalPengguna})</span>
             </button>
           </div>
         </div>

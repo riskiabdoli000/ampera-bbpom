@@ -180,11 +180,47 @@ export async function getGardaPublicDataAction(): Promise<{
       }));
   }
 
+  // Ambil 10 butir soal secara acak dari bank soal (20 butir) untuk Pre-Test
+  // Sesuai ketentuan alur pengguna: Soal Post-Test dibuat sama persis dengan Pre-Test beserta urutan nomornya
+  const pool = preList.length > 0 ? preList : postList;
+  const selectedSoal = shuffleAndPick(pool, 10);
+
   return {
-    preTestSoal: shuffleAndPick(preList, 10),
-    postTestSoal: shuffleAndPick(postList, 10),
+    preTestSoal: selectedSoal,
+    postTestSoal: selectedSoal,
     modules: formattedModules,
   };
+}
+
+const ROMAN_MONTHS = ["I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X", "XI", "XII"];
+
+/**
+ * Format nomor sertifikat resmi GARDA AMPERA sesuai format:
+ * {Urutan 3-digit}/GARDAAMPERA/BBPOMPLG/{BulanRomawi}/{Tahun}
+ * Contoh: 001/GARDAAMPERA/BBPOMPLG/X/2026
+ */
+function formatNomorSertifikatGarda(urutan: number, date = new Date()): string {
+  const pad = String(urutan).padStart(3, "0");
+  const month = ROMAN_MONTHS[date.getMonth()];
+  const year = date.getFullYear();
+  return `${pad}/GARDAAMPERA/BBPOMPLG/${month}/${year}`;
+}
+
+/**
+ * Mendapatkan nomor sertifikat berikutnya yang otomatis berurutan
+ */
+export async function getNextGardaNomorSertifikatAction(): Promise<string> {
+  try {
+    if ((prisma as any).gardaPeserta) {
+      const count = await (prisma as any).gardaPeserta.count({
+        where: { isLulus: true },
+      });
+      return formatNomorSertifikatGarda(count + 1);
+    }
+  } catch (err: any) {
+    console.warn("Gagal menghitung nomor sertifikat berikutnya:", err.message);
+  }
+  return formatNomorSertifikatGarda(globalFallback.pesertaList.filter((p) => p.isLulus).length + 1);
 }
 
 /**
@@ -198,9 +234,26 @@ export async function submitGardaPesertaAssessmentAction(payload: {
   isLulus: boolean;
   nomorSertifikat?: string;
   evaluasi?: EvaluasiGarda | null;
-}): Promise<{ success: boolean; id?: number; message?: string }> {
+}): Promise<{ success: boolean; id?: number; nomorSertifikat?: string; message?: string }> {
   try {
-    const { biodata, preTestScore, postTestScore, postTestAttempts, isLulus, nomorSertifikat, evaluasi } = payload;
+    const { biodata, preTestScore, postTestScore, postTestAttempts, isLulus, evaluasi } = payload;
+
+    // Tentukan nomor sertifikat resmi jika lulus
+    let finalNomorSertifikat = payload.nomorSertifikat;
+    if (isLulus) {
+      if (!finalNomorSertifikat || !finalNomorSertifikat.includes("/GARDAAMPERA/BBPOMPLG/")) {
+        try {
+          const count = await (prisma as any).gardaPeserta.count({
+            where: { isLulus: true },
+          });
+          finalNomorSertifikat = formatNomorSertifikatGarda(count + 1);
+        } catch {
+          finalNomorSertifikat = formatNomorSertifikatGarda(globalFallback.pesertaList.filter((p) => p.isLulus).length + 1);
+        }
+      }
+    } else {
+      finalNomorSertifikat = undefined;
+    }
 
     // Coba simpan ke database Prisma
     if ((prisma as any).gardaPeserta) {
@@ -219,7 +272,7 @@ export async function submitGardaPesertaAssessmentAction(payload: {
           postTestScore,
           postTestAttempts,
           isLulus,
-          nomorSertifikat: nomorSertifikat || null,
+          nomorSertifikat: finalNomorSertifikat || null,
           tanggalLulus: isLulus ? new Date() : null,
           ...(evaluasi
             ? {
@@ -238,13 +291,19 @@ export async function submitGardaPesertaAssessmentAction(payload: {
       });
 
       revalidatePath("/admin/garda-ampera");
-      return { success: true, id: created.id };
+      return { success: true, id: created.id, nomorSertifikat: finalNomorSertifikat };
     }
   } catch (err: any) {
     console.warn("Prisma save failed, saving to fallback cache:", err.message);
   }
 
   // Fallback memory cache
+  const isLulus = payload.isLulus;
+  let finalNomorSertifikat = payload.nomorSertifikat;
+  if (isLulus && (!finalNomorSertifikat || !finalNomorSertifikat.includes("/GARDAAMPERA/BBPOMPLG/"))) {
+    finalNomorSertifikat = formatNomorSertifikatGarda(globalFallback.pesertaList.filter((p) => p.isLulus).length + 1);
+  }
+
   const newId = globalFallback.pesertaList.length + 1;
   const newRecord = {
     id: newId,
@@ -261,7 +320,7 @@ export async function submitGardaPesertaAssessmentAction(payload: {
     postTestScore: payload.postTestScore,
     postTestAttempts: payload.postTestAttempts,
     isLulus: payload.isLulus,
-    nomorSertifikat: payload.nomorSertifikat || null,
+    nomorSertifikat: finalNomorSertifikat || null,
     tanggalLulus: payload.isLulus ? new Date() : null,
     evaluasi: payload.evaluasi
       ? {
@@ -277,7 +336,7 @@ export async function submitGardaPesertaAssessmentAction(payload: {
 
   globalFallback.pesertaList.unshift(newRecord);
   revalidatePath("/admin/garda-ampera");
-  return { success: true, id: newId };
+  return { success: true, id: newId, nomorSertifikat: finalNomorSertifikat };
 }
 
 // =========================================================================
