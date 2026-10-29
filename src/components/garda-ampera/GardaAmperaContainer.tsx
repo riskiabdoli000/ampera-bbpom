@@ -398,32 +398,32 @@ export function GardaAmperaContainer() {
 
       {/* Sesi Restored Banner */}
       {restoredBanner && step !== "biodata" && (
-        <div className="mb-6 p-4 rounded-2xl bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/40 dark:to-indigo-950/40 border border-blue-200 dark:border-blue-800 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs text-blue-950 dark:text-blue-200 shadow-sm animate-fade-up">
-          <div className="flex items-center gap-3 min-w-0">
-            <div className="w-8 h-8 rounded-xl bg-blue-600/10 dark:bg-blue-500/20 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0">
+        <div className="mb-6 p-4 sm:p-4.5 rounded-2xl bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/40 dark:to-indigo-950/40 border border-blue-200 dark:border-blue-800 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4 text-xs text-blue-950 dark:text-blue-200 shadow-sm animate-fade-up">
+          <div className="flex items-start gap-3 min-w-0 flex-1">
+            <div className="w-8 h-8 rounded-xl bg-blue-600/10 dark:bg-blue-500/20 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0 mt-0.5">
               <Sparkles className="w-4 h-4 text-brand-orange" />
             </div>
-            <div className="min-w-0">
-              <p className="font-bold">
+            <div className="min-w-0 flex-1">
+              <p className="font-bold text-navy-900 dark:text-white leading-tight">
                 Sesi Belajar Anda Berhasil Dipulihkan
               </p>
-              <p className="text-[11px] text-slate-600 dark:text-slate-300 truncate">
+              <p className="text-[11px] sm:text-xs text-slate-600 dark:text-slate-300 mt-1 leading-relaxed whitespace-normal break-words">
                 Peserta <strong>{biodata.nama || "Tamu"}</strong> sedang berada pada tahap <strong>{step.toUpperCase()}</strong>. Seluruh progres sebelumnya tetap tersimpan aman di peramban Anda.
               </p>
             </div>
           </div>
-          <div className="flex items-center gap-2 shrink-0 self-end sm:self-auto">
+          <div className="flex items-center gap-2 shrink-0 w-full sm:w-auto justify-between sm:justify-end pt-2 sm:pt-0 border-t sm:border-t-0 border-blue-200/60 dark:border-blue-800/60">
             <button
               type="button"
               onClick={handleResetAll}
-              className="px-3 py-1.5 rounded-xl border border-slate-300 dark:border-slate-700 hover:bg-white dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 font-bold text-[11px] cursor-pointer transition-colors"
+              className="px-3.5 py-1.5 rounded-xl border border-slate-300 dark:border-slate-700 hover:bg-white dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 font-bold text-[11px] cursor-pointer transition-colors shadow-2xs"
             >
               Ulangi Dari Awal
             </button>
             <button
               type="button"
               onClick={() => setRestoredBanner(false)}
-              className="px-2 py-1.5 rounded-xl hover:bg-blue-100 dark:hover:bg-blue-900/50 text-blue-700 dark:text-blue-300 text-[11px] font-bold cursor-pointer"
+              className="px-3 py-1.5 rounded-xl hover:bg-blue-100 dark:hover:bg-blue-900/50 text-blue-700 dark:text-blue-300 text-[11px] font-bold cursor-pointer transition-colors"
             >
               ✕ Tutup
             </button>

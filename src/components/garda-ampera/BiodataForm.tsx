@@ -543,10 +543,10 @@ export function BiodataForm({ initialData, onSubmit }: BiodataFormProps) {
 
           <button
             type="submit"
-            className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-navy-900 hover:bg-blue-800 text-white font-bold text-sm shadow-md shadow-navy-900/20 transition-all hover:translate-x-0.5 cursor-pointer"
+            className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-4 py-2.5 sm:px-6 sm:py-3 rounded-xl bg-navy-900 hover:bg-blue-800 text-white font-bold text-xs sm:text-sm shadow-md shadow-navy-900/20 transition-all hover:translate-x-0.5 cursor-pointer whitespace-nowrap"
           >
             Simpan & Mulai Pre-Test
-            <ArrowRight className="w-4 h-4" />
+            <ArrowRight className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
           </button>
         </div>
       </form>

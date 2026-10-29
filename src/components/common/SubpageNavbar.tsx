@@ -86,7 +86,7 @@ export function SubpageNavbar({ activePage = "layanan" }: SubpageNavbarProps) {
                 BBPOM
               </span>
               <span className="font-brand font-medium text-[11px] sm:text-xs text-brand-orange dark:text-orange-400 tracking-wide mt-0.5">
-                Palembang • Portal AMPERA
+                Balai Besar POM di Palembang
               </span>
             </div>
           </Link>

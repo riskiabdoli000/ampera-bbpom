@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import {
   ClipboardList,
   GraduationCap,
@@ -44,6 +44,21 @@ export function QuizView({
 }: QuizViewProps) {
   const [answers, setAnswers] = useState<Record<number, string>>(savedAnswers);
   const [currentIdx, setCurrentIdx] = useState(0);
+  const paletteRef = useRef<HTMLDivElement>(null);
+
+  // Auto-scroll hanya pada kontainer nomor soal (tidak menggeser window/halaman browser)
+  useEffect(() => {
+    if (!paletteRef.current) return;
+    const container = paletteRef.current;
+    const activeBtn = container.querySelector<HTMLButtonElement>(`[data-qidx="${currentIdx}"]`);
+    if (activeBtn) {
+      const containerRect = container.getBoundingClientRect();
+      const btnRect = activeBtn.getBoundingClientRect();
+      const offsetWithinContainer = btnRect.left - containerRect.left + container.scrollLeft;
+      const targetScrollLeft = offsetWithinContainer - container.clientWidth / 2 + btnRect.width / 2;
+      container.scrollTo({ left: Math.max(0, targetScrollLeft), behavior: "smooth" });
+    }
+  }, [currentIdx]);
 
   const isPreTest = type === "pre-test";
   const title = isPreTest ? "Pre-Test Garda Ampera" : "Post-Test Evaluasi Kelulusan";
@@ -216,33 +231,33 @@ export function QuizView({
         </div>
 
         {/* Action Buttons */}
-        <div className="p-6 sm:p-8 flex flex-col sm:flex-row items-center justify-between gap-4 bg-slate-50 dark:bg-slate-900/50">
+        <div className="p-4 sm:p-8 flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-4 bg-slate-50 dark:bg-slate-900/50">
           {isPreTest ? (
             <>
-              <p className="text-xs text-slate-500 dark:text-slate-400">
+              <p className="text-xs text-slate-500 dark:text-slate-400 text-center sm:text-left">
                 Langkah berikutnya: Membaca 3 Materi Edukasi (Slide demi Slide).
               </p>
               <button
                 type="button"
                 onClick={onProceed}
-                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-navy-900 hover:bg-blue-800 text-white font-bold text-sm shadow-md transition-all hover:translate-x-0.5 cursor-pointer"
+                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-4 py-2.5 sm:px-6 sm:py-3 rounded-xl bg-navy-900 hover:bg-blue-800 text-white font-bold text-xs sm:text-sm shadow-md transition-all hover:translate-x-0.5 cursor-pointer whitespace-nowrap"
               >
                 Lanjut ke Materi Edukasi
-                <ArrowRight className="w-4 h-4" />
+                <ArrowRight className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />
               </button>
             </>
           ) : isPassed ? (
             <>
-              <p className="text-xs text-slate-500 dark:text-slate-400">
+              <p className="text-xs text-slate-500 dark:text-slate-400 text-center sm:text-left">
                 Wajib isi evaluasi sistem untuk membuka unduh sertifikat.
               </p>
               <button
                 type="button"
                 onClick={onProceed}
-                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-sm shadow-md shadow-emerald-600/20 transition-all hover:translate-x-0.5 cursor-pointer"
+                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-4 py-2.5 sm:px-6 sm:py-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs sm:text-sm shadow-md shadow-emerald-600/20 transition-all hover:translate-x-0.5 cursor-pointer whitespace-nowrap"
               >
                 Lanjut ke Evaluasi Sistem
-                <ArrowRight className="w-4 h-4" />
+                <ArrowRight className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />
               </button>
             </>
           ) : (
@@ -251,18 +266,18 @@ export function QuizView({
                 <button
                   type="button"
                   onClick={onReviewMateri}
-                  className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 hover:bg-white dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 font-semibold text-sm transition-all cursor-pointer"
+                  className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-3.5 py-2.5 sm:px-4 sm:py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 hover:bg-white dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 font-semibold text-xs sm:text-sm transition-all cursor-pointer whitespace-nowrap"
                 >
-                  <BookOpen className="w-4 h-4 text-blue-600" />
+                  <BookOpen className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-blue-600 shrink-0" />
                   Pelajari Ulang Materi
                 </button>
               )}
               <button
                 type="button"
                 onClick={onRetry}
-                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-amber-600 hover:bg-amber-500 text-white font-bold text-sm shadow-md shadow-amber-600/20 transition-all hover:scale-[1.02] cursor-pointer"
+                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-4 py-2.5 sm:px-6 sm:py-3 rounded-xl bg-amber-600 hover:bg-amber-500 text-white font-bold text-xs sm:text-sm shadow-md shadow-amber-600/20 transition-all hover:scale-[1.02] cursor-pointer whitespace-nowrap"
               >
-                <RotateCcw className="w-4 h-4" />
+                <RotateCcw className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />
                 Ulangi Pengerjaan Post-Test
               </button>
             </>
@@ -332,40 +347,46 @@ export function QuizView({
       </div>
 
       {/* Progress & Palette Strip */}
-      <div className="bg-slate-50 dark:bg-slate-800/60 px-6 py-3.5 border-b border-slate-200 dark:border-slate-800 flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-2">
-          <span className="text-xs font-bold text-slate-700 dark:text-slate-300">
+      <div className="bg-slate-50 dark:bg-slate-800/60 px-4 sm:px-6 py-3 border-b border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2.5">
+        <div className="flex items-center gap-2 text-xs">
+          <span className="font-bold text-slate-700 dark:text-slate-300 whitespace-nowrap">
             Terjawab: {answeredCount} dari {soalList.length} Soal
           </span>
-          <span className="text-xs text-slate-400">•</span>
-          <span className="text-xs text-slate-500 dark:text-slate-400">
+          <span className="text-slate-400">•</span>
+          <span className="text-slate-500 dark:text-slate-400 truncate">
             Kategori: <strong className="text-blue-600 dark:text-blue-400">{currentSoal.kategori}</strong>
           </span>
         </div>
 
-        {/* Soal Palette */}
-        <div className="flex items-center gap-1.5">
-          {soalList.map((s, idx) => {
-            const hasAnswer = Boolean(answers[s.id]);
-            const isSelected = idx === currentIdx;
+        {/* Soal Palette (Bisa di-slide/geser di mobile tanpa scrollbar) */}
+        <div
+          ref={paletteRef}
+          className="w-full sm:w-auto overflow-x-auto py-1 scroll-smooth no-scrollbar [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
+        >
+          <div className="flex items-center gap-1.5 min-w-max">
+            {soalList.map((s, idx) => {
+              const hasAnswer = Boolean(answers[s.id]);
+              const isSelected = idx === currentIdx;
 
-            return (
-              <button
-                key={s.id}
-                type="button"
-                onClick={() => setCurrentIdx(idx)}
-                className={`w-7 h-7 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                  isSelected
-                    ? "bg-navy-900 dark:bg-blue-600 text-white ring-2 ring-blue-300 dark:ring-blue-800"
-                    : hasAnswer
-                    ? "bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700"
-                    : "bg-white dark:bg-slate-800 text-slate-500 border border-slate-200 dark:border-slate-700 hover:bg-slate-100"
-                }`}
-              >
-                {idx + 1}
-              </button>
-            );
-          })}
+              return (
+                <button
+                  key={s.id}
+                  data-qidx={idx}
+                  type="button"
+                  onClick={() => setCurrentIdx(idx)}
+                  className={`shrink-0 w-8 h-8 sm:w-7 sm:h-7 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                    isSelected
+                      ? "bg-navy-900 dark:bg-blue-600 text-white ring-2 ring-blue-300 dark:ring-blue-800 scale-105"
+                      : hasAnswer
+                      ? "bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700"
+                      : "bg-white dark:bg-slate-800 text-slate-500 border border-slate-200 dark:border-slate-700 hover:bg-slate-100"
+                  }`}
+                >
+                  {idx + 1}
+                </button>
+              );
+            })}
+          </div>
         </div>
       </div>
 
@@ -440,13 +461,13 @@ export function QuizView({
             type="button"
             disabled={!isAllAnswered}
             onClick={handleSubmit}
-            className={`w-full sm:w-auto px-6 py-3 rounded-xl font-bold text-sm shadow-md transition-all cursor-pointer inline-flex items-center justify-center gap-2 ${
+            className={`w-full sm:w-auto px-4 py-2.5 sm:px-6 sm:py-3 rounded-xl font-bold text-xs sm:text-sm shadow-md transition-all cursor-pointer inline-flex items-center justify-center gap-2 whitespace-nowrap ${
               isAllAnswered
                 ? "bg-navy-900 hover:bg-blue-800 text-white shadow-navy-900/20 hover:scale-[1.01]"
                 : "bg-slate-200 dark:bg-slate-800 text-slate-400 cursor-not-allowed"
             }`}
           >
-            <CheckCircle2 className="w-4 h-4" />
+            <CheckCircle2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />
             {isAllAnswered
               ? isPreTest
                 ? "Kirim Jawaban & Lihat Skor Pre-Test"
