@@ -314,3 +314,116 @@ model Edukasi {
 
   @@index([urutan])
 }
+
+// ==========================================
+// 5. FITUR GARDA AMPERA (PRE-TEST, MATERI & POST-TEST)
+// ==========================================
+
+enum TipeSoalGarda {
+  PRE_TEST
+  POST_TEST
+  SEMUA
+}
+
+model GardaPeserta {
+  id               Int            @id @default(autoincrement())
+  nik              String         // 16 digit NIK
+  nama             String
+  tanggalTes       DateTime       @default(now())
+  alamat           String         @db.Text
+  usia             Int
+  jenisKelamin     String         // "Laki-laki" | "Perempuan"
+  pendidikan       String
+  pekerjaan        String
+  instansi         String
+  
+  // Hasil Ujian
+  preTestScore     Int?
+  postTestScore    Int?
+  postTestAttempts Int            @default(1)
+  isLulus          Boolean        @default(false)
+  nomorSertifikat  String?        @unique
+  tanggalLulus     DateTime?
+  
+  // Relasi Evaluasi
+  evaluasi         GardaEvaluasi?
+  
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+
+  @@index([nik])
+  @@index([isLulus])
+  @@index([createdAt])
+}
+
+model GardaEvaluasi {
+  id              Int          @id @default(autoincrement())
+  pesertaId       Int          @unique
+  peserta         GardaPeserta @relation(fields: [pesertaId], references: [id], onDelete: Cascade)
+
+  ratingKemudahan Int          // 1 - 5
+  ratingMateri    Int          // 1 - 5
+  ratingSoal      Int          // 1 - 5
+  ratingManfaat   Int          // 1 - 5
+  kritikSaran     String?      @db.Text
+
+  createdAt       DateTime     @default(now())
+
+  @@index([pesertaId])
+}
+
+model GardaSoal {
+  id           Int           @id @default(autoincrement())
+  tipe         TipeSoalGarda @default(PRE_TEST)
+  kategori     String        // Contoh: "Regulasi Obat", "Pangan Aman", "Bahan Berbahaya", "Kosmetik Aman"
+  pertanyaan   String        @db.Text
+  pilihanA     String        @db.Text
+  pilihanB     String        @db.Text
+  pilihanC     String        @db.Text
+  pilihanD     String        @db.Text
+  jawabanBenar String        // "A" | "B" | "C" | "D"
+  penjelasan   String?       @db.Text
+  urutan       Int           @default(0)
+  isAktif      Boolean       @default(true)
+
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  @@index([tipe])
+  @@index([urutan])
+  @@index([isAktif])
+}
+
+model GardaMateri {
+  id          Int          @id @default(autoincrement())
+  nomor       Int          @unique // 1, 2, 3
+  judul       String
+  ringkasan   String       @db.Text
+  durasi      String       @default("7 Menit Belajar")
+  pdfUrl      String?      @db.Text
+  isAktif     Boolean      @default(true)
+  slides      GardaSlide[]
+
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  @@index([nomor])
+}
+
+model GardaSlide {
+  id        Int         @id @default(autoincrement())
+  materiId  Int
+  materi    GardaMateri @relation(fields: [materiId], references: [id], onDelete: Cascade)
+  urutan    Int         // 1 - 5
+  judul     String
+  subjudul  String
+  poin      String      @db.Text // JSON string array poin
+  tips      String?     @db.Text
+  badge     String?
+
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+
+  @@index([materiId])
+  @@index([urutan])
+}
