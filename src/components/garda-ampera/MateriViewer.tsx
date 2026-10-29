@@ -53,6 +53,120 @@ export function MateriViewer({
   const [showTextSummary, setShowTextSummary] = useState(false);
   const [detectedPages, setDetectedPages] = useState<Record<number, number>>({});
 
+  // Sinkronisasi activeModulId jika data modules baru dimuat dari database
+  useEffect(() => {
+    if (modules && modules.length > 0) {
+      const exists = modules.some((m) => m.id === activeModulId);
+      if (!exists) {
+        setActiveModulId(modules[currentModulIndex]?.id || modules[0].id);
+      }
+    }
+  }, [modules, currentModulIndex, activeModulId]);
+
+  const activeModul =
+    modules && modules.length > 0
+      ? modules.find((m) => m.id === activeModulId) || modules[0]
+      : {
+          id: 1,
+          nomor: 1,
+          judul: "Modul Pembelajaran",
+          ringkasan: "",
+          durasi: "",
+          jumlahSlide: 1,
+          pdfUrl: "/documents/materi-edukasi-bbpom.pdf",
+          slides: [],
+        };
+
+  const slideIdx =
+    currentSlideIndex[activeModul.id] ??
+    currentSlideIndex[activeModul.nomor] ??
+    0;
+
+  const currentSlide =
+    activeModul.slides && activeModul.slides.length > 0
+      ? activeModul.slides[slideIdx] || activeModul.slides[0]
+      : {
+          id: 1,
+          judul: activeModul.judul,
+          subjudul: "Materi Pembelajaran",
+          poin: ["Pelajari materi ini dengan teliti."],
+          tips: "",
+          badge: `Modul ${activeModul.nomor} • Slide 1/1`,
+        };
+
+  const totalSlides =
+    detectedPages[activeModul.id] ||
+    detectedPages[activeModul.nomor] ||
+    activeModul.slides?.length ||
+    1;
+  const isLastSlide = slideIdx >= totalSlides - 1;
+
+  const activeModulIndex = modules && modules.length > 0 ? modules.findIndex((m) => m.id === activeModul.id) : 0;
+  const hasNextModul = modules && modules.length > 0 && activeModulIndex < modules.length - 1;
+  const nextModul = hasNextModul && modules ? modules[activeModulIndex + 1] : null;
+
+  // Cek apakah modul tertentu sudah selesai (mengakomodir id acak dari DB dan nomor 1, 2, 3)
+  const isModulDone = (modulId: number): boolean => {
+    if (!modules || modules.length === 0) return false;
+    const m = modules.find((mod) => mod.id === modulId);
+    const nomor = m?.nomor ?? modulId;
+    if (nomor === 1 && modul1Completed) return true;
+    if (nomor === 2 && modul2Completed) return true;
+    if (nomor === 3 && modul3Completed) return true;
+    if (!m) return false;
+    const total = detectedPages[modulId] || detectedPages[nomor] || m.slides?.length || 1;
+    const reached = maxSlideReached[modulId] ?? maxSlideReached[nomor] ?? 0;
+    return reached >= total - 1;
+  };
+
+  // Cek apakah modul tertentu terkunci (wajib menyelesaikan modul sebelumnya sampai slide terakhir)
+  const isModulLocked = (modulId: number): boolean => {
+    if (!modules || modules.length === 0) return false;
+    const idx = modules.findIndex((m) => m.id === modulId);
+    if (idx <= 0) return false;
+    const prevModul = modules[idx - 1];
+    return !isModulDone(prevModul.id);
+  };
+
+  const handleNextSlide = () => {
+    if (slideIdx < totalSlides - 1) {
+      const nextIdx = slideIdx + 1;
+      onUpdateSlide(activeModul.id, nextIdx);
+
+      // Jika mencapai slide terakhir, tandai modul selesai
+      if (nextIdx === totalSlides - 1) {
+        onCompleteModul(activeModul.id);
+      }
+    }
+  };
+
+  const handlePrevSlide = () => {
+    const prevIdx = Math.max(0, slideIdx - 1);
+    onUpdateSlide(activeModul.id, prevIdx);
+  };
+
+  // Keyboard navigation untuk slide - selalu terpanggil setiap render tanpa syarat
+  useEffect(() => {
+    if (!modules || modules.length === 0) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "ArrowRight" && slideIdx < totalSlides - 1) {
+        handleNextSlide();
+      } else if (e.key === "ArrowLeft" && slideIdx > 0) {
+        handlePrevSlide();
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [slideIdx, totalSlides, activeModulId, modules]);
+
+  const handleSelectModul = (modulId: number) => {
+    if (isModulLocked(modulId)) return;
+    setActiveModulId(modulId);
+  };
+
+  const allModulesCompleted = Boolean(modules && modules.length > 0 && modules.every((m) => isModulDone(m.id)));
+
+  // Tampilan ketika data modul masih kosong (di-render setelah semua hook selesai dipanggil)
   if (!modules || modules.length === 0) {
     return (
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-8 sm:p-12 text-center max-w-xl mx-auto shadow-sm">
@@ -77,81 +191,6 @@ export function MateriViewer({
       </div>
     );
   }
-
-  const activeModul = modules.find((m) => m.id === activeModulId) || modules[0];
-  const slideIdx = currentSlideIndex[activeModul.id] || 0;
-  const currentSlide =
-    activeModul.slides && activeModul.slides.length > 0
-      ? activeModul.slides[slideIdx] || activeModul.slides[0]
-      : {
-          id: 1,
-          judul: activeModul.judul,
-          subjudul: "Materi Pembelajaran",
-          poin: ["Pelajari materi ini dengan teliti."],
-          tips: "",
-          badge: `Modul ${activeModul.nomor} • Slide 1/1`,
-        };
-  const totalSlides = detectedPages[activeModul.id] || activeModul.slides?.length || 1;
-  const isLastSlide = slideIdx >= totalSlides - 1;
-
-  const activeModulIndex = modules.findIndex((m) => m.id === activeModul.id);
-  const hasNextModul = activeModulIndex < modules.length - 1;
-  const nextModul = hasNextModul ? modules[activeModulIndex + 1] : null;
-
-  // Cek apakah modul tertentu sudah selesai
-  const isModulDone = (modulId: number): boolean => {
-    if (modulId === 1 && modul1Completed) return true;
-    if (modulId === 2 && modul2Completed) return true;
-    if (modulId === 3 && modul3Completed) return true;
-    const m = modules.find((mod) => mod.id === modulId);
-    if (!m || !m.slides || m.slides.length === 0) return false;
-    return (maxSlideReached[modulId] ?? 0) >= m.slides.length - 1;
-  };
-
-  // Cek apakah modul tertentu terkunci (wajib menyelesaikan modul sebelumnya sampai slide terakhir)
-  const isModulLocked = (modulId: number): boolean => {
-    const idx = modules.findIndex((m) => m.id === modulId);
-    if (idx <= 0) return false;
-    const prevModul = modules[idx - 1];
-    return !isModulDone(prevModul.id);
-  };
-
-  // Keyboard navigation untuk slide
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "ArrowRight" && slideIdx < totalSlides - 1) {
-        handleNextSlide();
-      } else if (e.key === "ArrowLeft" && slideIdx > 0) {
-        handlePrevSlide();
-      }
-    };
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [slideIdx, totalSlides, activeModulId]);
-
-  const handleNextSlide = () => {
-    if (slideIdx < totalSlides - 1) {
-      const nextIdx = slideIdx + 1;
-      onUpdateSlide(activeModul.id, nextIdx);
-
-      // Jika mencapai slide terakhir, tandai modul selesai
-      if (nextIdx === totalSlides - 1) {
-        onCompleteModul(activeModul.id);
-      }
-    }
-  };
-
-  const handlePrevSlide = () => {
-    const prevIdx = Math.max(0, slideIdx - 1);
-    onUpdateSlide(activeModul.id, prevIdx);
-  };
-
-  const handleSelectModul = (modulId: number) => {
-    if (isModulLocked(modulId)) return;
-    setActiveModulId(modulId);
-  };
-
-  const allModulesCompleted = modules.length > 0 && modules.every((m) => isModulDone(m.id));
 
   return (
     <div className="space-y-6">

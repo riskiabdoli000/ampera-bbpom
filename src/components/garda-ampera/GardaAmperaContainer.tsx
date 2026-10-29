@@ -254,26 +254,31 @@ export function GardaAmperaContainer() {
   };
 
   const handleCompleteModul = (modulId: number) => {
-    if (modulId === 1) setModul1Completed(true);
-    if (modulId === 2) setModul2Completed(true);
-    if (modulId === 3) setModul3Completed(true);
-
     const m = materiModules.find((mod) => mod.id === modulId);
+    const nomor = m?.nomor ?? modulId;
+    if (nomor === 1) setModul1Completed(true);
+    if (nomor === 2) setModul2Completed(true);
+    if (nomor === 3) setModul3Completed(true);
+
     if (m && m.slides) {
       setMaxSlideReached((prev) => ({
         ...prev,
         [modulId]: m.slides.length - 1,
+        [nomor]: m.slides.length - 1,
       }));
     }
 
     const allFinished =
       materiModules.length > 0 &&
       materiModules.every((mod) => {
-        if (mod.id === modulId) return true;
-        if (mod.id === 1) return modul1Completed;
-        if (mod.id === 2) return modul2Completed;
-        if (mod.id === 3) return modul3Completed;
-        return (maxSlideReached[mod.id] ?? 0) >= (mod.slides?.length || 1) - 1;
+        if (mod.id === modulId || mod.nomor === nomor) return true;
+        if (mod.nomor === 1) return modul1Completed;
+        if (mod.nomor === 2) return modul2Completed;
+        if (mod.nomor === 3) return modul3Completed;
+        return (
+          (maxSlideReached[mod.id] ?? maxSlideReached[mod.nomor] ?? 0) >=
+          (mod.slides?.length || 1) - 1
+        );
       });
 
     if (allFinished || (materiModules.length <= 1 && modulId === materiModules[0]?.id)) {

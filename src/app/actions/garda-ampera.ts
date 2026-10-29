@@ -823,6 +823,20 @@ export async function adminUploadMateriAction(formData: FormData): Promise<{
       if ((prisma as any).gardaMateri) {
         if (existingId) {
           if (file && file.size > 0) {
+            // Hapus berkas lama jika diganti berkas baru agar tidak menjadi sampah storage
+            try {
+              const old = await (prisma as any).gardaMateri.findUnique({
+                where: { id: existingId },
+                select: { pdfUrl: true },
+              });
+              if (old?.pdfUrl && old.pdfUrl.startsWith("/uploads/materi/") && old.pdfUrl !== savedPdfUrl) {
+                const fs = await import("fs/promises");
+                const path = await import("path");
+                const oldPath = path.resolve(process.cwd(), "public", old.pdfUrl.replace(/^\//, ""));
+                await fs.unlink(oldPath);
+              }
+            } catch {}
+
             await (prisma as any).gardaSlide.deleteMany({
               where: { materiId: existingId },
             });
@@ -1099,26 +1113,67 @@ export async function adminCreateMateriAction(payload: {
 }
 
 /**
- * Hapus Modul Materi oleh Admin
+ * Hapus Modul Materi oleh Admin beserta berkas fisiknya di public/uploads/materi
  */
 export async function adminDeleteMateriAction(id: number): Promise<{ success: boolean; message: string }> {
+  let fileToDelete: string | null = null;
+
   try {
     if ((prisma as any).gardaMateri) {
+      // 1. Ambil URL file PDF sebelum data modul dihapus
+      const existing = await (prisma as any).gardaMateri.findUnique({
+        where: { id },
+        select: { pdfUrl: true },
+      });
+      if (existing?.pdfUrl) {
+        fileToDelete = existing.pdfUrl;
+      }
+
+      // 2. Hapus data modul dari database (cascade menghapus slide terkait)
       await (prisma as any).gardaMateri.delete({
         where: { id },
       });
-      revalidatePath("/admin/garda-ampera");
-      revalidatePath("/garda-ampera");
-      return { success: true, message: "Modul materi berhasil dihapus." };
     }
   } catch (err: any) {
     console.warn("DB delete materi failed, using fallback:", err.message);
   }
 
-  globalFallback.materiList = globalFallback.materiList.filter((m) => m.id !== id);
+  // Cek juga di fallback store jika ada
+  const fbIdx = globalFallback.materiList.findIndex((m) => m.id === id);
+  if (fbIdx !== -1) {
+    if (!fileToDelete && globalFallback.materiList[fbIdx].pdfUrl) {
+      fileToDelete = globalFallback.materiList[fbIdx].pdfUrl;
+    }
+    globalFallback.materiList.splice(fbIdx, 1);
+  }
+
+  // 3. Hapus berkas fisik dari storage jika berada di direktori /uploads/materi/
+  if (fileToDelete && fileToDelete.startsWith("/uploads/materi/")) {
+    try {
+      // Pastikan tidak ada modul lain yang masih memakai file yang sama
+      let isUsedByOthers = false;
+      if ((prisma as any).gardaMateri) {
+        const otherUsage = await (prisma as any).gardaMateri.findFirst({
+          where: { pdfUrl: fileToDelete },
+        });
+        if (otherUsage) isUsedByOthers = true;
+      }
+
+      if (!isUsedByOthers) {
+        const fs = await import("fs/promises");
+        const path = await import("path");
+        const fullPath = path.resolve(process.cwd(), "public", fileToDelete.replace(/^\//, ""));
+        await fs.unlink(fullPath);
+        console.log(`[Storage] Berkas fisik materi berhasil dihapus: ${fullPath}`);
+      }
+    } catch (fsErr: any) {
+      console.warn("[Storage] Catatan: Gagal menghapus berkas fisik materi:", fsErr.message);
+    }
+  }
+
   revalidatePath("/admin/garda-ampera");
   revalidatePath("/garda-ampera");
-  return { success: true, message: "Modul materi berhasil dihapus." };
+  return { success: true, message: "Modul materi beserta berkas fisiknya berhasil dihapus." };
 }
 
 /**
