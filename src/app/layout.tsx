@@ -27,6 +27,14 @@ export const metadata: Metadata = {
   title: "AMPERA BBPOM - Portal Layanan & Pendampingan Regulasi BBPOM Palembang",
   description:
     "Portal resmi pelayanan publik, pendaftaran sertifikasi CPPOB, CDOB, pengujian laboratorium, dan pendampingan UMKM BBPOM di Palembang.",
+  icons: {
+    icon: [
+      { url: "/icon.png" },
+      { url: "/assets-landingpage/garda_ampera_logo.png" },
+    ],
+    shortcut: "/favicon.ico",
+    apple: "/apple-icon.png",
+  },
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
