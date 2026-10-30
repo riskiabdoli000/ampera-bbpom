@@ -3,6 +3,7 @@
 import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import { uploadFileOrDocument, deleteImage } from "@/lib/storage";
+import { verifyAdminSession } from "@/lib/auth/session";
 import {
   triggerPengajuanStatusUpdatedNotification,
   sendRawWhatsAppMessage,
@@ -141,6 +142,10 @@ export interface DataAmperaOverviewResponse {
  */
 export async function getDataAmperaOverview(): Promise<DataAmperaOverviewResponse> {
   try {
+    const session = await verifyAdminSession();
+    if (!session) {
+      throw new Error("Akses ditolak. Silakan login sebagai Admin.");
+    }
     const [rawPengajuan, rawTamu] = await Promise.all([
       prisma.pengajuanLayanan.findMany({
         orderBy: { createdAt: "desc" },
@@ -158,108 +163,120 @@ export async function getDataAmperaOverview(): Promise<DataAmperaOverviewRespons
       }),
       prisma.tamu.findMany({
         orderBy: { createdAt: "desc" },
-        include: {
-          pengajuan: {
-            orderBy: { createdAt: "desc" },
-            include: {
-              layanan: true,
-            },
-          },
-        },
       }),
     ]);
 
-    const pengajuanList: PengajuanItem[] = rawPengajuan.map((p) => ({
-      id: p.id,
-      kodePengajuan: p.kodePengajuan,
-      status: p.status as StatusPengajuan,
-      catatanPetugas: p.catatanPetugas,
-      createdAt: p.createdAt,
-      updatedAt: p.updatedAt,
-      layanan: {
-        id: p.layanan.id,
-        kode: p.layanan.kode,
-        nama: p.layanan.nama,
-      },
-      tamu: {
-        id: p.tamu.id,
-        nik: p.tamu.nik,
-        nama: p.tamu.nama,
-        email: p.tamu.email,
-        telepon: p.tamu.telepon,
-        alamat: p.tamu.alamat,
-        asalInstansi: p.tamu.asalInstansi,
-        umur: p.tamu.umur,
-      },
-      informasiDibutuhkan: p.informasiDibutuhkan,
-      kategoriInformasi: p.kategoriInformasi,
-      produkDicurigai: p.produkDicurigai,
-      produkLainnya: p.produkLainnya,
-      alasanKecurigaan: p.alasanKecurigaan,
-      alasanLainnya: p.alasanLainnya,
-      rincianProduk: p.rincianProduk,
-      isiPengaduan: p.isiPengaduan,
-      buktiFotoUrl: p.buktiFotoUrl,
-      ktpUrl: p.ktpUrl,
-      dokumenPendukungUrl: p.dokumenPendukungUrl,
-      rincianInformasiKip: p.rincianInformasiKip,
-      tujuanPenggunaanKip: p.tujuanPenggunaanKip,
-      lampiranTindakan: (p.lampiranTindakan || []).map((l: any) => ({
-        id: l.id,
-        pengajuanId: l.pengajuanId,
-        url: l.url,
-        storagePath: l.storagePath,
-        namaFile: l.namaFile,
-        tipeFile: l.tipeFile,
-        ukuranFile: l.ukuranFile,
-        createdAt: l.createdAt,
-      })),
-      notifikasiWa: (p.notifikasiWa || []).map((n: any) => ({
-        id: n.id,
-        pengajuanId: n.pengajuanId,
-        tipePenerima: n.tipePenerima,
-        nomorTujuan: n.nomorTujuan,
-        namaPenerima: n.namaPenerima,
-        pesan: n.pesan,
-        status: n.status,
-        responGateway: n.responGateway,
-        dikirimPada: n.dikirimPada,
-        createdAt: n.createdAt,
-      })),
-      survei: p.survei
-        ? {
-            id: p.survei.id,
-            ratingBintang: p.survei.ratingBintang,
-            kualitasPelayanan: p.survei.kualitasPelayanan,
-            manfaatPelayanan: p.survei.manfaatPelayanan,
-            kualitasWebsite: p.survei.kualitasWebsite,
-            manfaatWebsite: p.survei.manfaatWebsite,
-            kritikSaran: p.survei.kritikSaran,
-            createdAt: p.survei.createdAt,
-          }
-        : null,
-    }));
+    const pengajuanByTamuId = new Map<
+      number,
+      Array<{
+        id: number;
+        kodePengajuan: string;
+        status: StatusPengajuan;
+        layananNama: string;
+        createdAt: Date;
+      }>
+    >();
 
-    const penggunaList: PenggunaItem[] = rawTamu.map((t) => ({
-      id: t.id,
-      nik: t.nik,
-      nama: t.nama,
-      email: t.email,
-      telepon: t.telepon,
-      alamat: t.alamat,
-      asalInstansi: t.asalInstansi,
-      umur: t.umur,
-      createdAt: t.createdAt,
-      updatedAt: t.updatedAt,
-      totalPengajuan: t.pengajuan.length,
-      pengajuan: t.pengajuan.map((p) => ({
+    const pengajuanList: PengajuanItem[] = rawPengajuan.map((p) => {
+      const tamuHistory = pengajuanByTamuId.get(p.tamu.id) || [];
+      tamuHistory.push({
         id: p.id,
         kodePengajuan: p.kodePengajuan,
         status: p.status as StatusPengajuan,
         layananNama: p.layanan.nama,
         createdAt: p.createdAt,
-      })),
-    }));
+      });
+      pengajuanByTamuId.set(p.tamu.id, tamuHistory);
+
+      return {
+        id: p.id,
+        kodePengajuan: p.kodePengajuan,
+        status: p.status as StatusPengajuan,
+        catatanPetugas: p.catatanPetugas,
+        createdAt: p.createdAt,
+        updatedAt: p.updatedAt,
+        layanan: {
+          id: p.layanan.id,
+          kode: p.layanan.kode,
+          nama: p.layanan.nama,
+        },
+        tamu: {
+          id: p.tamu.id,
+          nik: p.tamu.nik,
+          nama: p.tamu.nama,
+          email: p.tamu.email,
+          telepon: p.tamu.telepon,
+          alamat: p.tamu.alamat,
+          asalInstansi: p.tamu.asalInstansi,
+          umur: p.tamu.umur,
+        },
+        informasiDibutuhkan: p.informasiDibutuhkan,
+        kategoriInformasi: p.kategoriInformasi,
+        produkDicurigai: p.produkDicurigai,
+        produkLainnya: p.produkLainnya,
+        alasanKecurigaan: p.alasanKecurigaan,
+        alasanLainnya: p.alasanLainnya,
+        rincianProduk: p.rincianProduk,
+        isiPengaduan: p.isiPengaduan,
+        buktiFotoUrl: p.buktiFotoUrl,
+        ktpUrl: p.ktpUrl,
+        dokumenPendukungUrl: p.dokumenPendukungUrl,
+        rincianInformasiKip: p.rincianInformasiKip,
+        tujuanPenggunaanKip: p.tujuanPenggunaanKip,
+        lampiranTindakan: (p.lampiranTindakan || []).map((l: any) => ({
+          id: l.id,
+          pengajuanId: l.pengajuanId,
+          url: l.url,
+          storagePath: l.storagePath,
+          namaFile: l.namaFile,
+          tipeFile: l.tipeFile,
+          ukuranFile: l.ukuranFile,
+          createdAt: l.createdAt,
+        })),
+        notifikasiWa: (p.notifikasiWa || []).map((n: any) => ({
+          id: n.id,
+          pengajuanId: n.pengajuanId,
+          tipePenerima: n.tipePenerima,
+          nomorTujuan: n.nomorTujuan,
+          namaPenerima: n.namaPenerima,
+          pesan: n.pesan,
+          status: n.status,
+          responGateway: n.responGateway,
+          dikirimPada: n.dikirimPada,
+          createdAt: n.createdAt,
+        })),
+        survei: p.survei
+          ? {
+              id: p.survei.id,
+              ratingBintang: p.survei.ratingBintang,
+              kualitasPelayanan: p.survei.kualitasPelayanan,
+              manfaatPelayanan: p.survei.manfaatPelayanan,
+              kualitasWebsite: p.survei.kualitasWebsite,
+              manfaatWebsite: p.survei.manfaatWebsite,
+              kritikSaran: p.survei.kritikSaran,
+              createdAt: p.survei.createdAt,
+            }
+          : null,
+      };
+    });
+
+    const penggunaList: PenggunaItem[] = rawTamu.map((t) => {
+      const history = pengajuanByTamuId.get(t.id) || [];
+      return {
+        id: t.id,
+        nik: t.nik,
+        nama: t.nama,
+        email: t.email,
+        telepon: t.telepon,
+        alamat: t.alamat,
+        asalInstansi: t.asalInstansi,
+        umur: t.umur,
+        createdAt: t.createdAt,
+        updatedAt: t.updatedAt,
+        totalPengajuan: history.length,
+        pengajuan: history,
+      };
+    });
 
     // Agregat Statistik
     const totalPengajuan = pengajuanList.length;
@@ -308,8 +325,6 @@ export async function getDataAmperaOverview(): Promise<DataAmperaOverviewRespons
 
 /**
  * Memperbarui status verifikasi pengajuan layanan secara cepat dari tabel admin.
- * Safeguard: Jika status diubah menjadi SELESAI, sistem memvalidasi bahwa pengajuan
- * sudah memiliki minimal 2 berkas bukti lampiran tindakan petugas.
  */
 export async function updatePengajuanStatusAction(
   id: number,
@@ -317,53 +332,32 @@ export async function updatePengajuanStatusAction(
   catatanPetugas?: string
 ): Promise<{ success: boolean; message: string }> {
   try {
-    const existing = await prisma.pengajuanLayanan.findUnique({
-      where: { id },
-      include: {
-        lampiranTindakan: true,
-      },
-    });
-
-    if (!existing) {
-      return { success: false, message: "Data pengajuan tidak ditemukan." };
+    const session = await verifyAdminSession();
+    if (!session) {
+      return { success: false, message: "Akses ditolak. Silakan login sebagai Admin." };
     }
-
-    if (status === "SELESAI" && existing.lampiranTindakan.length < 2) {
-      return {
-        success: false,
-        message: `Pengajuan belum dapat diselesaikan. Petugas wajib melampirkan minimal 2 bukti lampiran tindakan (saat ini ${existing.lampiranTindakan.length} berkas). Silakan buka modal detail untuk mengunggah bukti lampiran.`,
-      };
-    }
-
-    await prisma.pengajuanLayanan.update({
+    const updated = await prisma.pengajuanLayanan.update({
       where: { id },
       data: {
         status,
-        catatanPetugas: catatanPetugas !== undefined ? catatanPetugas : existing.catatanPetugas,
+        ...(catatanPetugas !== undefined ? { catatanPetugas } : {}),
+      },
+      select: {
+        id: true,
+        kodePengajuan: true,
       },
     });
 
-    // Memicu notifikasi WhatsApp update status ke Tamu
+    // Memicu notifikasi WhatsApp update status ke Tamu secara asinkron di latar belakang
     if (status !== "MENUNGGU_VERIFIKASI") {
       triggerPengajuanStatusUpdatedNotification(id).catch((err) => {
         console.error("[WA Notif Background Error] Status Update:", err);
       });
     }
 
-    try {
-      revalidatePath("/admin");
-      revalidatePath("/admin/data-ampera");
-      revalidatePath("/admin/laporan/informasi");
-      revalidatePath("/admin/laporan/pengujian-cepat");
-      revalidatePath("/admin/laporan/pengaduan");
-      revalidatePath("/admin/laporan/kip");
-    } catch {
-      // Ignore if called outside Next.js request context
-    }
-
     return {
       success: true,
-      message: `Status pengajuan #${existing.kodePengajuan} berhasil diperbarui menjadi ${status.replace("_", " ")}.`,
+      message: `Status pengajuan #${updated.kodePengajuan} berhasil diperbarui menjadi ${status.replace("_", " ")}.`,
     };
   } catch (err: any) {
     console.error("[updatePengajuanStatusAction Error]", err);
@@ -386,6 +380,10 @@ export async function updatePengajuanTindakanWithLampiranAction(
   updatedPengajuan?: PengajuanItem;
 }> {
   try {
+    const session = await verifyAdminSession();
+    if (!session) {
+      return { success: false, message: "Akses ditolak. Silakan login sebagai Admin." };
+    }
     const rawId = formData.get("id");
     const id = typeof rawId === "string" ? parseInt(rawId, 10) : Number(rawId);
     if (!id || isNaN(id)) {
@@ -425,55 +423,14 @@ export async function updatePengajuanTindakanWithLampiranAction(
       return { success: false, message: "Data pengajuan tidak ditemukan." };
     }
 
-    // Hitung sisa lampiran lama yang tidak dihapus
+    // Hitung sisa lampiran lama yang tidak dihapus (lampiran bersifat opsional)
     const remainingExisting = existingPengajuan.lampiranTindakan.filter(
       (l) => !deletedLampiranIds.includes(l.id)
     );
 
     const totalFinalLampiran = remainingExisting.length + validNewFiles.length;
 
-    // VALIDASI: Minimal 2 lampiran bukti jika petugas menyimpan tindakan (status DIPROSES, SELESAI, atau ada catatan)
-    const isUnderAction =
-      status === "DIPROSES" ||
-      status === "SELESAI" ||
-      catatanPetugas.trim().length > 0 ||
-      validNewFiles.length > 0 ||
-      existingPengajuan.lampiranTindakan.length > 0;
-
-    if (isUnderAction && totalFinalLampiran < 2) {
-      return {
-        success: false,
-        message: `Bukti lampiran tindakan petugas minimal 2 berkas (saat ini baru ${totalFinalLampiran} berkas). Silakan lampirkan minimal 2 berkas bukti sebelum menyimpan.`,
-      };
-    }
-
-    // 1. Hapus berkas lama yang ditandai untuk dihapus
-    if (deletedLampiranIds.length > 0) {
-      const itemsToDelete = existingPengajuan.lampiranTindakan.filter((l) =>
-        deletedLampiranIds.includes(l.id)
-      );
-
-      for (const item of itemsToDelete) {
-        try {
-          await deleteImage(item.storagePath || item.url);
-        } catch (delErr) {
-          console.warn("[deleteImage error]", delErr);
-        }
-        await prisma.lampiranTindakanPetugas.delete({
-          where: { id: item.id },
-        });
-      }
-    }
-
-    // 2. Upload berkas bukti lampiran baru (kompresi gambar ke target ~100KB, simpan dokumen PDF utuh)
-    const newRecords: Array<{
-      url: string;
-      storagePath: string;
-      namaFile: string;
-      tipeFile: string;
-      ukuranFile: number;
-    }> = [];
-
+    // Validasi ukuran & format seluruh berkas baru di awal sebelum menyentuh storage
     for (const file of validNewFiles) {
       if (file.size > 10 * 1024 * 1024) {
         return {
@@ -493,40 +450,71 @@ export async function updatePengajuanTindakanWithLampiranAction(
           message: `Format berkas "${file.name}" tidak didukung. Harap unggah gambar (JPG, PNG, WebP) atau PDF.`,
         };
       }
-
-      const uploadRes = await uploadFileOrDocument(file, "tindakan", 100);
-      newRecords.push({
-        url: uploadRes.url,
-        storagePath: uploadRes.path,
-        namaFile: file.name,
-        tipeFile:
-          file.type ||
-          (file.name.toLowerCase().endsWith(".pdf") ? "application/pdf" : "image/jpeg"),
-        ukuranFile: uploadRes.compressedSize || file.size,
-      });
     }
 
-    if (newRecords.length > 0) {
-      await prisma.lampiranTindakanPetugas.createMany({
-        data: newRecords.map((r) => ({
-          pengajuanId: id,
-          url: r.url,
-          storagePath: r.storagePath,
-          namaFile: r.namaFile,
-          tipeFile: r.tipeFile,
-          ukuranFile: r.ukuranFile,
-        })),
-      });
-    }
+    const itemsToDelete =
+      deletedLampiranIds.length > 0
+        ? existingPengajuan.lampiranTindakan.filter((l) =>
+            deletedLampiranIds.includes(l.id)
+          )
+        : [];
 
-    // 3. Update status dan catatan petugas
-    await prisma.pengajuanLayanan.update({
-      where: { id },
-      data: {
-        status,
-        catatanPetugas: catatanPetugas.trim() || null,
-      },
-    });
+    // 1. Hapus berkas lama & 2. Upload berkas bukti lampiran baru secara PARALEL
+    const [, newRecords] = await Promise.all([
+      itemsToDelete.length > 0
+        ? Promise.all([
+            Promise.allSettled(
+              itemsToDelete.map((item) =>
+                deleteImage(item.storagePath || item.url)
+              )
+            ),
+            prisma.lampiranTindakanPetugas.deleteMany({
+              where: {
+                id: { in: itemsToDelete.map((item) => item.id) },
+              },
+            }),
+          ])
+        : Promise.resolve(),
+      Promise.all(
+        validNewFiles.map(async (file) => {
+          const uploadRes = await uploadFileOrDocument(file, "tindakan", 100);
+          return {
+            url: uploadRes.url,
+            storagePath: uploadRes.path,
+            namaFile: file.name,
+            tipeFile:
+              file.type ||
+              (file.name.toLowerCase().endsWith(".pdf")
+                ? "application/pdf"
+                : "image/jpeg"),
+            ukuranFile: uploadRes.compressedSize || file.size,
+          };
+        })
+      ),
+    ]);
+
+    // 3. Simpan lampiran baru (jika ada) dan update status/catatan petugas secara PARALEL
+    await Promise.all([
+      newRecords.length > 0
+        ? prisma.lampiranTindakanPetugas.createMany({
+            data: newRecords.map((r) => ({
+              pengajuanId: id,
+              url: r.url,
+              storagePath: r.storagePath,
+              namaFile: r.namaFile,
+              tipeFile: r.tipeFile,
+              ukuranFile: r.ukuranFile,
+            })),
+          })
+        : Promise.resolve(),
+      prisma.pengajuanLayanan.update({
+        where: { id },
+        data: {
+          status,
+          catatanPetugas: catatanPetugas.trim() || null,
+        },
+      }),
+    ]);
 
     // Memicu notifikasi WhatsApp update status ke Tamu
     if (status !== "MENUNGGU_VERIFIKASI") {
@@ -626,17 +614,6 @@ export async function updatePengajuanTindakanWithLampiranAction(
         : null,
     };
 
-    try {
-      revalidatePath("/admin");
-      revalidatePath("/admin/data-ampera");
-      revalidatePath("/admin/laporan/informasi");
-      revalidatePath("/admin/laporan/pengujian-cepat");
-      revalidatePath("/admin/laporan/pengaduan");
-      revalidatePath("/admin/laporan/kip");
-    } catch {
-      // Ignore outside request context
-    }
-
     return {
       success: true,
       message: `Tindakan petugas #${updated.kodePengajuan} berhasil disimpan (${totalFinalLampiran} bukti lampiran).`,
@@ -658,6 +635,10 @@ export async function deletePengajuanAction(
   id: number
 ): Promise<{ success: boolean; message: string }> {
   try {
+    const session = await verifyAdminSession();
+    if (!session) {
+      return { success: false, message: "Akses ditolak. Silakan login sebagai Admin." };
+    }
     const existing = await prisma.pengajuanLayanan.findUnique({
       where: { id },
       include: {
@@ -666,28 +647,22 @@ export async function deletePengajuanAction(
     });
 
     if (existing) {
-      for (const l of existing.lampiranTindakan) {
-        await deleteImage(l.storagePath || l.url).catch(() => {});
+      const filesToRemove = [
+        ...existing.lampiranTindakan.map((l) => l.storagePath || l.url),
+        existing.buktiFotoUrl,
+        existing.ktpUrl,
+        existing.dokumenPendukungUrl,
+      ].filter((p): p is string => Boolean(p));
+
+      if (filesToRemove.length > 0) {
+        await Promise.allSettled(filesToRemove.map((f) => deleteImage(f)));
       }
-      if (existing.buktiFotoUrl) await deleteImage(existing.buktiFotoUrl).catch(() => {});
-      if (existing.ktpUrl) await deleteImage(existing.ktpUrl).catch(() => {});
-      if (existing.dokumenPendukungUrl) await deleteImage(existing.dokumenPendukungUrl).catch(() => {});
     }
 
     const deleted = await prisma.pengajuanLayanan.delete({
       where: { id },
+      select: { kodePengajuan: true },
     });
-
-    try {
-      revalidatePath("/admin");
-      revalidatePath("/admin/data-ampera");
-      revalidatePath("/admin/laporan/informasi");
-      revalidatePath("/admin/laporan/pengujian-cepat");
-      revalidatePath("/admin/laporan/pengaduan");
-      revalidatePath("/admin/laporan/kip");
-    } catch {
-      // Ignore if called outside Next.js request context
-    }
 
     return {
       success: true,
@@ -721,27 +696,32 @@ export async function getServiceLaporanData(
   serviceCode: "INFO" | "UJI_CEPAT" | "ADUAN" | "KIP"
 ): Promise<ServiceLaporanResponse> {
   try {
-    const layanan = await prisma.layanan.findUnique({
-      where: { kode: serviceCode },
-    });
-
-    const rawPengajuan = await prisma.pengajuanLayanan.findMany({
-      where: {
-        layanan: { kode: serviceCode },
-      },
-      orderBy: { createdAt: "desc" },
-      include: {
-        tamu: true,
-        layanan: true,
-        lampiranTindakan: {
-          orderBy: { createdAt: "asc" },
+    const session = await verifyAdminSession();
+    if (!session) {
+      throw new Error("Akses ditolak. Silakan login sebagai Admin.");
+    }
+    const [layanan, rawPengajuan] = await Promise.all([
+      prisma.layanan.findUnique({
+        where: { kode: serviceCode },
+      }),
+      prisma.pengajuanLayanan.findMany({
+        where: {
+          layanan: { kode: serviceCode },
         },
-        notifikasiWa: {
-          orderBy: { createdAt: "desc" },
+        orderBy: { createdAt: "desc" },
+        include: {
+          tamu: true,
+          layanan: true,
+          lampiranTindakan: {
+            orderBy: { createdAt: "asc" },
+          },
+          notifikasiWa: {
+            orderBy: { createdAt: "desc" },
+          },
+          survei: true,
         },
-        survei: true,
-      },
-    });
+      }),
+    ]);
 
     const pengajuanList: PengajuanItem[] = rawPengajuan.map((p) => ({
       id: p.id,
@@ -906,6 +886,10 @@ export async function resendPengajuanWaNotificationAction(
   logId: number
 ): Promise<{ success: boolean; message: string }> {
   try {
+    const session = await verifyAdminSession();
+    if (!session) {
+      return { success: false, message: "Akses ditolak. Silakan login sebagai Admin." };
+    }
     const log = await prisma.notifikasiWaLog.findUnique({
       where: { id: logId },
     });
@@ -952,6 +936,10 @@ export async function sendManualPengajuanWaNotificationAction(
   pengajuanId: number
 ): Promise<{ success: boolean; message: string }> {
   try {
+    const session = await verifyAdminSession();
+    if (!session) {
+      return { success: false, message: "Akses ditolak. Silakan login sebagai Admin." };
+    }
     const pengajuan = await prisma.pengajuanLayanan.findUnique({
       where: { id: pengajuanId },
       include: {
@@ -982,4 +970,150 @@ export async function sendManualPengajuanWaNotificationAction(
     };
   }
 }
+
+export interface AdminNotificationItem {
+  id: number;
+  kodePengajuan: string;
+  layananKode: "INFO" | "UJI_CEPAT" | "ADUAN" | "KIP";
+  layananNama: string;
+  tamuNama: string;
+  createdAt: string;
+  href: string;
+}
+
+export interface AdminNotificationsSummary {
+  waitingByService: {
+    INFO: number;
+    UJI_CEPAT: number;
+    ADUAN: number;
+    KIP: number;
+    total: number;
+  };
+  todayWaitingCount: number;
+  todayWaitingItems: AdminNotificationItem[];
+  todayDateKey: string;
+}
+
+/**
+ * Mengambil ringkasan notifikasi pengajuan layanan berstatus MENUNGGU_VERIFIKASI khusus HARI INI (WIB):
+ * 1. Jumlah per layanan hari ini (INFO, UJI_CEPAT, ADUAN, KIP) untuk badge menu Sidebar Data Laporan.
+ * 2. Jumlah & daftar pengajuan hari ini untuk badge lonceng (Bell) di AdminHeader & popup toast 6 detik.
+ */
+export async function getAdminNotificationsAction(): Promise<AdminNotificationsSummary> {
+  const now = new Date();
+  const wibFormatter = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Jakarta",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  });
+  const todayDateKey = wibFormatter.format(now); // YYYY-MM-DD (WIB)
+  const startOfToday = new Date(`${todayDateKey}T00:00:00.000+07:00`);
+  const endOfToday = new Date(`${todayDateKey}T23:59:59.999+07:00`);
+
+  try {
+    const session = await verifyAdminSession();
+    if (!session) {
+      return {
+        waitingByService: { INFO: 0, UJI_CEPAT: 0, ADUAN: 0, KIP: 0, total: 0 },
+        todayWaitingCount: 0,
+        todayWaitingItems: [],
+        todayDateKey,
+      };
+    }
+    const waitingList = await prisma.pengajuanLayanan.findMany({
+      where: {
+        status: "MENUNGGU_VERIFIKASI",
+        createdAt: {
+          gte: startOfToday,
+          lte: endOfToday,
+        },
+      },
+      orderBy: {
+        createdAt: "desc",
+      },
+      select: {
+        id: true,
+        kodePengajuan: true,
+        createdAt: true,
+        layanan: {
+          select: {
+            kode: true,
+            nama: true,
+          },
+        },
+        tamu: {
+          select: {
+            nama: true,
+          },
+        },
+      },
+    });
+
+    const waitingByService = {
+      INFO: 0,
+      UJI_CEPAT: 0,
+      ADUAN: 0,
+      KIP: 0,
+      total: 0,
+    };
+
+    const todayWaitingItems: AdminNotificationItem[] = [];
+
+    const getHrefByKode = (kode: string): string => {
+      switch (kode) {
+        case "INFO":
+          return "/admin/laporan/informasi";
+        case "UJI_CEPAT":
+          return "/admin/laporan/pengujian-cepat";
+        case "ADUAN":
+          return "/admin/laporan/pengaduan";
+        case "KIP":
+          return "/admin/laporan/kip";
+        default:
+          return "/admin/data-ampera";
+      }
+    };
+
+    for (const p of waitingList) {
+      const kode = p.layanan.kode as "INFO" | "UJI_CEPAT" | "ADUAN" | "KIP";
+      if (kode in waitingByService) {
+        waitingByService[kode]++;
+        waitingByService.total++;
+      }
+
+      todayWaitingItems.push({
+        id: p.id,
+        kodePengajuan: p.kodePengajuan,
+        layananKode: kode,
+        layananNama: p.layanan.nama,
+        tamuNama: p.tamu.nama,
+        createdAt: p.createdAt.toISOString(),
+        href: getHrefByKode(kode),
+      });
+    }
+
+    return {
+      waitingByService,
+      todayWaitingCount: todayWaitingItems.length,
+      todayWaitingItems,
+      todayDateKey,
+    };
+  } catch (err) {
+    console.error("[getAdminNotificationsAction Error]", err);
+    return {
+      waitingByService: {
+        INFO: 0,
+        UJI_CEPAT: 0,
+        ADUAN: 0,
+        KIP: 0,
+        total: 0,
+      },
+      todayWaitingCount: 0,
+      todayWaitingItems: [],
+      todayDateKey,
+    };
+  }
+}
+
 

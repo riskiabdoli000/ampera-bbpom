@@ -1,5 +1,4 @@
-import jsPDF from "jspdf";
-import { BiodataGarda } from "./types";
+import type { BiodataGarda } from "./types";
 
 interface GenerateCertificateOptions {
   biodata: BiodataGarda;
@@ -8,245 +7,260 @@ interface GenerateCertificateOptions {
   tanggalLulus?: string;
 }
 
+/**
+ * Helper untuk mengambil aset gambar dari URL publik browser menjadi ArrayBuffer
+ */
+async function fetchAssetBuffer(path: string): Promise<ArrayBuffer> {
+  const res = await fetch(path);
+  if (!res.ok) {
+    throw new Error(`Gagal memuat aset sertifikat: ${path}`);
+  }
+  return await res.arrayBuffer();
+}
+
+/**
+ * Generate E-Sertifikat Resmi Garda Ampera (A4 Landscape)
+ * Menggunakan format desain terbaru BBPOM di Palembang:
+ * - Font: Times New Roman & Trebuchet MS / Helvetica
+ * - Watermark Garda Ampera (opacity 0.10)
+ * - Gelombang Toska bawah (wave-bottom.jpg)
+ * - Penandatangan: Yani Ardiyanti, SF, Apt.,M.Sc (TTE & Cap Basah BBPOM Palembang)
+ */
 export async function generateGardaCertificatePdf({
   biodata,
-  postTestScore,
   nomorSertifikat,
   tanggalLulus,
 }: GenerateCertificateOptions): Promise<void> {
-  const doc = new jsPDF({
-    orientation: "landscape",
-    unit: "mm",
-    format: "a4",
+  const { PDFDocument, rgb, StandardFonts } = await import("pdf-lib");
+  const pdfDoc = await PDFDocument.create();
+
+  // Dimensi A4 Landscape (841.89 x 595.28 pt)
+  const pageWidth = 841.89;
+  const pageHeight = 595.28;
+  const page = pdfDoc.addPage([pageWidth, pageHeight]);
+
+  // Muat Standard Fonts
+  const fontTimes = await pdfDoc.embedFont(StandardFonts.TimesRoman);
+  const fontTimesBold = await pdfDoc.embedFont(StandardFonts.TimesRomanBold);
+  const fontHelvetica = await pdfDoc.embedFont(StandardFonts.Helvetica);
+  const fontHelveticaBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
+
+  // 1. Latar Belakang Putih
+  page.drawRectangle({
+    x: 0,
+    y: 0,
+    width: pageWidth,
+    height: pageHeight,
+    color: rgb(1, 1, 1),
   });
 
-  const pageWidth = doc.internal.pageSize.getWidth(); // 297 mm
-  const pageHeight = doc.internal.pageSize.getHeight(); // 210 mm
+  // 2. Muat seluruh aset gambar resmi secara paralel
+  const [logoBytes, waveBytes, gardaLogoBytes, capBytes, tteBytes] =
+    await Promise.all([
+      fetchAssetBuffer("/sertifikat/assets/logo-bpom.png"),
+      fetchAssetBuffer("/sertifikat/assets/wave-bottom.jpg"),
+      fetchAssetBuffer("/sertifikat/assets/garda-ampera-logo.png"),
+      fetchAssetBuffer("/sertifikat/assets/cap-bpom.png"),
+      fetchAssetBuffer("/sertifikat/assets/tte-bu-yani.png"),
+    ]);
 
-  // ==========================================
-  // 1. LATAR BELAKANG & BINGKAI SERTIFIKAT
-  // ==========================================
-  // Latar belakang gradasi halus / krem mewah
-  doc.setFillColor(254, 254, 252);
-  doc.rect(0, 0, pageWidth, pageHeight, "F");
+  const logoImage = await pdfDoc.embedPng(logoBytes);
+  const waveImage = await pdfDoc.embedJpg(waveBytes);
+  const gardaLogoImage = await pdfDoc.embedPng(gardaLogoBytes);
+  const capImage = await pdfDoc.embedPng(capBytes);
+  const tteImage = await pdfDoc.embedPng(tteBytes);
 
-  // Bingkai luar (Navy #0b2a6b)
-  doc.setDrawColor(11, 42, 107);
-  doc.setLineWidth(2.5);
-  doc.rect(10, 10, pageWidth - 20, pageHeight - 20);
-
-  // Bingkai tengah (Gold #d97706)
-  doc.setDrawColor(217, 119, 6);
-  doc.setLineWidth(0.8);
-  doc.rect(13, 13, pageWidth - 26, pageHeight - 26);
-
-  // Bingkai dalam (Navy tipis)
-  doc.setDrawColor(11, 42, 107);
-  doc.setLineWidth(0.4);
-  doc.rect(15, 15, pageWidth - 30, pageHeight - 30);
-
-  // Aksen sudut dekoratif (Sudut Gold)
-  const drawCorner = (x: number, y: number, dirX: number, dirY: number) => {
-    doc.setDrawColor(217, 119, 6);
-    doc.setLineWidth(1.5);
-    doc.line(x, y, x + dirX * 10, y);
-    doc.line(x, y, x, y + dirY * 10);
-  };
-  drawCorner(16, 16, 1, 1);
-  drawCorner(pageWidth - 16, 16, -1, 1);
-  drawCorner(16, pageHeight - 16, 1, -1);
-  drawCorner(pageWidth - 16, pageHeight - 16, -1, -1);
-
-  // ==========================================
-  // 2. KOP RESMI BBPOM PALEMBANG
-  // ==========================================
-  doc.setTextColor(11, 42, 107);
-  doc.setFont("helvetica", "bold");
-  doc.setFontSize(13);
-  doc.text("BADAN PENGAWAS OBAT DAN MAKANAN REPUBLIK INDONESIA", pageWidth / 2, 27, {
-    align: "center",
+  // 3. Watermark Logo GARDA AMPERA di latar belakang (opacity 0.10)
+  const wmWidth = 470;
+  const wmHeight = 470;
+  page.drawImage(gardaLogoImage, {
+    x: (pageWidth - wmWidth) / 2,
+    y: (pageHeight - wmHeight) / 2 - 25,
+    width: wmWidth,
+    height: wmHeight,
+    opacity: 0.1,
   });
 
-  doc.setFontSize(11);
-  doc.setFont("helvetica", "bold");
-  doc.text("BALAI BESAR PENGAWAS OBAT DAN MAKANAN DI PALEMBANG", pageWidth / 2, 33, {
-    align: "center",
+  // 4. Gelombang Poligon Toska di Bagian Bawah
+  const waveHeight = 142;
+  page.drawImage(waveImage, {
+    x: 0,
+    y: 0,
+    width: pageWidth,
+    height: waveHeight,
   });
 
-  doc.setFont("helvetica", "normal");
-  doc.setFontSize(8);
-  doc.setTextColor(100, 116, 139);
-  doc.text(
-    "Jl. Pangeran Ratu, Jakabaring, Palembang, Sumatera Selatan | Portal Layanan AMPERA",
-    pageWidth / 2,
-    38,
-    { align: "center" }
-  );
-
-  // Garis pemisah kop
-  doc.setDrawColor(203, 213, 225);
-  doc.setLineWidth(0.5);
-  doc.line(40, 42, pageWidth - 40, 42);
-
-  // ==========================================
-  // 3. JUDUL SERTIFIKAT
-  // ==========================================
-  doc.setFont("helvetica", "bold");
-  doc.setFontSize(22);
-  doc.setTextColor(11, 42, 107);
-  doc.text("SERTIFIKAT KELULUSAN", pageWidth / 2, 54, { align: "center" });
-
-  doc.setFont("helvetica", "bold");
-  doc.setFontSize(10);
-  doc.setTextColor(217, 119, 6); // Brand Gold
-  doc.text("PROGRAM GARDA AMPERA (GERAKAN SADAR OBAT & MAKANAN AMAN)", pageWidth / 2, 60, {
-    align: "center",
+  // 5. Logo BPOM di Tengah Atas
+  const logoW = 96;
+  const logoH = 68;
+  page.drawImage(logoImage, {
+    x: (pageWidth - logoW) / 2,
+    y: pageHeight - 90,
+    width: logoW,
+    height: logoH,
   });
 
-  doc.setFont("helvetica", "normal");
-  doc.setFontSize(9);
-  doc.setTextColor(71, 85, 105);
-  doc.text(`Nomor Registrasi: ${nomorSertifikat}`, pageWidth / 2, 66, {
-    align: "center",
+  // 6. Judul: "SERTIFIKAT" (Times New Roman Bold, 33pt)
+  const titleText = "SERTIFIKAT";
+  const titleFontSize = 33;
+  const titleWidth = fontTimesBold.widthOfTextAtSize(titleText, titleFontSize);
+  page.drawText(titleText, {
+    x: (pageWidth - titleWidth) / 2,
+    y: pageHeight - 132,
+    size: titleFontSize,
+    font: fontTimesBold,
+    color: rgb(0.05, 0.05, 0.05),
   });
 
-  // ==========================================
-  // 4. PENERIMA SERTIFIKAT
-  // ==========================================
-  doc.setFontSize(10);
-  doc.setTextColor(100, 116, 139);
-  doc.text("Diberikan dengan bangga dan apresiasi setinggi-tingginya kepada:", pageWidth / 2, 77, {
-    align: "center",
+  // 7. Nomor Sertifikat (Times New Roman Regular, 13.5pt)
+  const noText = `Nomor :  ${nomorSertifikat}`;
+  const noFontSize = 13.5;
+  const noWidth = fontTimes.widthOfTextAtSize(noText, noFontSize);
+  page.drawText(noText, {
+    x: (pageWidth - noWidth) / 2,
+    y: pageHeight - 165,
+    size: noFontSize,
+    font: fontTimes,
+    color: rgb(0.1, 0.1, 0.1),
   });
 
-  // Nama Peserta (Besar & Menonjol)
-  doc.setFont("helvetica", "bold");
-  doc.setFontSize(20);
-  doc.setTextColor(11, 42, 107);
-  const namaPeserta = (biodata.nama || "Peserta Garda Ampera").toUpperCase();
-  doc.text(namaPeserta, pageWidth / 2, 88, { align: "center" });
+  // 8. Kalimat Pengantar: "Sertifikat ini menerangkan bahwa:" (Times New Roman, 14.5pt)
+  const introText = "Sertifikat ini menerangkan bahwa:";
+  const introFontSize = 14.5;
+  const introWidth = fontTimes.widthOfTextAtSize(introText, introFontSize);
+  page.drawText(introText, {
+    x: (pageWidth - introWidth) / 2,
+    y: pageHeight - 202,
+    size: introFontSize,
+    font: fontTimes,
+    color: rgb(0.12, 0.12, 0.12),
+  });
 
-  // Garis dekoratif di bawah nama
-  const namaWidth = doc.getTextWidth(namaPeserta);
-  doc.setDrawColor(217, 119, 6);
-  doc.setLineWidth(1);
-  doc.line(
-    (pageWidth - Math.min(namaWidth + 20, 180)) / 2,
-    91,
-    (pageWidth + Math.min(namaWidth + 20, 180)) / 2,
-    91
-  );
+  // 9. Nama Peserta (Times New Roman Bold, 36pt)
+  const namaPeserta = biodata.nama || "Peserta Garda Ampera";
+  const namaFontSize = 36;
+  const namaWidth = fontTimesBold.widthOfTextAtSize(namaPeserta, namaFontSize);
+  page.drawText(namaPeserta, {
+    x: (pageWidth - namaWidth) / 2,
+    y: pageHeight - 248,
+    size: namaFontSize,
+    font: fontTimesBold,
+    color: rgb(0.02, 0.02, 0.02),
+  });
 
-  // Detail NIK & Instansi
-  doc.setFont("helvetica", "normal");
-  doc.setFontSize(9.5);
-  doc.setTextColor(71, 85, 105);
-  const detailText = `NIK: ${biodata.nik || "-"}  |  Instansi/Organisasi: ${
-    biodata.instansi || "Masyarakat Umum"
-  }`;
-  doc.text(detailText, pageWidth / 2, 98, { align: "center" });
-
-  // ==========================================
-  // 5. NARASI KELULUSAN & PREDIKAT
-  // ==========================================
-  doc.setFontSize(9.5);
-  doc.setTextColor(51, 65, 85);
-
-  const predikat =
-    postTestScore >= 90
-      ? "SANGAT BAIK (DENGAN PUJIAN)"
-      : postTestScore >= 80
-      ? "SANGAT BAIK"
-      : "BAIK (LULUS)";
-
-  const narasi = [
-    "Telah mengikuti seluruh rangkaian Ujian Pre-Test, menuntaskan 3 Modul Pembelajaran Interaktif",
-    "mengenai Regulasi Obat, Bahan Kimia Berbahaya, Gerakan Cek KLIK, Keamanan Kosmetik & Jamu,",
-    `serta dinyatakan LULUS Ujian Evaluasi Akhir (Post-Test) dengan Perolehan Nilai ${postTestScore}/100.`,
+  // 10. Narasi Kelulusan Resmi: Times New Roman Bold (13.5pt, spasi rapat)
+  const descLines = [
+    "Telah menyelesaikan modul Gerakan Antisipasi Risiko, Deteksi, dan Aksi pada inovasi GARDA AMPERA.",
+    "Semoga partisipasi ini menjadi langkah nyata bersama dalam mewujudkan keamanan pangan",
+    "dan pengawasan obat dan makanan yang lebih baik.",
   ];
+  const descFontSize = 13.5;
+  let currentY = pageHeight - 282;
+  const lineHeight = 17.5;
 
-  doc.text(narasi[0], pageWidth / 2, 109, { align: "center" });
-  doc.text(narasi[1], pageWidth / 2, 114, { align: "center" });
-  doc.text(narasi[2], pageWidth / 2, 119, { align: "center" });
-
-  // Badge Predikat
-  doc.setFillColor(241, 245, 249);
-  doc.roundedRect(pageWidth / 2 - 45, 123, 90, 8, 2, 2, "F");
-  doc.setFont("helvetica", "bold");
-  doc.setFontSize(9);
-  doc.setTextColor(11, 42, 107);
-  doc.text(`PREDIKAT: ${predikat}`, pageWidth / 2, 128.5, { align: "center" });
-
-  // ==========================================
-  // 6. TANDA TANGAN & LEGALITAS RESMI
-  // ==========================================
-  const tanggalFormat =
-    tanggalLulus ||
-    new Date().toLocaleDateString("id-ID", {
-      day: "numeric",
-      month: "long",
-      year: "numeric",
+  for (const line of descLines) {
+    const lineWidth = fontTimesBold.widthOfTextAtSize(line, descFontSize);
+    page.drawText(line, {
+      x: (pageWidth - lineWidth) / 2,
+      y: currentY,
+      size: descFontSize,
+      font: fontTimesBold,
+      color: rgb(0.08, 0.08, 0.08),
     });
+    currentY -= lineHeight;
+  }
 
-  // Kolom Kiri: Verifikasi Digital & Barcode Badge
-  doc.setFont("helvetica", "normal");
-  doc.setFontSize(8);
-  doc.setTextColor(100, 116, 139);
-  doc.text("Verifikasi Keaslian Sertifikat:", 30, 150);
+  // 11. Blok Tanda Tangan & Pengesahan
+  const centerSignX = pageWidth / 2;
 
-  // Kotak QR Code Mockup
-  doc.setDrawColor(203, 213, 225);
-  doc.setFillColor(248, 250, 252);
-  doc.rect(30, 153, 24, 24, "FD");
-  doc.setFont("courier", "bold");
-  doc.setFontSize(6.5);
-  doc.setTextColor(11, 42, 107);
-  doc.text("GARDA", 42, 162, { align: "center" });
-  doc.text("AMPERA", 42, 166, { align: "center" });
-  doc.text("VERIFIED", 42, 170, { align: "center" });
+  // Tanggal Penerbitan (Times New Roman Regular)
+  const dateStr = tanggalLulus
+    ? tanggalLulus.startsWith("Palembang")
+      ? tanggalLulus
+      : `Palembang, ${tanggalLulus}`
+    : `Palembang, ${new Date().toLocaleDateString("id-ID", {
+        day: "numeric",
+        month: "long",
+        year: "numeric",
+      })}`;
 
-  doc.setFont("helvetica", "italic");
-  doc.setFontSize(7);
-  doc.setTextColor(100, 116, 139);
-  doc.text("Pindai melalui portal resmi AMPERA", 58, 163);
-  doc.text(`ID Dokumen: ${nomorSertifikat}`, 58, 168);
-  doc.text("Dokumen ini sah diterbitkan secara elektronik.", 58, 173);
-
-  // Kolom Kanan: Pengesahan BBPOM di Palembang
-  doc.setFont("helvetica", "normal");
-  doc.setFontSize(9);
-  doc.setTextColor(51, 65, 85);
-  doc.text(`Ditetapkan di Palembang, ${tanggalFormat}`, pageWidth - 75, 146, {
-    align: "center",
-  });
-  doc.setFont("helvetica", "bold");
-  doc.text("Kepala Balai Besar POM di Palembang", pageWidth - 75, 151, {
-    align: "center",
+  const tanggalFontSize = 13;
+  const tanggalWidth = fontTimes.widthOfTextAtSize(dateStr, tanggalFontSize);
+  page.drawText(dateStr, {
+    x: centerSignX - tanggalWidth / 2,
+    y: 222,
+    size: tanggalFontSize,
+    font: fontTimes,
+    color: rgb(0.1, 0.1, 0.1),
   });
 
-  // Stempel Digital BBPOM & Tanda Tangan
-  doc.setDrawColor(11, 42, 107);
-  doc.setLineWidth(0.6);
-  doc.circle(pageWidth - 75, 166, 9);
-  doc.setFontSize(5.5);
-  doc.setTextColor(11, 42, 107);
-  doc.text("BALAI BESAR POM", pageWidth - 75, 164, { align: "center" });
-  doc.text("PALEMBANG", pageWidth - 75, 167, { align: "center" });
-  doc.text("RESMI", pageWidth - 75, 170, { align: "center" });
+  // Jabatan Penandatangan (Trebuchet/Helvetica)
+  const jabatanText1 = "Kepala Balai Besar Pengawas Obat dan Makanan";
+  const jabatanText2 = "di Palembang";
+  const jabFontSize = 12;
+  const jab1Width = fontHelvetica.widthOfTextAtSize(jabatanText1, jabFontSize);
+  const jab2Width = fontHelvetica.widthOfTextAtSize(jabatanText2, jabFontSize);
 
-  // Nama Pejabat
-  doc.setFont("helvetica", "bold");
-  doc.setFontSize(9.5);
-  doc.setTextColor(11, 42, 107);
-  doc.text("Drs. Zulkifli, Apt.", pageWidth - 75, 183, { align: "center" });
-  doc.setFont("helvetica", "normal");
-  doc.setFontSize(8);
-  doc.setTextColor(100, 116, 139);
-  doc.text("NIP. 19680415 199403 1 002", pageWidth - 75, 187, { align: "center" });
+  page.drawText(jabatanText1, {
+    x: centerSignX - jab1Width / 2,
+    y: 205,
+    size: jabFontSize,
+    font: fontHelvetica,
+    color: rgb(0.1, 0.1, 0.1),
+  });
+  page.drawText(jabatanText2, {
+    x: centerSignX - jab2Width / 2,
+    y: 191,
+    size: jabFontSize,
+    font: fontHelvetica,
+    color: rgb(0.1, 0.1, 0.1),
+  });
 
-  // Simpan berkas PDF
-  const safeFilename = `Sertifikat-Garda-Ampera-${biodata.nama
-    .trim()
-    .replace(/\s+/g, "-")}.pdf`;
-  doc.save(safeFilename);
+  // Cap Stempel BBPOM Palembang (cap-bpom.png) -> sesuai -translate-x-20 & -translate-y-2
+  const stempelW = 86;
+  const stempelH = 86;
+  page.drawImage(capImage, {
+    x: centerSignX - 96,
+    y: 106,
+    width: stempelW,
+    height: stempelH,
+  });
+
+  // Tanda Tangan Elektronik Bu Yani (tte-bu-yani.png) -> sesuai translate-x-2
+  const ttdW = 105;
+  const ttdH = 70;
+  page.drawImage(tteImage, {
+    x: centerSignX - 28,
+    y: 108,
+    width: ttdW,
+    height: ttdH,
+  });
+
+  // Nama Pejabat: Yani Ardiyanti, SF, Apt.,M.Sc (Trebuchet / Helvetica Bold, tanpa NIP)
+  const pejabatNama = "Yani Ardiyanti, SF, Apt.,M.Sc";
+  const pejabatFontSize = 14;
+  const pejabatWidth = fontHelveticaBold.widthOfTextAtSize(
+    pejabatNama,
+    pejabatFontSize
+  );
+  page.drawText(pejabatNama, {
+    x: centerSignX - pejabatWidth / 2,
+    y: 92,
+    size: pejabatFontSize,
+    font: fontHelveticaBold,
+    color: rgb(0.05, 0.05, 0.05),
+  });
+
+  // 12. Simpan & Picu Download Otomatis di Browser
+  const pdfBytes = await pdfDoc.save();
+  const blob = new Blob([pdfBytes as any], { type: "application/pdf" });
+  const downloadUrl = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = downloadUrl;
+  const safeName = (biodata.nama || "Peserta").replace(/[^a-zA-Z0-9]/g, "_");
+  link.download = `Sertifikat-Garda-Ampera-${safeName}.pdf`;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(downloadUrl);
 }

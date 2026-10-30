@@ -39,6 +39,7 @@ export function GardaPdfSlideViewer({
 }: GardaPdfSlideViewerProps) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
+  const scrollAreaRef = useRef<HTMLDivElement | null>(null);
   const renderTaskRef = useRef<any>(null);
 
   const [pdfDoc, setPdfDoc] = useState<any | null>(null);
@@ -46,9 +47,91 @@ export function GardaPdfSlideViewer({
   const [loading, setLoading] = useState<boolean>(true);
   const [rendering, setRendering] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
-  const [scale, setScale] = useState<number>(1.25);
+  const [scale, setScale] = useState<number>(1.0);
   const [isFullscreen, setIsFullscreen] = useState<boolean>(false);
   const [fallbackToIframe, setFallbackToIframe] = useState<boolean>(false);
+  const [resizeKey, setResizeKey] = useState<number>(0);
+  const [isDragging, setIsDragging] = useState<boolean>(false);
+  const dragStartRef = useRef<{ startX: number; startY: number; scrollLeft: number; scrollTop: number }>({
+    startX: 0,
+    startY: 0,
+    scrollLeft: 0,
+    scrollTop: 0,
+  });
+
+  // Drag & Pan Handlers saat di-zoom
+  const handleMouseDown = (e: React.MouseEvent) => {
+    if (scale <= 1.0 || !scrollAreaRef.current) return;
+    setIsDragging(true);
+    dragStartRef.current = {
+      startX: e.clientX,
+      startY: e.clientY,
+      scrollLeft: scrollAreaRef.current.scrollLeft,
+      scrollTop: scrollAreaRef.current.scrollTop,
+    };
+  };
+
+  const handleMouseMove = (e: React.MouseEvent) => {
+    if (!isDragging || scale <= 1.0 || !scrollAreaRef.current) return;
+    e.preventDefault();
+    const dx = e.clientX - dragStartRef.current.startX;
+    const dy = e.clientY - dragStartRef.current.startY;
+    scrollAreaRef.current.scrollLeft = dragStartRef.current.scrollLeft - dx;
+    scrollAreaRef.current.scrollTop = dragStartRef.current.scrollTop - dy;
+  };
+
+  const handleMouseUp = () => {
+    setIsDragging(false);
+  };
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    if (scale <= 1.0 || !scrollAreaRef.current || e.touches.length !== 1) return;
+    setIsDragging(true);
+    const touch = e.touches[0];
+    dragStartRef.current = {
+      startX: touch.clientX,
+      startY: touch.clientY,
+      scrollLeft: scrollAreaRef.current.scrollLeft,
+      scrollTop: scrollAreaRef.current.scrollTop,
+    };
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (!isDragging || scale <= 1.0 || !scrollAreaRef.current || e.touches.length !== 1) return;
+    const touch = e.touches[0];
+    const dx = touch.clientX - dragStartRef.current.startX;
+    const dy = touch.clientY - dragStartRef.current.startY;
+    scrollAreaRef.current.scrollLeft = dragStartRef.current.scrollLeft - dx;
+    scrollAreaRef.current.scrollTop = dragStartRef.current.scrollTop - dy;
+  };
+
+  const handleTouchEnd = () => {
+    setIsDragging(false);
+  };
+
+  // Reset scroll posisi saat halaman atau scale berganti
+  useEffect(() => {
+    if (scrollAreaRef.current && scale <= 1.0) {
+      scrollAreaRef.current.scrollLeft = 0;
+      scrollAreaRef.current.scrollTop = 0;
+    }
+  }, [currentPage, scale]);
+
+  // Listener resize agar ukuran canvas selalu menyesuaikan saat layar di-rotate / resize
+  useEffect(() => {
+    let timeoutId: any;
+    const handleResize = () => {
+      clearTimeout(timeoutId);
+      timeoutId = setTimeout(() => {
+        setResizeKey((prev) => prev + 1);
+      }, 150);
+    };
+    window.addEventListener("resize", handleResize);
+    return () => {
+      window.removeEventListener("resize", handleResize);
+      clearTimeout(timeoutId);
+    };
+  }, []);
 
   // 1. Inisialisasi & Muat Berkas PDF menggunakan PDF.js
   useEffect(() => {
@@ -142,8 +225,11 @@ export function GardaPdfSlideViewer({
         // Auto-scale sesuai lebar container pada tampilan layar kecil
         const containerWidth = containerRef.current?.clientWidth || 800;
         const unscaledViewport = page.getViewport({ scale: 1 });
-        const fitScale = (containerWidth - 32) / unscaledViewport.width;
-        const effectiveScale = Math.max(0.6, Math.min(2.5, fitScale * scale));
+        const horizontalPadding = containerWidth < 640 ? 16 : 48;
+        const availableWidth = Math.max(200, containerWidth - horizontalPadding);
+        const fitScale = availableWidth / unscaledViewport.width;
+        // Skala efektif: izinkan skala menyesuaikan layar HP tanpa batas artifisial 0.6
+        const effectiveScale = Math.max(0.15, Math.min(3.5, fitScale * scale));
 
         const viewport = page.getViewport({ scale: effectiveScale });
 
@@ -151,8 +237,13 @@ export function GardaPdfSlideViewer({
         const outputScale = typeof window !== "undefined" ? window.devicePixelRatio || 1 : 1;
         canvas.width = Math.floor(viewport.width * outputScale);
         canvas.height = Math.floor(viewport.height * outputScale);
-        canvas.style.width = `${Math.floor(viewport.width)}px`;
-        canvas.style.height = `${Math.floor(viewport.height)}px`;
+
+        // Kunci aspek rasio secara proporsional sempurna tanpa squeeze
+        const displayWidth = Math.floor(viewport.width);
+        canvas.style.width = scale <= 1.0 ? "100%" : `${displayWidth}px`;
+        canvas.style.maxWidth = scale <= 1.0 ? `${displayWidth}px` : "none";
+        canvas.style.height = "auto";
+        canvas.style.aspectRatio = `${unscaledViewport.width} / ${unscaledViewport.height}`;
 
         const transform = outputScale !== 1 ? [outputScale, 0, 0, outputScale, 0, 0] : null;
 
@@ -189,7 +280,7 @@ export function GardaPdfSlideViewer({
         } catch {}
       }
     };
-  }, [pdfDoc, currentPage, scale, actualTotalPages, fallbackToIframe]);
+  }, [pdfDoc, currentPage, scale, actualTotalPages, fallbackToIframe, resizeKey]);
 
   // Handle Fullscreen Toggle
   const toggleFullscreen = () => {
@@ -212,9 +303,9 @@ export function GardaPdfSlideViewer({
   }, []);
 
   // Zoom Handlers
-  const handleZoomIn = () => setScale((prev) => Math.min(2.0, prev + 0.15));
-  const handleZoomOut = () => setScale((prev) => Math.max(0.7, prev - 0.15));
-  const handleResetZoom = () => setScale(1.25);
+  const handleZoomIn = () => setScale((prev) => Math.min(2.5, +(prev + 0.15).toFixed(2)));
+  const handleZoomOut = () => setScale((prev) => Math.max(0.6, +(prev - 0.15).toFixed(2)));
+  const handleResetZoom = () => setScale(1.0);
 
   const effectiveTotal = Math.max(actualTotalPages, totalPages);
   const isFirstPage = currentPage <= 1;
@@ -349,9 +440,22 @@ export function GardaPdfSlideViewer({
       {/* 3. AREA PRESENTASI KANVAS PDF                             */}
       {/* ========================================================= */}
       <div
-        className={`relative flex-1 flex items-center justify-center p-3 sm:p-6 overflow-auto bg-slate-950/80 min-h-[460px] sm:min-h-[580px] max-h-[80vh] ${
-          isFullscreen ? "max-h-[calc(100vh-120px)]" : ""
-        }`}
+        ref={scrollAreaRef}
+        onMouseDown={handleMouseDown}
+        onMouseMove={handleMouseMove}
+        onMouseUp={handleMouseUp}
+        onMouseLeave={handleMouseUp}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
+        className={`relative flex-1 p-2 sm:p-6 overflow-auto bg-slate-950/80 min-h-[220px] sm:min-h-[520px] max-h-[85vh] flex ${
+          scale > 1.0
+            ? "cursor-grab active:cursor-grabbing select-none"
+            : "items-center justify-center"
+        } ${isFullscreen ? "max-h-[calc(100vh-120px)] min-h-[calc(100vh-120px)]" : ""}`}
+        style={{
+          touchAction: scale > 1.0 ? "none" : "auto",
+        }}
       >
         {/* Loading Spinner */}
         {(loading || rendering) && (
@@ -363,19 +467,36 @@ export function GardaPdfSlideViewer({
           </div>
         )}
 
+        {/* Indikator Panduan Geser saat Zoom */}
+        {scale > 1.0 && (
+          <div className="absolute bottom-3 right-3 z-20 pointer-events-none flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-slate-900/90 backdrop-blur-md border border-slate-700/80 text-[11px] font-semibold text-slate-200 shadow-xl animate-fade-in">
+            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+            Geser layar untuk menjelajah slide
+          </div>
+        )}
+
         {/* Fallback to Iframe jika browser memblokir Canvas / WebWorker */}
         {fallbackToIframe ? (
-          <div className="w-full h-full min-h-[550px] bg-white rounded-xl overflow-hidden">
+          <div className="w-full h-full min-h-[320px] sm:min-h-[550px] bg-white rounded-xl overflow-hidden m-auto">
             <iframe
               src={`${pdfUrl}#page=${currentPage}&toolbar=0&navpanes=0`}
               title={title}
-              className="w-full h-full min-h-[550px] border-0"
+              className="w-full h-full min-h-[320px] sm:min-h-[550px] border-0"
             />
           </div>
         ) : (
           /* Actual PDF Page Canvas */
-          <div className="relative flex items-center justify-center shadow-2xl rounded-xl overflow-hidden bg-white border border-slate-700/50">
-            <canvas ref={canvasRef} className="block max-w-full h-auto" />
+          <div
+            className={`relative shadow-2xl rounded-xl bg-white border border-slate-700/50 m-auto transition-shadow ${
+              scale > 1.0
+                ? "w-max max-w-none"
+                : "max-w-full overflow-hidden inline-flex items-center justify-center"
+            }`}
+          >
+            <canvas
+              ref={canvasRef}
+              className="block h-auto object-contain pointer-events-none"
+            />
           </div>
         )}
       </div>

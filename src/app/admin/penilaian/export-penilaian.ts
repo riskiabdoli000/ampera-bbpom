@@ -1,7 +1,4 @@
-import ExcelJS from "exceljs";
-import jsPDF from "jspdf";
-import autoTable from "jspdf-autotable";
-import { PenilaianItem, PenilaianStats } from "@/app/actions/admin-penilaian";
+import type { PenilaianItem, PenilaianStats } from "@/app/actions/admin-penilaian";
 
 function formatTanggalIndo(dateInput: Date | string): string {
   const d = new Date(dateInput);
@@ -63,6 +60,7 @@ export async function exportPenilaianExcel(
   list: PenilaianItem[],
   stats: PenilaianStats
 ) {
+  const ExcelJS = (await import("exceljs")).default;
   const workbook = new ExcelJS.Workbook();
   workbook.creator = "Sistem Informasi AMPERA - BBPOM di Palembang";
   workbook.lastModifiedBy = "Admin BBPOM Palembang";
@@ -228,6 +226,10 @@ export async function exportPenilaianPdf(
   list: PenilaianItem[],
   stats: PenilaianStats
 ) {
+  const [{ default: jsPDF }, { default: autoTable }] = await Promise.all([
+    import("jspdf"),
+    import("jspdf-autotable"),
+  ]);
   const doc = new jsPDF({
     orientation: "landscape",
     unit: "mm",

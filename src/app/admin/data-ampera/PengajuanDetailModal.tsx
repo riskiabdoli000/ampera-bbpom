@@ -58,6 +58,32 @@ interface NewFileItem {
   sizeFormatted: string;
 }
 
+export function formatDurasiPenyelesaian(
+  startDate: Date | string,
+  endDate: Date | string
+): string {
+  const start = new Date(startDate).getTime();
+  const end = new Date(endDate).getTime();
+  const diffMs = Math.max(0, end - start);
+  const totalMinutes = Math.floor(diffMs / (1000 * 60));
+
+  if (totalMinutes < 1) {
+    const seconds = Math.max(1, Math.floor(diffMs / 1000));
+    return `${seconds} detik`;
+  }
+
+  const days = Math.floor(totalMinutes / (60 * 24));
+  const hours = Math.floor((totalMinutes % (60 * 24)) / 60);
+  const minutes = totalMinutes % 60;
+
+  const parts: string[] = [];
+  if (days > 0) parts.push(`${days} hari`);
+  if (hours > 0) parts.push(`${hours} jam`);
+  if (minutes > 0) parts.push(`${minutes} menit`);
+
+  return parts.join(" ");
+}
+
 export function PengajuanDetailModal({
   pengajuan,
   isOpen,
@@ -176,19 +202,6 @@ export function PengajuanDetailModal({
   };
 
   const handleUpdateStatus = () => {
-    // Validasi frontend minimal 2 lampiran jika status diproses/selesai atau ada catatan/berkas
-    const isUnderAction =
-      selectedStatus === "DIPROSES" ||
-      selectedStatus === "SELESAI" ||
-      catatanPetugas.trim().length > 0 ||
-      totalLampiran > 0;
-
-    if (isUnderAction && totalLampiran < 2) {
-      setValidationError(
-        `Bukti lampiran tindakan petugas minimal 2 berkas (saat ini ${totalLampiran} berkas). Silakan lampirkan minimal 2 berkas bukti sebelum menyimpan.`
-      );
-      return;
-    }
     setValidationError(null);
 
     startTransition(async () => {
@@ -325,7 +338,7 @@ export function PengajuanDetailModal({
           {/* Header */}
           <div className="flex items-center justify-between border-b border-slate-100 px-6 sm:px-7 py-5 dark:border-slate-800 bg-white dark:bg-slate-900">
             <div>
-              <div className="flex items-center gap-3">
+              <div className="flex flex-wrap items-center gap-2.5">
                 <span className="font-mono text-sm sm:text-base font-extrabold text-[#ff7a1a] dark:text-orange-400">
                   {pengajuan.kodePengajuan}
                 </span>
@@ -334,6 +347,12 @@ export function PengajuanDetailModal({
                 >
                   {badge.label}
                 </span>
+                {pengajuan.status === "SELESAI" && (
+                  <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100/80 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800 px-2.5 py-1 text-[11px] font-bold text-emerald-800 dark:text-emerald-300">
+                    <Clock className="h-3 w-3" />
+                    Selesai dalam {formatDurasiPenyelesaian(pengajuan.createdAt, pengajuan.updatedAt)}
+                  </span>
+                )}
               </div>
               <h2 className="mt-1 text-lg sm:text-xl font-black text-navy-900 dark:text-white font-brand">
                 {pengajuan.layanan.nama}
@@ -607,14 +626,14 @@ export function PengajuanDetailModal({
                   <ShieldCheck className="h-4 w-4 text-[#ff7a1a]" /> Tindakan Petugas BBPOM
                 </h3>
 
-                {/* Indikator Counter Minimal 2 Lampiran */}
-                {totalLampiran >= 2 ? (
+                {/* Indikator Lampiran Opsional */}
+                {totalLampiran > 0 ? (
                   <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-bold text-emerald-700 dark:border-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300">
-                    <CheckCircle2 className="h-3.5 w-3.5" /> {totalLampiran} Lampiran Terpenuhi (Bisa ditambah lagi)
+                    <CheckCircle2 className="h-3.5 w-3.5" /> {totalLampiran} Lampiran Bukti Terlampir
                   </span>
                 ) : (
-                  <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-xs font-bold text-amber-800 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-300">
-                    <AlertCircle className="h-3.5 w-3.5" /> Wajib Min. 2 Lampiran (Saat ini: {totalLampiran}/2)
+                  <span className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300">
+                    Lampiran Bukti Opsional
                   </span>
                 )}
               </div>
@@ -623,6 +642,39 @@ export function PengajuanDetailModal({
                 <div className="rounded-2xl border border-rose-200 bg-rose-50 p-4 text-xs font-semibold text-rose-800 dark:border-rose-900/60 dark:bg-rose-950/40 dark:text-rose-300 flex items-start gap-2.5">
                   <AlertCircle className="h-4 w-4 shrink-0 mt-0.5 text-rose-600 dark:text-rose-400" />
                   <span>{validationError}</span>
+                </div>
+              )}
+
+              {/* Informasi Waktu Penyelesaian Jika Status SELESAI */}
+              {(pengajuan.status === "SELESAI" || selectedStatus === "SELESAI") && (
+                <div className="rounded-2xl border border-emerald-200 bg-emerald-50/80 p-4 dark:border-emerald-800/70 dark:bg-emerald-950/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div className="flex items-start gap-3">
+                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-emerald-600 text-white shadow-xs mt-0.5">
+                      <Clock className="h-4 w-4" />
+                    </div>
+                    <div>
+                      <span className="text-xs font-extrabold uppercase tracking-wider text-emerald-800 dark:text-emerald-300 block">
+                        Waktu Penyelesaian Laporan Layanan
+                      </span>
+                      <p className="text-xs sm:text-sm font-bold text-navy-900 dark:text-white mt-0.5">
+                        Diselesaikan dalam{" "}
+                        <span className="text-emerald-700 dark:text-emerald-400 underline decoration-emerald-400/60">
+                          {formatDurasiPenyelesaian(
+                            pengajuan.createdAt,
+                            pengajuan.status === "SELESAI" ? pengajuan.updatedAt : new Date()
+                          )}
+                        </span>
+                      </p>
+                      <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+                        {pengajuan.status === "SELESAI"
+                          ? `Ditandai selesai pada ${new Date(pengajuan.updatedAt).toLocaleString("id-ID", {
+                              dateStyle: "long",
+                              timeStyle: "short",
+                            })} WIB`
+                          : "Estimasi waktu penyelesaian jika disimpan sekarang"}
+                      </p>
+                    </div>
+                  </div>
                 </div>
               )}
 
@@ -677,10 +729,10 @@ export function PengajuanDetailModal({
                 <div className="flex items-center justify-between">
                   <div>
                     <span className="text-xs font-extrabold uppercase tracking-wider text-slate-700 dark:text-slate-300 block">
-                      Bukti Lampiran Tindakan (Foto Hasil Uji Lab / Berita Acara / LHU)
+                      Bukti Lampiran Tindakan (Opsional • Foto Hasil Uji Lab / Berita Acara / LHU)
                     </span>
                     <span className="text-[11px] text-slate-500 dark:text-slate-400">
-                      Minimal 2 lampiran bukti • Mendukung banyak lampiran (&gt;2) • Foto dikompresi ke ~100KB • PDF disimpan utuh
+                      Opsional (tidak wajib) • Anda tetap dapat mengunggah foto (~100KB) atau dokumen PDF bila diperlukan
                     </span>
                   </div>
                   <button

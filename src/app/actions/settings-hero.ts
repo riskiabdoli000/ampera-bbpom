@@ -14,10 +14,16 @@ const heroKontenSchema = z.object({
 });
 
 export async function getHeroSettings() {
-  let konten = await prisma.heroKonten.findUnique({
-    where: { id: 1 },
-  });
+  const [existingKonten, slides] = await Promise.all([
+    prisma.heroKonten.findUnique({
+      where: { id: 1 },
+    }),
+    prisma.heroSlide.findMany({
+      orderBy: [{ urutan: "asc" }, { id: "asc" }],
+    }),
+  ]);
 
+  let konten = existingKonten;
   if (!konten) {
     konten = await prisma.heroKonten.create({
       data: {
@@ -30,10 +36,6 @@ export async function getHeroSettings() {
       },
     });
   }
-
-  const slides = await prisma.heroSlide.findMany({
-    orderBy: [{ urutan: "asc" }, { id: "asc" }],
-  });
 
   const isStorageConfigured = isSupabaseStorageConfigured();
 
@@ -154,8 +156,6 @@ export async function saveHeroKontenAction(data: {
       },
     });
 
-    revalidatePath("/admin/settings/hero");
-    revalidatePath("/admin/settings");
     revalidatePath("/");
 
     return { success: true, data: updated };
@@ -182,8 +182,16 @@ export async function createHeroSlideAction(formData: FormData) {
   let compressionStats: { originalSize: number; compressedSize: number } | null = null;
 
   try {
-    if (imageFile && imageFile.size > 0) {
-      const uploadResult = await uploadImage(imageFile, "hero");
+    const [uploadResult, maxUrutan] = await Promise.all([
+      imageFile && imageFile.size > 0
+        ? uploadImage(imageFile, "hero")
+        : Promise.resolve(null),
+      prisma.heroSlide.aggregate({
+        _max: { urutan: true },
+      }),
+    ]);
+
+    if (uploadResult) {
       imageUrl = uploadResult.url;
       imagePath = uploadResult.path;
       isLocalUpload = uploadResult.isLocal;
@@ -193,9 +201,6 @@ export async function createHeroSlideAction(formData: FormData) {
       };
     }
 
-    const maxUrutan = await prisma.heroSlide.aggregate({
-      _max: { urutan: true },
-    });
     const nextUrutan = (maxUrutan._max.urutan ?? 0) + 1;
 
     const newSlide = await prisma.heroSlide.create({
@@ -209,8 +214,6 @@ export async function createHeroSlideAction(formData: FormData) {
       },
     });
 
-    revalidatePath("/admin/settings/hero");
-    revalidatePath("/admin/settings");
     revalidatePath("/");
 
     function formatBytes(bytes: number) {
@@ -258,8 +261,6 @@ export async function updateHeroSlideAction(
       data,
     });
 
-    revalidatePath("/admin/settings/hero");
-    revalidatePath("/admin/settings");
     revalidatePath("/");
 
     return { success: true, data: updated };
@@ -281,20 +282,21 @@ export async function replaceHeroSlideImageAction(id: number, formData: FormData
   }
 
   try {
-    const oldSlide = await prisma.heroSlide.findUnique({
-      where: { id },
-    });
+    const [oldSlide, uploadRes] = await Promise.all([
+      prisma.heroSlide.findUnique({
+        where: { id },
+      }),
+      uploadImage(file, "hero"),
+    ]);
 
     if (!oldSlide) {
       return { success: false, error: "Slide tidak ditemukan." };
     }
 
-    const uploadRes = await uploadImage(file, "hero");
-
-    // Hapus foto lama otomatis dari Supabase Storage / file lokal jika ada
+    // Hapus foto lama otomatis di latar belakang
     const oldTarget = oldSlide.imagePath || oldSlide.imageUrl;
     if (oldTarget) {
-      await deleteImage(oldTarget);
+      deleteImage(oldTarget).catch(() => {});
     }
 
     const updated = await prisma.heroSlide.update({
@@ -305,8 +307,6 @@ export async function replaceHeroSlideImageAction(id: number, formData: FormData
       },
     });
 
-    revalidatePath("/admin/settings/hero");
-    revalidatePath("/admin/settings");
     revalidatePath("/");
 
     function formatBytes(bytes: number) {
@@ -341,16 +341,18 @@ export async function deleteHeroSlideAction(id: number) {
   await verifyAdminSession();
 
   try {
-    const slide = await prisma.heroSlide.findUnique({
-      where: { id },
-    });
+    const [slide, totalSlides] = await Promise.all([
+      prisma.heroSlide.findUnique({
+        where: { id },
+      }),
+      prisma.heroSlide.count(),
+    ]);
 
     if (!slide) {
       return { success: false, error: "Slide tidak ditemukan." };
     }
 
     // Pastikan tidak menghapus jika hanya tersisa 1 slide aktif
-    const totalSlides = await prisma.heroSlide.count();
     if (totalSlides <= 1) {
       return {
         success: false,
@@ -365,11 +367,9 @@ export async function deleteHeroSlideAction(id: number) {
     });
 
     if (targetToDelete) {
-      await deleteImage(targetToDelete);
+      deleteImage(targetToDelete).catch(() => {});
     }
 
-    revalidatePath("/admin/settings/hero");
-    revalidatePath("/admin/settings");
     revalidatePath("/");
 
     return { success: true };

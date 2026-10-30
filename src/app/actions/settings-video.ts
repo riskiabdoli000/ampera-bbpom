@@ -80,8 +80,6 @@ export async function saveVideoSettingsAction(data: {
       },
     });
 
-    revalidatePath("/admin/settings/video");
-    revalidatePath("/admin/settings");
     revalidatePath("/");
 
     return {

@@ -1,19 +1,18 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import {
   ClipboardList,
   GraduationCap,
-  Clock,
   CheckCircle2,
   AlertTriangle,
   ArrowRight,
   ArrowLeft,
   RotateCcw,
-  Sparkles,
   BookOpen,
   Award,
   HelpCircle,
+  KeyRound,
 } from "lucide-react";
 import { SoalUjian } from "./types";
 
@@ -44,10 +43,45 @@ export function QuizView({
 }: QuizViewProps) {
   const [answers, setAnswers] = useState<Record<number, string>>(savedAnswers);
   const [currentIdx, setCurrentIdx] = useState(0);
+  const paletteRef = useRef<HTMLDivElement>(null);
+
+  // Sinkronkan state jawaban & reset nomor soal ke #1 saat mengulang (retry)
+  useEffect(() => {
+    setAnswers(savedAnswers);
+  }, [savedAnswers]);
+
+  useEffect(() => {
+    if (!isSubmitted) {
+      setCurrentIdx(0);
+    }
+  }, [attemptsCount, isSubmitted]);
+
+  // Auto-scroll hanya pada kontainer nomor soal (tidak menggeser window/halaman browser)
+  useEffect(() => {
+    if (!paletteRef.current) return;
+    const container = paletteRef.current;
+    const activeBtn = container.querySelector<HTMLButtonElement>(`[data-qidx="${currentIdx}"]`);
+    if (activeBtn) {
+      const containerRect = container.getBoundingClientRect();
+      const btnRect = activeBtn.getBoundingClientRect();
+      const offsetWithinContainer = btnRect.left - containerRect.left + container.scrollLeft;
+      const targetScrollLeft = offsetWithinContainer - container.clientWidth / 2 + btnRect.width / 2;
+      container.scrollTo({ left: Math.max(0, targetScrollLeft), behavior: "smooth" });
+    }
+  }, [currentIdx]);
 
   const isPreTest = type === "pre-test";
   const title = isPreTest ? "Pre-Test Garda Ampera" : "Post-Test Evaluasi Kelulusan";
-  const badgeLabel = isPreTest ? "Langkah 2 dari 6 • Pre-Test" : "Langkah 4 dari 6 • Post-Test";
+  const badgeLabel = isPreTest
+    ? "Langkah 2 dari 6 • Pre-Test"
+    : attemptsCount > 1
+    ? `Langkah 4 dari 6 • Post-Test (Percobaan #${attemptsCount})`
+    : "Langkah 4 dari 6 • Post-Test";
+
+  // Bantuan kunci jawaban aktif pada Post-Test percobaan ke-3 (setelah gagal 2 kali)
+  // Hanya diberikan untuk 8 soal pertama (Soal #1 s.d. #8), sedangkan Soal #9 & #10 tanpa kunci
+  const showAnswerKeyHelper = !isPreTest && attemptsCount >= 3;
+  const isQuestionWithKey = showAnswerKeyHelper && currentIdx < 8;
 
   if (!soalList || soalList.length === 0) {
     return (
@@ -99,35 +133,6 @@ export function QuizView({
   const handleSubmit = () => {
     const finalScore = calculateScore(answers);
     onSubmit(answers, finalScore);
-  };
-
-  // Demo Helpers untuk Reviewer
-  const handleQuickFillPass = () => {
-    const perfectAnswers: Record<number, string> = {};
-    soalList.forEach((s, idx) => {
-      // 9 benar, 1 salah untuk nilai 90 yang natural
-      if (idx === 3) {
-        const wrongOption = s.pilihan.find((p) => p.id !== s.jawabanBenar)?.id || "A";
-        perfectAnswers[s.id] = wrongOption;
-      } else {
-        perfectAnswers[s.id] = s.jawabanBenar;
-      }
-    });
-    setAnswers(perfectAnswers);
-  };
-
-  const handleQuickFillFail = () => {
-    const failAnswers: Record<number, string> = {};
-    soalList.forEach((s, idx) => {
-      // 5 benar, 5 salah untuk nilai 50 (< 70)
-      if (idx < 5) {
-        failAnswers[s.id] = s.jawabanBenar;
-      } else {
-        const wrongOption = s.pilihan.find((p) => p.id !== s.jawabanBenar)?.id || "C";
-        failAnswers[s.id] = wrongOption;
-      }
-    });
-    setAnswers(failAnswers);
   };
 
   // =========================================================================
@@ -202,13 +207,27 @@ export function QuizView({
                   diunduh.
                 </p>
               </div>
+            ) : attemptsCount >= 2 ? (
+              <div className="bg-amber-950/50 backdrop-blur-sm rounded-xl p-4 text-xs sm:text-sm text-amber-100 text-left border border-amber-400/40 space-y-1.5">
+                <p className="font-semibold flex items-center gap-1.5 text-amber-200">
+                  <KeyRound className="w-4 h-4 text-amber-300 shrink-0" />
+                  Bantuan Kunci Jawaban Akan Diaktifkan pada Percobaan Berikutnya!
+                </p>
+                <p className="text-amber-100/90 leading-relaxed">
+                  Anda telah menyelesaikan <strong>{attemptsCount} kali percobaan</strong> dengan nilai{" "}
+                  <strong>{submittedScore}</strong> (di bawah KKM 70). Saat Anda menekan tombol{" "}
+                  <strong>Ulangi Pengerjaan Post-Test</strong> di bawah, sistem akan menampilkan{" "}
+                  <strong>kunci jawaban pada 8 dari 10 soal (Soal #1 s.d. #8)</strong> agar Anda dapat
+                  lulus ke tahap Evaluasi dan mengunduh Sertifikat.
+                </p>
+              </div>
             ) : (
               <div className="bg-red-950/40 backdrop-blur-sm rounded-xl p-4 text-xs sm:text-sm text-rose-100 text-left border border-rose-500/30">
-                <p className="font-semibold mb-1">⚠️ Batas Kelulusan Belum Tercapai:</p>
+                <p className="font-semibold mb-1">⚠️ Batas Kelulusan Belum Tercapai (Percobaan #1):</p>
                 <p className="text-rose-200">
                   Batas kelulusan minimal (KKM) Post-Test adalah <strong>70</strong>. Nilai
-                  Anda adalah <strong>{submittedScore}</strong>. Mohon ulangi pengerjaan
-                  Post-Test atau pelajari kembali modul materi agar pemahaman Anda lebih matang.
+                  Anda adalah <strong>{submittedScore}</strong>. Silakan ulangi pengerjaan
+                  Post-Test (Percobaan ke-2 belum disertai kunci jawaban) atau pelajari kembali modul materi.
                 </p>
               </div>
             )}
@@ -216,33 +235,33 @@ export function QuizView({
         </div>
 
         {/* Action Buttons */}
-        <div className="p-6 sm:p-8 flex flex-col sm:flex-row items-center justify-between gap-4 bg-slate-50 dark:bg-slate-900/50">
+        <div className="p-4 sm:p-8 flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-4 bg-slate-50 dark:bg-slate-900/50">
           {isPreTest ? (
             <>
-              <p className="text-xs text-slate-500 dark:text-slate-400">
+              <p className="text-xs text-slate-500 dark:text-slate-400 text-center sm:text-left">
                 Langkah berikutnya: Membaca 3 Materi Edukasi (Slide demi Slide).
               </p>
               <button
                 type="button"
                 onClick={onProceed}
-                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-navy-900 hover:bg-blue-800 text-white font-bold text-sm shadow-md transition-all hover:translate-x-0.5 cursor-pointer"
+                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-4 py-2.5 sm:px-6 sm:py-3 rounded-xl bg-navy-900 hover:bg-blue-800 text-white font-bold text-xs sm:text-sm shadow-md transition-all hover:translate-x-0.5 cursor-pointer whitespace-nowrap"
               >
                 Lanjut ke Materi Edukasi
-                <ArrowRight className="w-4 h-4" />
+                <ArrowRight className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />
               </button>
             </>
           ) : isPassed ? (
             <>
-              <p className="text-xs text-slate-500 dark:text-slate-400">
+              <p className="text-xs text-slate-500 dark:text-slate-400 text-center sm:text-left">
                 Wajib isi evaluasi sistem untuk membuka unduh sertifikat.
               </p>
               <button
                 type="button"
                 onClick={onProceed}
-                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-sm shadow-md shadow-emerald-600/20 transition-all hover:translate-x-0.5 cursor-pointer"
+                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-4 py-2.5 sm:px-6 sm:py-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs sm:text-sm shadow-md shadow-emerald-600/20 transition-all hover:translate-x-0.5 cursor-pointer whitespace-nowrap"
               >
                 Lanjut ke Evaluasi Sistem
-                <ArrowRight className="w-4 h-4" />
+                <ArrowRight className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />
               </button>
             </>
           ) : (
@@ -251,19 +270,21 @@ export function QuizView({
                 <button
                   type="button"
                   onClick={onReviewMateri}
-                  className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 hover:bg-white dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 font-semibold text-sm transition-all cursor-pointer"
+                  className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-3.5 py-2.5 sm:px-4 sm:py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 hover:bg-white dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 font-semibold text-xs sm:text-sm transition-all cursor-pointer whitespace-nowrap"
                 >
-                  <BookOpen className="w-4 h-4 text-blue-600" />
+                  <BookOpen className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-blue-600 shrink-0" />
                   Pelajari Ulang Materi
                 </button>
               )}
               <button
                 type="button"
                 onClick={onRetry}
-                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-amber-600 hover:bg-amber-500 text-white font-bold text-sm shadow-md shadow-amber-600/20 transition-all hover:scale-[1.02] cursor-pointer"
+                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-4 py-2.5 sm:px-6 sm:py-3 rounded-xl bg-amber-600 hover:bg-amber-500 text-white font-bold text-xs sm:text-sm shadow-md shadow-amber-600/20 transition-all hover:scale-[1.02] cursor-pointer whitespace-nowrap"
               >
-                <RotateCcw className="w-4 h-4" />
-                Ulangi Pengerjaan Post-Test
+                <RotateCcw className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />
+                {attemptsCount >= 2
+                  ? `Ulangi Post-Test (Percobaan #${attemptsCount + 1} + Bantuan Kunci Jawaban)`
+                  : `Ulangi Pengerjaan Post-Test (Percobaan #${attemptsCount + 1})`}
               </button>
             </>
           )}
@@ -292,89 +313,90 @@ export function QuizView({
                 : "Jawab 10 soal evaluasi materi. Batas minimal kelulusan (KKM) adalah nilai 70."}
             </p>
           </div>
-
-          {/* Reviewer Quick Buttons */}
-          <div className="flex flex-wrap items-center gap-2">
-            {isPreTest ? (
-              <button
-                type="button"
-                onClick={handleQuickFillPass}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-sky-200 text-xs font-semibold border border-white/20 transition-colors cursor-pointer"
-                title="Bantu isi otomatis untuk uji coba"
-              >
-                <Sparkles className="w-3.5 h-3.5" />
-                ⚡ Jawab Otomatis (Demo)
-              </button>
-            ) : (
-              <>
-                <button
-                  type="button"
-                  onClick={handleQuickFillPass}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-200 text-xs font-semibold border border-emerald-400/30 transition-colors cursor-pointer"
-                  title="Simulasi Nilai Lulus (90) untuk lanjut ke Evaluasi & Sertifikat"
-                >
-                  <Sparkles className="w-3.5 h-3.5 text-emerald-300" />
-                  ⚡ Simulasi Lulus (90)
-                </button>
-                <button
-                  type="button"
-                  onClick={handleQuickFillFail}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 text-amber-200 text-xs font-semibold border border-amber-400/30 transition-colors cursor-pointer"
-                  title="Simulasi Nilai Gagal (50) untuk menguji fitur ulangi Post-Test"
-                >
-                  <Sparkles className="w-3.5 h-3.5 text-amber-300" />
-                  ⚡ Simulasi Remidi (50)
-                </button>
-              </>
-            )}
-          </div>
         </div>
       </div>
 
+      {/* Banner Bantuan Kunci Jawaban (Hanya tampil saat Post-Test Percobaan >= 3) */}
+      {showAnswerKeyHelper && (
+        <div className="bg-emerald-50 dark:bg-emerald-950/40 border-b border-emerald-200 dark:border-emerald-800/60 px-4 sm:px-6 py-3 flex items-start sm:items-center gap-3 text-xs text-emerald-900 dark:text-emerald-200">
+          <div className="w-7 h-7 rounded-lg bg-emerald-600 text-white flex items-center justify-center shrink-0 mt-0.5 sm:mt-0">
+            <KeyRound className="w-4 h-4" />
+          </div>
+          <div className="flex-1 leading-relaxed">
+            <strong className="font-bold">Bantuan Kunci Jawaban Aktif (Percobaan #{attemptsCount}):</strong>{" "}
+            Kunci jawaban telah ditandai pada <strong>8 soal pertama (Soal #1 s.d. #8)</strong>. Silakan klik sendiri pilihan jawaban yang bertanda{" "}
+            <span className="inline-flex items-center px-1.5 py-0.5 rounded bg-emerald-600 text-white font-bold text-[10px]">
+              ✓ Kunci Jawaban
+            </span>
+            , sedangkan <strong>Soal #9 dan #10</strong> tetap dijawab secara mandiri.
+          </div>
+        </div>
+      )}
+
       {/* Progress & Palette Strip */}
-      <div className="bg-slate-50 dark:bg-slate-800/60 px-6 py-3.5 border-b border-slate-200 dark:border-slate-800 flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-2">
-          <span className="text-xs font-bold text-slate-700 dark:text-slate-300">
+      <div className="bg-slate-50 dark:bg-slate-800/60 px-4 sm:px-6 py-3 border-b border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2.5">
+        <div className="flex items-center gap-2 text-xs">
+          <span className="font-bold text-slate-700 dark:text-slate-300 whitespace-nowrap">
             Terjawab: {answeredCount} dari {soalList.length} Soal
           </span>
-          <span className="text-xs text-slate-400">•</span>
-          <span className="text-xs text-slate-500 dark:text-slate-400">
+          <span className="text-slate-400">•</span>
+          <span className="text-slate-500 dark:text-slate-400 truncate">
             Kategori: <strong className="text-blue-600 dark:text-blue-400">{currentSoal.kategori}</strong>
           </span>
         </div>
 
-        {/* Soal Palette */}
-        <div className="flex items-center gap-1.5">
-          {soalList.map((s, idx) => {
-            const hasAnswer = Boolean(answers[s.id]);
-            const isSelected = idx === currentIdx;
+        {/* Soal Palette (Bisa di-slide/geser di mobile tanpa scrollbar) */}
+        <div
+          ref={paletteRef}
+          className="w-full sm:w-auto overflow-x-auto py-1 scroll-smooth no-scrollbar [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
+        >
+          <div className="flex items-center gap-1.5 min-w-max">
+            {soalList.map((s, idx) => {
+              const hasAnswer = Boolean(answers[s.id]);
+              const isSelected = idx === currentIdx;
 
-            return (
-              <button
-                key={s.id}
-                type="button"
-                onClick={() => setCurrentIdx(idx)}
-                className={`w-7 h-7 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                  isSelected
-                    ? "bg-navy-900 dark:bg-blue-600 text-white ring-2 ring-blue-300 dark:ring-blue-800"
-                    : hasAnswer
-                    ? "bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700"
-                    : "bg-white dark:bg-slate-800 text-slate-500 border border-slate-200 dark:border-slate-700 hover:bg-slate-100"
-                }`}
-              >
-                {idx + 1}
-              </button>
-            );
-          })}
+              return (
+                <button
+                  key={s.id}
+                  data-qidx={idx}
+                  type="button"
+                  onClick={() => setCurrentIdx(idx)}
+                  className={`shrink-0 w-8 h-8 sm:w-7 sm:h-7 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                    isSelected
+                      ? "bg-navy-900 dark:bg-blue-600 text-white ring-2 ring-blue-300 dark:ring-blue-800 scale-105"
+                      : hasAnswer
+                      ? "bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700"
+                      : "bg-white dark:bg-slate-800 text-slate-500 border border-slate-200 dark:border-slate-700 hover:bg-slate-100"
+                  }`}
+                >
+                  {idx + 1}
+                </button>
+              );
+            })}
+          </div>
         </div>
       </div>
 
       {/* Soal Active Content */}
       <div className="p-6 sm:p-8 space-y-6">
         <div>
-          <span className="text-xs font-extrabold uppercase tracking-widest text-blue-600 dark:text-blue-400">
-            Pertanyaan #{currentIdx + 1}
-          </span>
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <span className="text-xs font-extrabold uppercase tracking-widest text-blue-600 dark:text-blue-400">
+              Pertanyaan #{currentIdx + 1}
+            </span>
+            {showAnswerKeyHelper && (
+              isQuestionWithKey ? (
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-100 dark:bg-emerald-950/70 border border-emerald-300 dark:border-emerald-700 text-emerald-800 dark:text-emerald-300 text-[11px] font-bold">
+                  <KeyRound className="w-3 h-3" />
+                  Bantuan Kunci Jawaban ({currentIdx + 1}/8)
+                </span>
+              ) : (
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-amber-100 dark:bg-amber-950/70 border border-amber-300 dark:border-amber-700 text-amber-800 dark:text-amber-300 text-[11px] font-bold">
+                  Soal Mandiri (Tanpa Kunci Jawaban)
+                </span>
+              )
+            )}
+          </div>
           <h3 className="text-lg sm:text-xl font-bold text-navy-900 dark:text-white mt-1.5 leading-relaxed">
             {currentSoal.pertanyaan}
           </h3>
@@ -384,6 +406,7 @@ export function QuizView({
         <div className="space-y-3">
           {currentSoal.pilihan.map((pil) => {
             const isPicked = answers[currentSoal.id] === pil.id;
+            const isKeyOption = isQuestionWithKey && pil.id === currentSoal.jawabanBenar;
 
             return (
               <button
@@ -393,6 +416,8 @@ export function QuizView({
                 className={`w-full text-left p-4 rounded-xl border transition-all flex items-start gap-3.5 group cursor-pointer ${
                   isPicked
                     ? "border-blue-600 dark:border-blue-500 bg-blue-50/70 dark:bg-blue-950/40 text-navy-950 dark:text-blue-100 shadow-sm"
+                    : isKeyOption
+                    ? "border-emerald-400 dark:border-emerald-600 bg-emerald-50/40 dark:bg-emerald-950/20 text-slate-800 dark:text-slate-200 hover:bg-emerald-50/70"
                     : "border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 bg-white dark:bg-slate-800/80 text-slate-700 dark:text-slate-300 hover:bg-slate-50/50"
                 }`}
               >
@@ -400,12 +425,22 @@ export function QuizView({
                   className={`w-8 h-8 rounded-lg flex items-center justify-center font-bold text-xs shrink-0 transition-colors ${
                     isPicked
                       ? "bg-blue-600 text-white"
+                      : isKeyOption
+                      ? "bg-emerald-600 text-white"
                       : "bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 group-hover:bg-slate-200"
                   }`}
                 >
                   {pil.id}
                 </span>
-                <span className="text-sm pt-1 leading-snug">{pil.teks}</span>
+                <div className="flex-1 flex flex-col sm:flex-row sm:items-center justify-between gap-2 pt-1">
+                  <span className="text-sm leading-snug">{pil.teks}</span>
+                  {isKeyOption && (
+                    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-emerald-600 text-white text-[11px] font-bold shrink-0 self-start sm:self-center shadow-xs">
+                      <KeyRound className="w-3 h-3" />
+                      ✓ Kunci Jawaban
+                    </span>
+                  )}
+                </div>
               </button>
             );
           })}
@@ -440,13 +475,13 @@ export function QuizView({
             type="button"
             disabled={!isAllAnswered}
             onClick={handleSubmit}
-            className={`w-full sm:w-auto px-6 py-3 rounded-xl font-bold text-sm shadow-md transition-all cursor-pointer inline-flex items-center justify-center gap-2 ${
+            className={`w-full sm:w-auto px-4 py-2.5 sm:px-6 sm:py-3 rounded-xl font-bold text-xs sm:text-sm shadow-md transition-all cursor-pointer inline-flex items-center justify-center gap-2 whitespace-nowrap ${
               isAllAnswered
                 ? "bg-navy-900 hover:bg-blue-800 text-white shadow-navy-900/20 hover:scale-[1.01]"
                 : "bg-slate-200 dark:bg-slate-800 text-slate-400 cursor-not-allowed"
             }`}
           >
-            <CheckCircle2 className="w-4 h-4" />
+            <CheckCircle2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />
             {isAllAnswered
               ? isPreTest
                 ? "Kirim Jawaban & Lihat Skor Pre-Test"

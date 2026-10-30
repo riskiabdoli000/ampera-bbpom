@@ -9,20 +9,25 @@ import {
   Briefcase,
   Building2,
   GraduationCap,
-  Sparkles,
   ArrowRight,
   ShieldCheck,
   AlertCircle,
   CheckCircle2,
   RefreshCw,
+  Award,
 } from "lucide-react";
 import { BiodataGarda } from "./types";
-import { CONTOH_BIODATA_DEMO } from "./data/mock-data";
-import { lookupGardaTamuByNikAction } from "@/app/actions/garda-ampera";
+import {
+  lookupGardaTamuByNikAction,
+  GardaTamuLookupResult,
+} from "@/app/actions/garda-ampera";
+
+export type ExistingCertificateInfo = NonNullable<GardaTamuLookupResult["existingCertificate"]>;
 
 interface BiodataFormProps {
   initialData: BiodataGarda;
   onSubmit: (data: BiodataGarda) => void;
+  onViewExistingCertificate?: (cert: ExistingCertificateInfo) => void;
 }
 
 const PENDIDIKAN_OPTIONS = [
@@ -48,11 +53,18 @@ const PEKERJAAN_OPTIONS = [
   "Masyarakat Umum / Lainnya",
 ];
 
-export function BiodataForm({ initialData, onSubmit }: BiodataFormProps) {
+export function BiodataForm({
+  initialData,
+  onSubmit,
+  onViewExistingCertificate,
+}: BiodataFormProps) {
   const [formData, setFormData] = useState<BiodataGarda>(initialData);
   const [errors, setErrors] = useState<Partial<Record<keyof BiodataGarda, string>>>({});
   const [isSearchingNik, setIsSearchingNik] = useState(false);
+  const [isVerifyingSubmit, setIsVerifyingSubmit] = useState(false);
   const [tamuMatchNotice, setTamuMatchNotice] = useState<string | null>(null);
+  const [alreadyCompletedCert, setAlreadyCompletedCert] =
+    useState<ExistingCertificateInfo | null>(null);
 
   const handleLookupNik = async (nikToLookup?: string) => {
     const rawNik = nikToLookup ?? formData.nik;
@@ -62,6 +74,7 @@ export function BiodataForm({ initialData, onSubmit }: BiodataFormProps) {
 
     setIsSearchingNik(true);
     setTamuMatchNotice(null);
+    setAlreadyCompletedCert(null);
 
     try {
       const res = await lookupGardaTamuByNikAction(cleanNik);
@@ -95,9 +108,13 @@ export function BiodataForm({ initialData, onSubmit }: BiodataFormProps) {
           return copy;
         });
 
-        setTamuMatchNotice(
-          `Data tamu cocok di database (${res.data.nama})! Biodata otomatis disinkronkan.`
-        );
+        if (res.alreadyCompleted && res.existingCertificate) {
+          setAlreadyCompletedCert(res.existingCertificate);
+        } else {
+          setTamuMatchNotice(
+            `Data tamu cocok di database (${res.data.nama})! Biodata otomatis disinkronkan.`
+          );
+        }
       }
     } catch (err) {
       console.warn("Gagal lookup NIK:", err);
@@ -117,17 +134,12 @@ export function BiodataForm({ initialData, onSubmit }: BiodataFormProps) {
 
     if (name === "nik") {
       setTamuMatchNotice(null);
+      setAlreadyCompletedCert(null);
       const digitsOnly = value.replace(/\D/g, "");
       if (digitsOnly.length === 16) {
         handleLookupNik(digitsOnly);
       }
     }
-  };
-
-  const handleQuickFill = () => {
-    setFormData(CONTOH_BIODATA_DEMO);
-    setErrors({});
-    setTamuMatchNotice(null);
   };
 
   const validate = (): boolean => {
@@ -177,11 +189,26 @@ export function BiodataForm({ initialData, onSubmit }: BiodataFormProps) {
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (validate()) {
-      onSubmit(formData);
+    if (!validate()) return;
+    if (alreadyCompletedCert) return;
+
+    setIsVerifyingSubmit(true);
+    try {
+      const checkRes = await lookupGardaTamuByNikAction(formData.nik.trim());
+      if (checkRes.alreadyCompleted && checkRes.existingCertificate) {
+        setAlreadyCompletedCert(checkRes.existingCertificate);
+        setTamuMatchNotice(null);
+        return;
+      }
+    } catch (err) {
+      console.warn("Gagal verifikasi status kelulusan NIK:", err);
+    } finally {
+      setIsVerifyingSubmit(false);
     }
+
+    onSubmit(formData);
   };
 
   return (
@@ -203,22 +230,49 @@ export function BiodataForm({ initialData, onSubmit }: BiodataFormProps) {
               secara resmi pada Sertifikat Kelulusan Anda.
             </p>
           </div>
-
-          {/* Quick Fill Button untuk Reviewer */}
-          <button
-            type="button"
-            onClick={handleQuickFill}
-            className="self-start sm:self-center inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-navy-950 font-bold text-xs shadow-md transition-transform active:scale-95 cursor-pointer whitespace-nowrap"
-            title="Isi otomatis data untuk mempercepat proses peninjauan"
-          >
-            <Sparkles className="w-4 h-4" />
-            ⚡ Isi Contoh Data Demo
-          </button>
         </div>
       </div>
 
       {/* Form Content */}
       <form onSubmit={handleSubmit} className="p-6 sm:p-8 space-y-6">
+        {/* Peringatan Jika NIK Sudah Pernah Lulus & Mendapatkan Sertifikat */}
+        {alreadyCompletedCert && (
+          <div className="p-4 sm:p-5 rounded-2xl bg-amber-50 dark:bg-amber-950/40 border-2 border-amber-300 dark:border-amber-700 text-amber-950 dark:text-amber-100 space-y-3 animate-fade-up">
+            <div className="flex items-start gap-3">
+              <div className="w-10 h-10 rounded-xl bg-amber-500 text-white flex items-center justify-center shrink-0 mt-0.5 shadow-sm">
+                <Award className="w-5 h-5" />
+              </div>
+              <div className="space-y-1 flex-1">
+                <h4 className="text-sm sm:text-base font-extrabold text-amber-950 dark:text-amber-200">
+                  NIK Ini Sudah Menyelesaikan Program Garda Ampera
+                </h4>
+                <p className="text-xs sm:text-sm text-amber-900/90 dark:text-amber-200/90 leading-relaxed">
+                  Peserta atas nama <strong>{alreadyCompletedCert.biodata.nama}</strong> (NIK:{" "}
+                  <span className="font-mono font-bold">{alreadyCompletedCert.biodata.nik}</span>)
+                  tercatat telah lulus dan menerima Sertifikat Nomor{" "}
+                  <strong className="font-mono">{alreadyCompletedCert.nomorSertifikat}</strong> pada{" "}
+                  <strong>{alreadyCompletedCert.tanggalLulus}</strong>. Sesuai ketentuan,{" "}
+                  <strong>setiap peserta hanya dapat mengikuti program ini 1 kali</strong>.
+                </p>
+              </div>
+            </div>
+
+            {onViewExistingCertificate && (
+              <div className="pt-1 flex justify-end">
+                <button
+                  type="button"
+                  onClick={() => onViewExistingCertificate(alreadyCompletedCert)}
+                  className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs sm:text-sm shadow-md shadow-emerald-600/20 transition-all hover:scale-[1.01] cursor-pointer"
+                >
+                  <Award className="w-4 h-4" />
+                  Lihat / Unduh Kembali Sertifikat Saya
+                  <ArrowRight className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {/* NIK */}
           <div>
@@ -257,7 +311,9 @@ export function BiodataForm({ initialData, onSubmit }: BiodataFormProps) {
                 onChange={handleChange}
                 placeholder="16 digit NIK sesuai KTP"
                 className={`w-full pl-10 pr-10 py-2.5 rounded-xl border text-sm transition-all focus:outline-none focus:ring-2 ${
-                  tamuMatchNotice
+                  alreadyCompletedCert
+                    ? "border-amber-500 focus:ring-amber-300 bg-amber-50/30 dark:bg-amber-950/20 text-slate-900 dark:text-white"
+                    : tamuMatchNotice
                     ? "border-emerald-500 focus:ring-emerald-200 bg-emerald-50/20 dark:bg-emerald-950/10 text-slate-900 dark:text-white"
                     : errors.nik
                     ? "border-red-500 focus:ring-red-300 bg-red-50/30 dark:bg-red-950/20 text-slate-900 dark:text-white"
@@ -267,13 +323,15 @@ export function BiodataForm({ initialData, onSubmit }: BiodataFormProps) {
               <div className="absolute inset-y-0 right-0 pr-3.5 flex items-center pointer-events-none">
                 {isSearchingNik ? (
                   <RefreshCw className="w-4 h-4 text-blue-600 animate-spin" />
+                ) : alreadyCompletedCert ? (
+                  <AlertCircle className="w-4 h-4 text-amber-600" />
                 ) : tamuMatchNotice ? (
                   <CheckCircle2 className="w-4 h-4 text-emerald-600" />
                 ) : null}
               </div>
             </div>
 
-            {tamuMatchNotice && (
+            {tamuMatchNotice && !alreadyCompletedCert && (
               <div className="mt-2 p-2.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-200 text-xs flex items-center justify-between gap-2 animate-fade-up">
                 <div className="flex items-center gap-1.5 min-w-0">
                   <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
@@ -543,10 +601,19 @@ export function BiodataForm({ initialData, onSubmit }: BiodataFormProps) {
 
           <button
             type="submit"
-            className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-navy-900 hover:bg-blue-800 text-white font-bold text-sm shadow-md shadow-navy-900/20 transition-all hover:translate-x-0.5 cursor-pointer"
+            disabled={Boolean(alreadyCompletedCert) || isVerifyingSubmit}
+            className={`w-full sm:w-auto inline-flex items-center justify-center gap-2 px-4 py-2.5 sm:px-6 sm:py-3 rounded-xl font-bold text-xs sm:text-sm transition-all whitespace-nowrap ${
+              alreadyCompletedCert
+                ? "bg-slate-200 dark:bg-slate-800 text-slate-400 cursor-not-allowed"
+                : "bg-navy-900 hover:bg-blue-800 text-white shadow-md shadow-navy-900/20 hover:translate-x-0.5 cursor-pointer"
+            }`}
           >
-            Simpan & Mulai Pre-Test
-            <ArrowRight className="w-4 h-4" />
+            {isVerifyingSubmit
+              ? "Memeriksa Status NIK..."
+              : alreadyCompletedCert
+              ? "NIK Sudah Pernah Mengikuti"
+              : "Simpan & Mulai Pre-Test"}
+            <ArrowRight className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
           </button>
         </div>
       </form>

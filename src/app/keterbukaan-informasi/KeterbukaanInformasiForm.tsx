@@ -32,6 +32,7 @@ import {
   type KeterbukaanInformasiResponse,
 } from "@/app/actions/keterbukaan-informasi";
 import { lookupNikAction } from "@/app/actions/lookup-nik";
+import { ServiceSavingOverlay } from "@/components/common/ServiceSavingOverlay";
 
 const MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024; // 10MB
 const FORM_DOWNLOAD_URL =
@@ -370,6 +371,7 @@ export function KeterbukaanInformasiForm() {
 
       const response = await submitKeterbukaanInformasiAction(body);
       if (response.success) {
+        try { localStorage.setItem("ampera_new_submission_signal", String(Date.now())); } catch {}
         setSubmissionResult(response);
         window.scrollTo({ top: 200, behavior: "smooth" });
       } else {
@@ -1572,6 +1574,15 @@ export function KeterbukaanInformasiForm() {
           </div>
         </form>
       </div>
+
+      {/* Overlay Loading Layar Penuh saat Proses Menyimpan */}
+      <ServiceSavingOverlay
+        isOpen={isSubmitting}
+        serviceName="Keterbukaan Informasi Publik (PPID)"
+        title="Menyimpan Permohonan Informasi Publik..."
+        description="Sistem sedang mengunggah dokumen formulir PPID & identitas KTP, menyimpan permohonan ke server BBPOM di Palembang, serta menerbitkan kode tiket resmi Anda."
+        hasFileUpload={true}
+      />
     </div>
   );
 }

@@ -60,16 +60,33 @@ export default async function AdminDashboardPage() {
     createdAt: Date;
   }> = [];
 
+  // Rentang waktu hari ini (Zona Waktu Indonesia Barat / Asia/Jakarta)
+  const now = new Date();
+  const formatter = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Jakarta",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  });
+  const todayStr = formatter.format(now);
+  const startOfToday = new Date(`${todayStr}T00:00:00+07:00`);
+  const endOfToday = new Date(`${todayStr}T23:59:59.999+07:00`);
+  const oneYearAgo = new Date(now.getFullYear() - 1, 0, 1);
+
   try {
-    const [tCount, mCount, pCount, sCount, dCount, recents, pList, pTotal, pAktif, allList] =
+    const [statusCounts, recents, pList, pCounts, allList] =
       await Promise.all([
-        prisma.pengajuanLayanan.count(),
-        prisma.pengajuanLayanan.count({ where: { status: "MENUNGGU_VERIFIKASI" } }),
-        prisma.pengajuanLayanan.count({ where: { status: "DIPROSES" } }),
-        prisma.pengajuanLayanan.count({ where: { status: "SELESAI" } }),
-        prisma.pengajuanLayanan.count({ where: { status: "DITOLAK" } }),
+        prisma.pengajuanLayanan.groupBy({
+          by: ["status"],
+          _count: { _all: true },
+        }),
         prisma.pengajuanLayanan.findMany({
-          take: 8,
+          where: {
+            createdAt: {
+              gte: startOfToday,
+              lte: endOfToday,
+            },
+          },
           orderBy: { createdAt: "desc" },
           include: {
             tamu: true,
@@ -83,9 +100,16 @@ export default async function AdminDashboardPage() {
           ORDER BY p."isAktif" DESC, p.id ASC
           LIMIT 3;
         `).catch(() => []),
-        prisma.$queryRawUnsafe<any[]>('SELECT COUNT(*)::text as count FROM "Petugas"').catch(() => [{ count: "0" }]),
-        prisma.$queryRawUnsafe<any[]>('SELECT COUNT(*)::text as count FROM "Petugas" WHERE "isAktif" = true').catch(() => [{ count: "0" }]),
+        prisma.$queryRawUnsafe<any[]>(`
+          SELECT
+            COUNT(*)::int as total,
+            COUNT(*) FILTER (WHERE "isAktif" = true)::int as aktif
+          FROM "Petugas"
+        `).catch(() => [{ total: 0, aktif: 0 }]),
         prisma.pengajuanLayanan.findMany({
+          where: {
+            createdAt: { gte: oneYearAgo },
+          },
           select: {
             id: true,
             status: true,
@@ -93,15 +117,20 @@ export default async function AdminDashboardPage() {
           },
         }),
       ]);
-    totalPengajuan = tCount;
-    menungguVerifikasi = mCount;
-    sedangDiproses = pCount;
-    selesai = sCount;
-    ditolak = dCount;
+
+    for (const row of statusCounts) {
+      const c = row._count._all;
+      totalPengajuan += c;
+      if (row.status === "MENUNGGU_VERIFIKASI") menungguVerifikasi = c;
+      else if (row.status === "DIPROSES") sedangDiproses = c;
+      else if (row.status === "SELESAI") selesai = c;
+      else if (row.status === "DITOLAK") ditolak = c;
+    }
+
     rawRecent = recents;
     rawPetugas = pList || [];
-    totalPetugas = Number(pTotal[0]?.count || 0);
-    petugasAktif = Number(pAktif[0]?.count || 0);
+    totalPetugas = Number(pCounts[0]?.total || 0);
+    petugasAktif = Number(pCounts[0]?.aktif || 0);
     allSubmissions = allList;
   } catch (err) {
     console.warn("[Admin Dashboard] Gagal membaca data pengajuan/petugas database:", err);
@@ -115,24 +144,25 @@ export default async function AdminDashboardPage() {
       p.rincianInformasiKip ||
       "Permohonan Layanan";
 
+    const jamWib = new Date(p.createdAt).toLocaleTimeString("id-ID", {
+      timeZone: "Asia/Jakarta",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+
     const diffMs = Date.now() - new Date(p.createdAt).getTime();
     const diffMins = Math.floor(diffMs / (1000 * 60));
     const diffHours = Math.floor(diffMins / 60);
-    const diffDays = Math.floor(diffHours / 24);
 
-    let waktu = "Baru saja";
+    let waktu = `${jamWib} WIB`;
     if (diffMins < 60) {
-      waktu = `${Math.max(1, diffMins)} menit lalu`;
+      waktu = `${Math.max(1, diffMins)} menit lalu (${jamWib} WIB)`;
     } else if (diffHours < 24) {
-      waktu = `${diffHours} jam lalu`;
-    } else if (diffDays === 1) {
-      waktu = "Kemarin";
-    } else {
-      waktu = `${diffDays} hari lalu`;
+      waktu = `${diffHours} jam lalu (${jamWib} WIB)`;
     }
 
     let statusKey: "MENUNGGU" | "DIPROSES" | "SELESAI" | "DITOLAK" = "MENUNGGU";
-    if (p.status === "SEDANG_DIPROSES") statusKey = "DIPROSES";
+    if (p.status === "DIPROSES" || p.status === "SEDANG_DIPROSES") statusKey = "DIPROSES";
     else if (p.status === "SELESAI") statusKey = "SELESAI";
     else if (p.status === "DITOLAK") statusKey = "DITOLAK";
 
@@ -483,9 +513,14 @@ export default async function AdminDashboardPage() {
       {/* Row: Pengajuan Layanan Terkini Table Card (Full Width) */}
       <div className={`${card} p-5`}>
         <div className="flex items-center justify-between">
-          <h2 className="text-base font-bold text-[#0f2257] dark:text-white">
-            Pengajuan Layanan Terkini
-          </h2>
+          <div className="flex items-center gap-2.5">
+            <h2 className="text-base font-bold text-[#0f2257] dark:text-white">
+              Pengajuan Layanan Terkini
+            </h2>
+            <span className="rounded-full bg-blue-50 px-2.5 py-0.5 text-[11px] font-bold text-[#1664e8] dark:bg-blue-950/60 dark:text-blue-300">
+              Hari Ini ({recentSubmissions.length})
+            </span>
+          </div>
           <Link
             href="/admin/data-ampera"
             className="text-xs font-semibold text-[#1664e8] transition hover:underline"
@@ -511,7 +546,7 @@ export default async function AdminDashboardPage() {
                     colSpan={4}
                     className="py-10 text-center text-xs text-slate-400 dark:text-slate-500"
                   >
-                    Belum ada pengajuan layanan yang tercatat dalam sistem database.
+                    Belum ada pengajuan layanan yang masuk pada hari ini.
                   </td>
                 </tr>
               ) : (

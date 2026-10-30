@@ -1,15 +1,19 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef, useMemo } from "react";
+import Link from "next/link";
 import {
   Award,
   Users,
   GraduationCap,
   TrendingUp,
-  Star,
+  LayoutDashboard,
   FileSpreadsheet,
   Search,
   Filter,
+  Calendar,
+  ChevronDown,
+  RotateCcw,
   Plus,
   Edit2,
   Trash2,
@@ -35,6 +39,7 @@ import {
   getAdminGardaOverviewAction,
   adminUpsertSoalAction,
   adminDeleteSoalAction,
+  adminDeletePesertaAction,
   adminToggleSoalStatusAction,
   adminUpdateMateriAction,
   adminCreateMateriAction,
@@ -47,7 +52,7 @@ import {
   GardaAdminStats,
 } from "@/app/actions/garda-ampera";
 import { parseQuestionsFromRawText } from "@/lib/garda-parser";
-import { exportGardaToExcel } from "./export-garda";
+import { exportGardaToExcel, exportGardaToPdf } from "./export-garda";
 import {
   ToastContainer,
   ConfirmDialogModal,
@@ -56,6 +61,24 @@ import {
   ToastType,
 } from "@/components/garda-ampera/GardaNotificationModal";
 import { EducationPdfModal } from "@/components/landing/EducationPdfModal";
+import { AdminPagination } from "@/components/admin/AdminPagination";
+
+const MONTHS_LIST = [
+  { value: "1", label: "Januari" },
+  { value: "2", label: "Februari" },
+  { value: "3", label: "Maret" },
+  { value: "4", label: "April" },
+  { value: "5", label: "Mei" },
+  { value: "6", label: "Juni" },
+  { value: "7", label: "Juli" },
+  { value: "8", label: "Agustus" },
+  { value: "9", label: "September" },
+  { value: "10", label: "Oktober" },
+  { value: "11", label: "November" },
+  { value: "12", label: "Desember" },
+];
+
+const DAYS_LIST = Array.from({ length: 31 }, (_, i) => (i + 1).toString());
 
 export default function AdminGardaAmperaPage() {
   const [activeTab, setActiveTab] = useState<"peserta" | "soal" | "materi">("peserta");
@@ -132,7 +155,63 @@ export default function AdminGardaAmperaPage() {
   // Filter & Search State
   const [searchPeserta, setSearchPeserta] = useState("");
   const [filterStatusPeserta, setFilterStatusPeserta] = useState<"all" | "lulus" | "remidi">("all");
+  const [filterTahunPeserta, setFilterTahunPeserta] = useState<string>("all");
+  const [filterBulanPeserta, setFilterBulanPeserta] = useState<string>("all");
+  const [filterTanggalPeserta, setFilterTanggalPeserta] = useState<string>("all");
+  const [isPesertaDatePickerOpen, setIsPesertaDatePickerOpen] = useState(false);
+  const pesertaDatePickerRef = useRef<HTMLDivElement>(null);
   const [filterTipeSoal, setFilterTipeSoal] = useState<"all" | "PRE_TEST" | "POST_TEST" | "SEMUA">("all");
+
+  // Close date picker popover when clicking outside
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (
+        pesertaDatePickerRef.current &&
+        !pesertaDatePickerRef.current.contains(event.target as Node)
+      ) {
+        setIsPesertaDatePickerOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
+
+  // Available Years list from peserta data (sorted descending)
+  const availableYears = useMemo(() => {
+    const yearsSet = new Set<string>();
+    const currentYear = new Date().getFullYear().toString();
+    yearsSet.add(currentYear);
+
+    pesertaList.forEach((p) => {
+      if (p.tanggalTes) {
+        const d = new Date(p.tanggalTes);
+        if (!isNaN(d.getTime())) {
+          yearsSet.add(d.getFullYear().toString());
+        }
+      }
+    });
+
+    return Array.from(yearsSet).sort((a, b) => b.localeCompare(a));
+  }, [pesertaList]);
+
+  const isFilterPesertaActive =
+    searchPeserta.trim() !== "" ||
+    filterStatusPeserta !== "all" ||
+    filterTahunPeserta !== "all" ||
+    filterBulanPeserta !== "all" ||
+    filterTanggalPeserta !== "all";
+
+  const handleResetFilterPeserta = () => {
+    setSearchPeserta("");
+    setFilterStatusPeserta("all");
+    setFilterTahunPeserta("all");
+    setFilterBulanPeserta("all");
+    setFilterTanggalPeserta("all");
+    setIsPesertaDatePickerOpen(false);
+    setCurrentPagePeserta(1);
+  };
 
   // Modal Detail Peserta
   const [selectedPeserta, setSelectedPeserta] = useState<GardaPesertaItem | null>(null);
@@ -224,22 +303,84 @@ export default function AdminGardaAmperaPage() {
     fetchData();
   }, []);
 
-  // Filter Peserta
-  const filteredPeserta = pesertaList.filter((p) => {
-    const matchSearch =
-      p.nama.toLowerCase().includes(searchPeserta.toLowerCase()) ||
-      p.nik.includes(searchPeserta) ||
-      p.instansi.toLowerCase().includes(searchPeserta.toLowerCase());
+  // Filter Peserta (Search, Status, Tahun, Bulan, Tanggal)
+  const filteredPeserta = useMemo(() => {
+    return pesertaList.filter((p) => {
+      const matchSearch =
+        searchPeserta.trim() === "" ||
+        p.nama.toLowerCase().includes(searchPeserta.toLowerCase()) ||
+        p.nik.includes(searchPeserta) ||
+        p.instansi.toLowerCase().includes(searchPeserta.toLowerCase()) ||
+        (p.pekerjaan && p.pekerjaan.toLowerCase().includes(searchPeserta.toLowerCase()));
 
-    const matchStatus =
-      filterStatusPeserta === "all"
-        ? true
-        : filterStatusPeserta === "lulus"
-        ? p.isLulus
-        : !p.isLulus;
+      const matchStatus =
+        filterStatusPeserta === "all"
+          ? true
+          : filterStatusPeserta === "lulus"
+          ? p.isLulus
+          : !p.isLulus;
 
-    return matchSearch && matchStatus;
-  });
+      const itemDate = p.tanggalTes ? new Date(p.tanggalTes) : null;
+      const isValidDate = Boolean(itemDate && !isNaN(itemDate.getTime()));
+
+      const matchTahun =
+        filterTahunPeserta === "all"
+          ? true
+          : Boolean(
+              isValidDate &&
+                itemDate &&
+                itemDate.getFullYear().toString() === filterTahunPeserta
+            );
+
+      const matchBulan =
+        filterBulanPeserta === "all"
+          ? true
+          : Boolean(
+              isValidDate &&
+                itemDate &&
+                (itemDate.getMonth() + 1).toString() === filterBulanPeserta
+            );
+
+      const matchTanggal =
+        filterTanggalPeserta === "all"
+          ? true
+          : Boolean(
+              isValidDate &&
+                itemDate &&
+                itemDate.getDate().toString() === filterTanggalPeserta
+            );
+
+      return matchSearch && matchStatus && matchTahun && matchBulan && matchTanggal;
+    });
+  }, [
+    pesertaList,
+    searchPeserta,
+    filterStatusPeserta,
+    filterTahunPeserta,
+    filterBulanPeserta,
+    filterTanggalPeserta,
+  ]);
+
+  // Pagination Peserta (Maksimal 10 peserta per halaman)
+  const [currentPagePeserta, setCurrentPagePeserta] = useState(1);
+  const itemsPerPagePeserta = 10;
+
+  // Reset pagination ke halaman 1 saat filter atau pencarian berubah
+  useEffect(() => {
+    setCurrentPagePeserta(1);
+  }, [
+    searchPeserta,
+    filterStatusPeserta,
+    filterTahunPeserta,
+    filterBulanPeserta,
+    filterTanggalPeserta,
+  ]);
+
+  const totalPagesPeserta = Math.ceil(filteredPeserta.length / itemsPerPagePeserta) || 1;
+  const paginatedPeserta = useMemo(() => {
+    const startIndex = (currentPagePeserta - 1) * itemsPerPagePeserta;
+    return filteredPeserta.slice(startIndex, startIndex + itemsPerPagePeserta);
+  }, [filteredPeserta, currentPagePeserta]);
 
   // Filter Soal
   const filteredSoal = soalList.filter((s) => {
@@ -303,6 +444,38 @@ export default function AdminGardaAmperaPage() {
     }
   };
 
+  const handleDeletePeserta = (peserta: GardaPesertaItem) => {
+    showConfirm({
+      title: "Hapus Data Peserta?",
+      message: `Apakah Anda yakin ingin menghapus data peserta "${peserta.nama}" (NIK: ${peserta.nik})? Riwayat ujian Pre-Test, Post-Test, sertifikat kelulusan, serta data survei evaluasi peserta ini akan dihapus secara permanen dari sistem.`,
+      confirmText: "Ya, Hapus Data",
+      cancelText: "Batal",
+      type: "danger",
+      onConfirm: async () => {
+        try {
+          const res = await adminDeletePesertaAction(peserta.id);
+          if (res.success) {
+            setPesertaList((prev) => prev.filter((p) => p.id !== peserta.id));
+            setSelectedPeserta(null);
+            showToast(
+              "Peserta Berhasil Dihapus",
+              res.message || `Data peserta ${peserta.nama} berhasil dihapus.`,
+              "success"
+            );
+          } else {
+            showToast("Gagal Menghapus", res.message || "Gagal menghapus data peserta.", "error");
+          }
+        } catch (err: any) {
+          showToast(
+            "Gagal Menghapus",
+            err.message || "Terjadi kesalahan saat menghapus data peserta.",
+            "error"
+          );
+        }
+      },
+    });
+  };
+
   const handleDeleteSoal = (id: number, pertanyaan?: string) => {
     const preview = pertanyaan
       ? `\n"${pertanyaan.slice(0, 90)}${pertanyaan.length > 90 ? "..." : ""}"\n\n`
@@ -315,8 +488,8 @@ export default function AdminGardaAmperaPage() {
       onConfirm: async () => {
         const res = await adminDeleteSoalAction(id);
         if (res.success) {
+          setSoalList((prev) => prev.filter((s) => s.id !== id));
           showToast("Soal Berhasil Dihapus", res.message || "Soal telah dihapus dari database.", "success");
-          fetchData();
         } else {
           showToast("Gagal Menghapus Soal", res.message || "Soal gagal dihapus.", "error");
         }
@@ -325,6 +498,10 @@ export default function AdminGardaAmperaPage() {
   };
 
   const handleToggleSoal = async (id: number, currentStatus: boolean) => {
+    // Optimistic update langsung agar tombol responsif instan
+    setSoalList((prev) =>
+      prev.map((s) => (s.id === id ? { ...s, isAktif: !currentStatus } : s))
+    );
     const res = await adminToggleSoalStatusAction(id, !currentStatus);
     if (res.success) {
       showToast(
@@ -332,8 +509,11 @@ export default function AdminGardaAmperaPage() {
         res.message || `Status butir soal diperbarui.`,
         "info"
       );
-      fetchData();
     } else {
+      // Rollback jika gagal
+      setSoalList((prev) =>
+        prev.map((s) => (s.id === id ? { ...s, isAktif: currentStatus } : s))
+      );
       showToast("Gagal Mengubah Status", res.message || "Gagal memperbarui status butir soal.", "error");
     }
   };
@@ -614,33 +794,112 @@ export default function AdminGardaAmperaPage() {
     }
   };
 
+  const [isExportingExcel, setIsExportingExcel] = useState(false);
+  const [isExportingPdf, setIsExportingPdf] = useState(false);
+
   const handleExportExcel = async () => {
+    setIsExportingExcel(true);
     try {
-      await exportGardaToExcel(pesertaList, stats);
-      showToast("Ekspor Berhasil", "Berkas rekapitulasi Excel Garda Ampera berhasil diunduh.", "success");
+      const exportData = isFilterPesertaActive ? filteredPeserta : pesertaList;
+      if (exportData.length === 0) {
+        showToast("Tidak Ada Data", "Tidak ada data peserta yang memenuhi kriteria filter untuk diekspor.", "error");
+        return;
+      }
+
+      const exportStats: GardaAdminStats = isFilterPesertaActive
+        ? {
+            totalPeserta: exportData.length,
+            totalLulus: exportData.filter((p) => p.isLulus).length,
+            totalRemidi: exportData.filter((p) => !p.isLulus).length,
+            tingkatKelulusanPersen: Math.round(
+              (exportData.filter((p) => p.isLulus).length / exportData.length) * 100
+            ),
+            rataRataPreTest:
+              Math.round(
+                (exportData.reduce((acc, p) => acc + (p.preTestScore ?? 0), 0) /
+                  exportData.length) *
+                  10
+              ) / 10,
+            rataRataPostTest:
+              Math.round(
+                (exportData.reduce((acc, p) => acc + (p.postTestScore ?? 0), 0) /
+                  exportData.length) *
+                  10
+              ) / 10,
+            peningkatanNilai: 0,
+            rataRataRatingSistem: 0,
+          }
+        : stats;
+
+      await exportGardaToExcel(exportData, exportStats);
+      showToast(
+        "Ekspor Berhasil",
+        `Berkas rekapitulasi Excel (${exportData.length} peserta) berhasil diunduh.`,
+        "success"
+      );
     } catch (err: any) {
       showToast("Gagal Ekspor", err.message || "Terjadi kesalahan saat mengekspor data Excel.", "error");
+    } finally {
+      setIsExportingExcel(false);
+    }
+  };
+
+  const handleExportPdf = async () => {
+    setIsExportingPdf(true);
+    try {
+      const exportData = isFilterPesertaActive ? filteredPeserta : pesertaList;
+      if (exportData.length === 0) {
+        showToast("Tidak Ada Data", "Tidak ada data peserta yang memenuhi kriteria filter untuk diekspor.", "error");
+        return;
+      }
+
+      const exportStats: GardaAdminStats = isFilterPesertaActive
+        ? {
+            totalPeserta: exportData.length,
+            totalLulus: exportData.filter((p) => p.isLulus).length,
+            totalRemidi: exportData.filter((p) => !p.isLulus).length,
+            tingkatKelulusanPersen: Math.round(
+              (exportData.filter((p) => p.isLulus).length / exportData.length) * 100
+            ),
+            rataRataPreTest:
+              Math.round(
+                (exportData.reduce((acc, p) => acc + (p.preTestScore ?? 0), 0) /
+                  exportData.length) *
+                  10
+              ) / 10,
+            rataRataPostTest:
+              Math.round(
+                (exportData.reduce((acc, p) => acc + (p.postTestScore ?? 0), 0) /
+                  exportData.length) *
+                  10
+              ) / 10,
+            peningkatanNilai: 0,
+            rataRataRatingSistem: 0,
+          }
+        : stats;
+
+      await exportGardaToPdf(exportData, exportStats);
+      showToast(
+        "Ekspor Berhasil",
+        `Berkas laporan PDF (${exportData.length} peserta) berhasil diunduh.`,
+        "success"
+      );
+    } catch (err: any) {
+      showToast("Gagal Ekspor", err.message || "Terjadi kesalahan saat mengekspor data PDF.", "error");
+    } finally {
+      setIsExportingPdf(false);
     }
   };
 
   return (
     <div className="space-y-6">
-      {/* 1. Header Title & Export Excel */}
+      {/* 1. Header Title & Export Buttons */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <div className="flex items-center gap-2 mb-1">
             <span className="text-xs font-bold uppercase tracking-wider text-brand-orange">
               PROGRAM EDUKASI KADER & MASYARAKAT
             </span>
-            {/* <span
-              className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                isDbConnected
-                  ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300"
-                  : "bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300"
-              }`}
-            >
-              {isDbConnected ? "● Database PostgreSQL Terhubung" : "● Mode Siap Sinkron (Local Cache)"}
-            </span> */}
           </div>
           <h1 className="text-2xl sm:text-3xl font-extrabold text-navy-900 dark:text-white">
             Manajemen Garda Ampera
@@ -650,14 +909,29 @@ export default function AdminGardaAmperaPage() {
           </p>
         </div>
 
-        <div className="flex items-center gap-2.5">
+        <div className="flex flex-wrap items-center gap-2.5">
+          {/* Ekspor Excel */}
           <button
             type="button"
             onClick={handleExportExcel}
-            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow-md shadow-emerald-600/20 transition-all hover:scale-[1.02] cursor-pointer"
+            disabled={isExportingExcel}
+            className="inline-flex items-center gap-2 px-3.5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 text-white font-bold text-xs shadow-md shadow-emerald-600/20 transition-all hover:scale-[1.02] cursor-pointer disabled:opacity-60"
+            title="Unduh Rekapitulasi Excel (.xlsx)"
           >
             <FileSpreadsheet className="w-4 h-4" />
-            Ekspor Rekap Excel (.xlsx)
+            <span>{isExportingExcel ? "Menyiapkan Excel..." : "Unduh Excel (.xlsx)"}</span>
+          </button>
+
+          {/* Ekspor PDF */}
+          <button
+            type="button"
+            onClick={handleExportPdf}
+            disabled={isExportingPdf}
+            className="inline-flex items-center gap-2 px-3.5 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-500 active:bg-rose-700 text-white font-bold text-xs shadow-md shadow-rose-600/20 transition-all hover:scale-[1.02] cursor-pointer disabled:opacity-60"
+            title="Unduh Laporan Resmi PDF (.pdf)"
+          >
+            <FileText className="w-4 h-4" />
+            <span>{isExportingPdf ? "Menyiapkan PDF..." : "Unduh PDF (.pdf)"}</span>
           </button>
         </div>
       </div>
@@ -698,11 +972,30 @@ export default function AdminGardaAmperaPage() {
           </div>
         </div>
 
-        {/* Peningkatan Nilai Rata-rata */}
+        {/* Rata-rata Pre-Test */}
         <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-sm flex items-center justify-between">
           <div>
             <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">
-              Nilai Post-Test
+              Rata-rata Pre-Test
+            </p>
+            <h3 className="text-2xl font-black text-navy-900 dark:text-white mt-1">
+              {stats.rataRataPreTest}
+              <span className="text-xs text-slate-400 font-medium ml-1">pts</span>
+            </h3>
+            <p className="text-[11px] text-slate-500 mt-0.5">
+              Rata-rata total {stats.totalPeserta} peserta
+            </p>
+          </div>
+          <div className="w-12 h-12 rounded-xl bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 flex items-center justify-center">
+            <HelpCircle className="w-6 h-6" />
+          </div>
+        </div>
+
+        {/* Rata-rata Post-Test */}
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-sm flex items-center justify-between">
+          <div>
+            <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">
+              Rata-rata Post-Test
             </p>
             <h3 className="text-2xl font-black text-navy-900 dark:text-white mt-1">
               {stats.rataRataPostTest}
@@ -710,27 +1003,12 @@ export default function AdminGardaAmperaPage() {
                 (+{stats.peningkatanNilai} pts)
               </span>
             </h3>
-            <p className="text-[11px] text-slate-500 mt-0.5">Pre-Test: {stats.rataRataPreTest}</p>
+            <p className="text-[11px] text-slate-500 mt-0.5">
+              Rata-rata total {stats.totalPeserta} peserta
+            </p>
           </div>
           <div className="w-12 h-12 rounded-xl bg-amber-50 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400 flex items-center justify-center">
             <TrendingUp className="w-6 h-6" />
-          </div>
-        </div>
-
-        {/* Kepuasan Sistem Evaluasi */}
-        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-sm flex items-center justify-between">
-          <div>
-            <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">
-              Rating Evaluasi
-            </p>
-            <h3 className="text-2xl font-black text-amber-500 mt-1">
-              ★ {stats.rataRataRatingSistem}
-              <span className="text-xs text-slate-400 font-medium"> / 5.0</span>
-            </h3>
-            <p className="text-[11px] text-slate-500 mt-0.5">Survei Sistem Garda Ampera</p>
-          </div>
-          <div className="w-12 h-12 rounded-xl bg-amber-50 dark:bg-amber-950/60 text-amber-500 flex items-center justify-center">
-            <Star className="w-6 h-6 fill-amber-400" />
           </div>
         </div>
       </div>
@@ -783,29 +1061,194 @@ export default function AdminGardaAmperaPage() {
       {activeTab === "peserta" && (
         <div className="space-y-4">
           {/* Filter Bar */}
-          <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-3">
-            <div className="relative w-full sm:w-80">
-              <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-              <input
-                type="text"
-                placeholder="Cari nama, NIK, instansi..."
-                value={searchPeserta}
-                onChange={(e) => setSearchPeserta(e.target.value)}
-                className="w-full pl-9 pr-4 py-2 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800 text-xs text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
+          <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs space-y-3">
+            <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3">
+              {/* Search Bar */}
+              <div className="relative flex-1 min-w-[240px]">
+                <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                <input
+                  type="text"
+                  placeholder="Cari nama, NIK, instansi, pekerjaan..."
+                  value={searchPeserta}
+                  onChange={(e) => setSearchPeserta(e.target.value)}
+                  className="w-full pl-9 pr-9 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-xs text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-orange-500 transition-all placeholder:text-slate-400"
+                />
+                {searchPeserta && (
+                  <button
+                    type="button"
+                    onClick={() => setSearchPeserta("")}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                )}
+              </div>
+
+              {/* Filter Controls Group */}
+              <div className="flex flex-wrap items-center gap-2">
+                {/* 1. Status Filter */}
+                <div className="flex items-center gap-1.5">
+                  <select
+                    value={filterStatusPeserta}
+                    onChange={(e: any) => setFilterStatusPeserta(e.target.value)}
+                    className="h-10 px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-xs font-medium text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-orange-500 cursor-pointer transition-all"
+                  >
+                    <option value="all">Semua Status</option>
+                    <option value="lulus">Hanya Lulus (Post-Test ≥ 70)</option>
+                    <option value="remidi">Hanya Remidi (Post-Test &lt; 70)</option>
+                  </select>
+                </div>
+
+                {/* 2. Tahun Filter */}
+                <div className="flex items-center gap-1.5">
+                  <select
+                    value={filterTahunPeserta}
+                    onChange={(e) => setFilterTahunPeserta(e.target.value)}
+                    className="h-10 px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-xs font-medium text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-orange-500 cursor-pointer transition-all"
+                  >
+                    <option value="all">Semua Tahun</option>
+                    {availableYears.map((year) => (
+                      <option key={year} value={year}>
+                        Tahun {year}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* 3. Bulan Filter */}
+                <div className="flex items-center gap-1.5">
+                  <select
+                    value={filterBulanPeserta}
+                    onChange={(e) => setFilterBulanPeserta(e.target.value)}
+                    className="h-10 px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-xs font-medium text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-orange-500 cursor-pointer transition-all"
+                  >
+                    <option value="all">Semua Bulan</option>
+                    {MONTHS_LIST.map((m) => (
+                      <option key={m.value} value={m.value}>
+                        {m.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* 4. Tanggal Filter (Custom Popover) */}
+                <div className="relative" ref={pesertaDatePickerRef}>
+                  <button
+                    type="button"
+                    onClick={() => setIsPesertaDatePickerOpen(!isPesertaDatePickerOpen)}
+                    className={`h-10 px-3 rounded-xl border text-xs font-medium flex items-center gap-2 focus:outline-none focus:ring-2 focus:ring-orange-500 transition-all cursor-pointer ${
+                      filterTanggalPeserta !== "all"
+                        ? "border-orange-500 bg-orange-50/60 dark:bg-orange-950/30 text-brand-orange font-bold"
+                        : "border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:border-orange-400"
+                    }`}
+                  >
+                    <Calendar className="w-3.5 h-3.5 text-slate-400" />
+                    <span>
+                      {filterTanggalPeserta === "all" ? "Semua Tanggal" : `Tanggal ${filterTanggalPeserta}`}
+                    </span>
+                    <ChevronDown
+                      className={`w-3.5 h-3.5 text-slate-400 transition-transform duration-200 ${
+                        isPesertaDatePickerOpen ? "rotate-180 text-brand-orange" : ""
+                      }`}
+                    />
+                  </button>
+
+                  {/* Popover Dropdown Kalender Tanggal */}
+                  {isPesertaDatePickerOpen && (
+                    <div className="absolute right-0 top-full mt-2 z-50 w-[285px] sm:w-[305px] bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-5 shadow-2xl shadow-slate-900/15 animate-in fade-in zoom-in-95 duration-150">
+                      {/* Tombol Utama: Semua Tanggal (Pill Oranye) */}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setFilterTanggalPeserta("all");
+                          setIsPesertaDatePickerOpen(false);
+                        }}
+                        className={`w-full py-2.5 px-4 rounded-2xl text-xs sm:text-sm font-bold transition-all cursor-pointer flex items-center justify-center ${
+                          filterTanggalPeserta === "all"
+                            ? "bg-gradient-to-r from-[#ff7a1a] to-[#f26a0f] text-white shadow-md shadow-orange-500/35 hover:brightness-105"
+                            : "bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-orange-50 hover:text-brand-orange dark:hover:bg-slate-750"
+                        }`}
+                      >
+                        Semua Tanggal
+                      </button>
+
+                      {/* Grid 7 Kolom Tanggal (1-31) */}
+                      <div className="grid grid-cols-7 gap-y-2.5 gap-x-1 text-center mt-4 mb-1">
+                        {DAYS_LIST.map((d) => {
+                          const isSelected = filterTanggalPeserta === d;
+                          return (
+                            <button
+                              key={d}
+                              type="button"
+                              onClick={() => {
+                                setFilterTanggalPeserta(d);
+                                setIsPesertaDatePickerOpen(false);
+                              }}
+                              className={`w-8 h-8 mx-auto rounded-full text-xs font-semibold flex items-center justify-center transition-all cursor-pointer ${
+                                isSelected
+                                  ? "bg-[#ff7a1a] text-white font-black shadow-md shadow-orange-500/35 scale-110"
+                                  : "text-slate-800 dark:text-slate-200 hover:bg-orange-50 dark:hover:bg-slate-800 hover:text-brand-orange"
+                              }`}
+                            >
+                              {d}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* 5. Reset Filter Button */}
+                {isFilterPesertaActive && (
+                  <button
+                    type="button"
+                    onClick={handleResetFilterPeserta}
+                    className="h-10 px-3 rounded-xl border border-rose-200 dark:border-rose-900/50 bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 text-xs font-bold flex items-center gap-1.5 hover:bg-rose-100 dark:hover:bg-rose-900/60 transition-all cursor-pointer"
+                    title="Reset semua filter"
+                  >
+                    <RotateCcw className="w-3.5 h-3.5" />
+                    <span>Reset</span>
+                  </button>
+                )}
+              </div>
             </div>
 
-            <div className="flex items-center gap-2 w-full sm:w-auto">
-              <Filter className="w-4 h-4 text-slate-400 shrink-0" />
-              <select
-                value={filterStatusPeserta}
-                onChange={(e: any) => setFilterStatusPeserta(e.target.value)}
-                className="px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800 text-xs text-slate-700 dark:text-slate-200 focus:outline-none"
-              >
-                <option value="all">Semua Status</option>
-                <option value="lulus">Hanya Lulus (Post-Test ≥ 70)</option>
-                <option value="remidi">Hanya Remidi (Post-Test &lt; 70)</option>
-              </select>
+            {/* Active Filter Indicators & Count */}
+            <div className="flex flex-wrap items-center justify-between pt-2.5 border-t border-slate-100 dark:border-slate-800 text-[11px] text-slate-500">
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <span>
+                  Menampilkan <strong className="text-slate-800 dark:text-slate-200">{filteredPeserta.length}</strong> dari{" "}
+                  <strong className="text-slate-800 dark:text-slate-200">{pesertaList.length}</strong> peserta
+                </span>
+                {isFilterPesertaActive && (
+                  <span className="text-brand-orange font-bold">• Filter aktif</span>
+                )}
+              </div>
+              {isFilterPesertaActive && (
+                <div className="flex items-center gap-1 flex-wrap mt-1 sm:mt-0">
+                  {filterStatusPeserta !== "all" && (
+                    <span className="px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-medium text-[10px]">
+                      Status: {filterStatusPeserta === "lulus" ? "Lulus" : "Remidi"}
+                    </span>
+                  )}
+                  {filterTahunPeserta !== "all" && (
+                    <span className="px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-medium text-[10px]">
+                      Tahun: {filterTahunPeserta}
+                    </span>
+                  )}
+                  {filterBulanPeserta !== "all" && (
+                    <span className="px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-medium text-[10px]">
+                      Bulan: {MONTHS_LIST.find((m) => m.value === filterBulanPeserta)?.label}
+                    </span>
+                  )}
+                  {filterTanggalPeserta !== "all" && (
+                    <span className="px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-medium text-[10px]">
+                      Tanggal: {filterTanggalPeserta}
+                    </span>
+                  )}
+                </div>
+              )}
             </div>
           </div>
 
@@ -833,102 +1276,138 @@ export default function AdminGardaAmperaPage() {
                         <div className="flex flex-col items-center justify-center space-y-2">
                           <Users className="w-8 h-8 text-slate-300 dark:text-slate-600" />
                           <span className="font-semibold text-xs text-slate-600 dark:text-slate-300">
-                            Belum Ada Data Peserta
+                            {isFilterPesertaActive ? "Tidak Ada Peserta yang Cocok" : "Belum Ada Data Peserta"}
                           </span>
-                          <span className="text-[11px] text-slate-400 max-w-sm">
-                            Database peserta masih kosong karena belum ada peserta yang menyelesaikan asesmen Garda Ampera.
+                          <span className="text-[11px] text-slate-400 max-w-sm text-center">
+                            {isFilterPesertaActive
+                              ? "Tidak ditemukan peserta yang sesuai dengan kriteria filter pencarian atau tanggal yang dipilih."
+                              : "Database peserta masih kosong karena belum ada peserta yang menyelesaikan asesmen Garda Ampera."}
                           </span>
+                          {isFilterPesertaActive && (
+                            <button
+                              type="button"
+                              onClick={handleResetFilterPeserta}
+                              className="mt-2 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-orange-50 dark:bg-orange-950/40 text-brand-orange text-xs font-bold hover:bg-orange-100 transition-colors cursor-pointer"
+                            >
+                              <RotateCcw className="w-3.5 h-3.5" />
+                              <span>Reset Filter</span>
+                            </button>
+                          )}
                         </div>
                       </td>
                     </tr>
                   ) : (
-                    filteredPeserta.map((p, idx) => (
-                      <tr
-                        key={p.id}
-                        className="hover:bg-slate-50/70 dark:hover:bg-slate-800/40 transition-colors"
-                      >
-                        <td className="py-3.5 px-4 font-bold text-slate-400">{idx + 1}</td>
-                        <td className="py-3.5 px-4">
-                          <p className="font-bold text-navy-900 dark:text-white">{p.nama}</p>
-                          <p className="text-[11px] text-slate-500 font-mono">
-                            NIK: {p.nik} • {p.usia} Th ({p.jenisKelamin === "Laki-laki" ? "L" : "P"})
-                          </p>
-                        </td>
-                        <td className="py-3.5 px-4">
-                          <p className="font-semibold text-slate-800 dark:text-slate-200">
-                            {p.instansi}
-                          </p>
-                          <p className="text-[11px] text-slate-500">{p.pekerjaan}</p>
-                        </td>
-                        <td className="py-3.5 px-4 text-slate-500 whitespace-nowrap">
-                          {new Date(p.tanggalTes).toLocaleDateString("id-ID", {
-                            day: "2-digit",
-                            month: "short",
-                            year: "numeric",
-                          })}
-                        </td>
-                        <td className="py-3.5 px-4 text-center font-bold text-slate-700 dark:text-slate-300">
-                          {p.preTestScore !== null ? `${p.preTestScore}` : "-"}
-                        </td>
-                        <td className="py-3.5 px-4 text-center">
-                          <span
-                            className={`font-black text-sm ${
-                              (p.postTestScore ?? 0) >= 70
-                                ? "text-emerald-600 dark:text-emerald-400"
-                                : "text-rose-600"
-                            }`}
-                          >
-                            {p.postTestScore !== null ? p.postTestScore : "-"}
-                          </span>
-                          {p.postTestAttempts > 1 && (
-                            <span className="block text-[10px] text-slate-400">
-                              (Ujian ke-{p.postTestAttempts})
+                    paginatedPeserta.map((p, idx) => {
+                      const rowNumber =
+                        (currentPagePeserta - 1) * itemsPerPagePeserta + idx + 1;
+                      return (
+                        <tr
+                          key={p.id}
+                          className="hover:bg-slate-50/70 dark:hover:bg-slate-800/40 transition-colors"
+                        >
+                          <td className="py-3.5 px-4 font-bold text-slate-400">{rowNumber}</td>
+                          <td className="py-3.5 px-4">
+                            <p className="font-bold text-navy-900 dark:text-white">{p.nama}</p>
+                            <p className="text-[11px] text-slate-500 font-mono">
+                              NIK: {p.nik} • {p.usia} Th ({p.jenisKelamin === "Laki-laki" ? "L" : "P"})
+                            </p>
+                          </td>
+                          <td className="py-3.5 px-4">
+                            <p className="font-semibold text-slate-800 dark:text-slate-200">
+                              {p.instansi}
+                            </p>
+                            <p className="text-[11px] text-slate-500">{p.pekerjaan}</p>
+                          </td>
+                          <td className="py-3.5 px-4 text-slate-500 whitespace-nowrap">
+                            {new Date(p.tanggalTes).toLocaleDateString("id-ID", {
+                              day: "2-digit",
+                              month: "short",
+                              year: "numeric",
+                            })}
+                          </td>
+                          <td className="py-3.5 px-4 text-center font-bold text-slate-700 dark:text-slate-300">
+                            {p.preTestScore !== null ? `${p.preTestScore}` : "-"}
+                          </td>
+                          <td className="py-3.5 px-4 text-center">
+                            <span
+                              className={`font-black text-sm ${
+                                (p.postTestScore ?? 0) >= 70
+                                  ? "text-emerald-600 dark:text-emerald-400"
+                                  : "text-rose-600"
+                              }`}
+                            >
+                              {p.postTestScore !== null ? p.postTestScore : "-"}
                             </span>
-                          )}
-                        </td>
-                        <td className="py-3.5 px-4 text-center">
-                          {p.isLulus ? (
-                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-950/80 dark:text-emerald-300">
-                              <CheckCircle2 className="w-3 h-3" /> Lulus (≥70)
-                            </span>
-                          ) : (
-                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold bg-rose-100 text-rose-800 dark:bg-rose-950/80 dark:text-rose-300">
-                              <XCircle className="w-3 h-3" /> Remidi (&lt;70)
-                            </span>
-                          )}
-                        </td>
-                        <td className="py-3.5 px-4 text-center">
-                          {p.evaluasi ? (
-                            <span className="font-bold text-amber-500 text-[11px]">
-                              ★{" "}
-                              {(
-                                (p.evaluasi.ratingKemudahan +
-                                  p.evaluasi.ratingMateri +
-                                  p.evaluasi.ratingSoal +
-                                  p.evaluasi.ratingManfaat) /
-                                4
-                              ).toFixed(1)}
-                            </span>
-                          ) : (
-                            <span className="text-[10px] text-slate-400">-</span>
-                          )}
-                        </td>
-                        <td className="py-3.5 px-4 text-center">
-                          <button
-                            type="button"
-                            onClick={() => setSelectedPeserta(p)}
-                            className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-[11px] font-semibold text-blue-600 dark:text-blue-400 transition-colors cursor-pointer"
-                          >
-                            <Eye className="w-3.5 h-3.5" />
-                            Detail
-                          </button>
-                        </td>
-                      </tr>
-                    ))
+                            {p.postTestAttempts > 1 && (
+                              <span className="block text-[10px] text-slate-400">
+                                (Ujian ke-{p.postTestAttempts})
+                              </span>
+                            )}
+                          </td>
+                          <td className="py-3.5 px-4 text-center">
+                            {p.isLulus ? (
+                              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-950/80 dark:text-emerald-300">
+                                <CheckCircle2 className="w-3 h-3" /> Lulus (≥70)
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold bg-rose-100 text-rose-800 dark:bg-rose-950/80 dark:text-rose-300">
+                                <XCircle className="w-3 h-3" /> Remidi (&lt;70)
+                              </span>
+                            )}
+                          </td>
+                          <td className="py-3.5 px-4 text-center">
+                            {p.evaluasi ? (
+                              <span className="font-bold text-amber-500 text-[11px]">
+                                ★{" "}
+                                {(
+                                  (p.evaluasi.ratingKemudahan +
+                                    p.evaluasi.ratingMateri +
+                                    p.evaluasi.ratingSoal +
+                                    p.evaluasi.ratingManfaat) /
+                                  4
+                                ).toFixed(1)}
+                              </span>
+                            ) : (
+                              <span className="text-[10px] text-slate-400">-</span>
+                            )}
+                          </td>
+                          <td className="py-3.5 px-4 text-center">
+                            <div className="flex items-center justify-center gap-1.5">
+                              <button
+                                type="button"
+                                onClick={() => setSelectedPeserta(p)}
+                                className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-[11px] font-semibold text-blue-600 dark:text-blue-400 transition-colors cursor-pointer"
+                                title="Lihat Detail Peserta"
+                              >
+                                <Eye className="w-3.5 h-3.5" />
+                                Detail
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleDeletePeserta(p)}
+                                className="p-1.5 rounded-lg border border-rose-200 dark:border-rose-900/50 hover:bg-rose-50 dark:hover:bg-rose-950/40 text-rose-600 dark:text-rose-400 transition-colors cursor-pointer"
+                                title="Hapus Data Peserta"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })
                   )}
                 </tbody>
               </table>
             </div>
+
+            {/* Pagination Controls */}
+            <AdminPagination
+              currentPage={currentPagePeserta}
+              totalPages={totalPagesPeserta}
+              totalItems={filteredPeserta.length}
+              itemsPerPage={itemsPerPagePeserta}
+              onPageChange={(page) => setCurrentPagePeserta(page)}
+            />
           </div>
         </div>
       )}
@@ -1669,6 +2148,26 @@ Kunci: A`)
                 </p>
               </div>
             )}
+
+            {/* Modal Actions Footer */}
+            <div className="flex flex-col-reverse sm:flex-row sm:items-center justify-between gap-3 pt-4 border-t border-slate-100 dark:border-slate-800">
+              <button
+                type="button"
+                onClick={() => handleDeletePeserta(selectedPeserta)}
+                className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-rose-50 dark:bg-rose-950/40 hover:bg-rose-100 dark:hover:bg-rose-900/60 text-rose-600 dark:text-rose-400 font-bold text-xs border border-rose-200 dark:border-rose-900/50 shadow-xs transition-all cursor-pointer hover:scale-[1.01] active:scale-[0.99]"
+              >
+                <Trash2 className="w-4 h-4" />
+                <span>Hapus Data Peserta</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setSelectedPeserta(null)}
+                className="px-5 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-semibold text-xs transition-all cursor-pointer text-center"
+              >
+                Tutup
+              </button>
+            </div>
           </div>
         </div>
       )}

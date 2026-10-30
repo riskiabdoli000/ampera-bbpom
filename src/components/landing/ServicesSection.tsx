@@ -29,7 +29,7 @@ const DEFAULT_SERVICES: LandingServiceItem[] = [
     iconName: "HelpCircle",
     image: "/assets-landingpage/layanan/1.jpg",
     href: "/permintaan-informasi",
-    actionText: "Akses Layanan",
+    actionText: "Daftar Sekarang",
   },
   {
     id: "pengujian-cepat",
@@ -62,7 +62,7 @@ const DEFAULT_SERVICES: LandingServiceItem[] = [
     iconName: "FileText",
     image: "/assets-landingpage/layanan/4.jpg",
     href: "/keterbukaan-informasi",
-    actionText: "Lihat Dokumen",
+    actionText: "Daftar Sekarang",
   },
 ];
 
@@ -127,7 +127,6 @@ export function ServicesSection({ initialData }: ServicesSectionProps) {
                       fill
                       sizes="(max-width: 640px) 50vw, (max-width: 1024px) 50vw, 25vw"
                       className="object-cover object-center group-hover:scale-105 transition-transform duration-700 ease-out"
-                      unoptimized={service.image.startsWith("http")}
                     />
 
                     {/* Subtle Gradient Shadow di bawah foto */}

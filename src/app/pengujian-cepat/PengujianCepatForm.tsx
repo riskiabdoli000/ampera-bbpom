@@ -28,17 +28,23 @@ import {
   type PengujianCepatResponse,
 } from "@/app/actions/pengujian-cepat";
 import { lookupNikAction } from "@/app/actions/lookup-nik";
+import { ServiceSavingOverlay } from "@/components/common/ServiceSavingOverlay";
 
 const PRODUK_OPTIONS = [
   "Pempek, tekwan, model",
   "Kerupuk/Kemplang",
   "Tahu",
-  "Mie Basah",
+  "Mie basah",
+  "Bakso",
+  "Ikan asin atau sejenisnya",
+  "Makanan berwarna mencolok (pink/kuning)",
+  "Lainnya",
 ];
 
 const ALASAN_OPTIONS = [
   "Produk tahan lama",
   "Perbedaan tekstur, rasa, dan/atau bau",
+  "Lainnya",
 ];
 
 export function PengujianCepatForm() {
@@ -63,7 +69,9 @@ export function PengujianCepatForm() {
     alamat: "",
     telepon: "",
     produkDicurigai: "",
+    produkLainnya: "",
     alasanKecurigaan: "",
+    alasanLainnya: "",
     rincianProduk: "",
   });
 
@@ -140,6 +148,22 @@ export function PengujianCepatForm() {
       });
     }
 
+    if (name === "produkDicurigai" && value !== "Lainnya" && errors.produkLainnya) {
+      setErrors((prev) => {
+        const newErr = { ...prev };
+        delete newErr.produkLainnya;
+        return newErr;
+      });
+    }
+
+    if (name === "alasanKecurigaan" && value !== "Lainnya" && errors.alasanLainnya) {
+      setErrors((prev) => {
+        const newErr = { ...prev };
+        delete newErr.alasanLainnya;
+        return newErr;
+      });
+    }
+
     if (name === "nik") {
       const clean = value.trim().replace(/\D/g, "");
       if (clean.length === 16) {
@@ -193,10 +217,22 @@ export function PengujianCepatForm() {
     const errs: { [key: string]: string } = {};
     if (!formData.produkDicurigai.trim()) {
       errs.produkDicurigai = "Silakan pilih produk yang dicurigai";
+    } else if (
+      formData.produkDicurigai === "Lainnya" &&
+      !(formData.produkLainnya || "").trim()
+    ) {
+      errs.produkLainnya = "Silakan ketik nama produk yang dicurigai";
     }
+
     if (!formData.alasanKecurigaan.trim()) {
       errs.alasanKecurigaan = "Silakan pilih alasan kecurigaan";
+    } else if (
+      formData.alasanKecurigaan === "Lainnya" &&
+      !(formData.alasanLainnya || "").trim()
+    ) {
+      errs.alasanLainnya = "Silakan ketik alasan kecurigaan Anda";
     }
+
     if (!formData.rincianProduk.trim()) {
       errs.rincianProduk = "Rincian produk dan lokasi penjual wajib diisi";
     } else if (formData.rincianProduk.trim().length < 10) {
@@ -250,6 +286,7 @@ export function PengujianCepatForm() {
     try {
       const response = await submitPengujianCepatAction(formData);
       if (response.success) {
+        try { localStorage.setItem("ampera_new_submission_signal", String(Date.now())); } catch {}
         setSubmissionResult(response);
         window.scrollTo({ top: 200, behavior: "smooth" });
       } else {
@@ -290,7 +327,9 @@ export function PengujianCepatForm() {
       alamat: "",
       telepon: "",
       produkDicurigai: "",
+      produkLainnya: "",
       alasanKecurigaan: "",
+      alasanLainnya: "",
       rincianProduk: "",
     });
     setNikLookupStatus({ status: "idle", message: "" });
@@ -953,6 +992,36 @@ export function PengujianCepatForm() {
                       <span>{errors.produkDicurigai}</span>
                     </p>
                   )}
+
+                  {formData.produkDicurigai === "Lainnya" && (
+                    <div className="mt-3 animate-fade-up">
+                      <label
+                        htmlFor="produkLainnya"
+                        className="block text-xs font-bold text-navy-900 dark:text-slate-200 mb-1.5"
+                      >
+                        Sebutkan Produk yang Dicurigai <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        id="produkLainnya"
+                        name="produkLainnya"
+                        type="text"
+                        value={formData.produkLainnya || ""}
+                        onChange={handleChange}
+                        placeholder="Ketik nama produk pangan yang dicurigai..."
+                        className={`w-full rounded-2xl border bg-white dark:bg-slate-950 px-4 py-3 text-sm text-navy-900 dark:text-white placeholder:text-slate-400 focus:outline-hidden transition-all duration-200 ${
+                          errors.produkLainnya
+                            ? "border-red-400 focus:ring-2 focus:ring-red-400/20"
+                            : "border-slate-200 dark:border-slate-700/80 focus:border-brand-orange focus:ring-2 focus:ring-brand-orange/20"
+                        }`}
+                      />
+                      {errors.produkLainnya && (
+                        <p className="mt-1.5 text-xs text-red-500 flex items-center gap-1">
+                          <AlertCircle className="w-3.5 h-3.5" />
+                          <span>{errors.produkLainnya}</span>
+                        </p>
+                      )}
+                    </div>
+                  )}
                 </div>
 
                 {/* Field: Alasan Kecurigaan (Dropdown) */}
@@ -995,6 +1064,36 @@ export function PengujianCepatForm() {
                       <AlertCircle className="w-3.5 h-3.5" />
                       <span>{errors.alasanKecurigaan}</span>
                     </p>
+                  )}
+
+                  {formData.alasanKecurigaan === "Lainnya" && (
+                    <div className="mt-3 animate-fade-up">
+                      <label
+                        htmlFor="alasanLainnya"
+                        className="block text-xs font-bold text-navy-900 dark:text-slate-200 mb-1.5"
+                      >
+                        Sebutkan Alasan Kecurigaan <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        id="alasanLainnya"
+                        name="alasanLainnya"
+                        type="text"
+                        value={formData.alasanLainnya || ""}
+                        onChange={handleChange}
+                        placeholder="Ketik alasan kecurigaan Anda..."
+                        className={`w-full rounded-2xl border bg-white dark:bg-slate-950 px-4 py-3 text-sm text-navy-900 dark:text-white placeholder:text-slate-400 focus:outline-hidden transition-all duration-200 ${
+                          errors.alasanLainnya
+                            ? "border-red-400 focus:ring-2 focus:ring-red-400/20"
+                            : "border-slate-200 dark:border-slate-700/80 focus:border-brand-orange focus:ring-2 focus:ring-brand-orange/20"
+                        }`}
+                      />
+                      {errors.alasanLainnya && (
+                        <p className="mt-1.5 text-xs text-red-500 flex items-center gap-1">
+                          <AlertCircle className="w-3.5 h-3.5" />
+                          <span>{errors.alasanLainnya}</span>
+                        </p>
+                      )}
+                    </div>
                   )}
                 </div>
 
@@ -1113,13 +1212,17 @@ export function PengujianCepatForm() {
                     <div>
                       <span className="text-slate-400 block text-xs">Produk yang Dicurigai:</span>
                       <span className="font-bold text-brand-orange-600 dark:text-orange-400">
-                        {formData.produkDicurigai}
+                        {formData.produkDicurigai === "Lainnya"
+                          ? formData.produkLainnya
+                          : formData.produkDicurigai}
                       </span>
                     </div>
                     <div>
                       <span className="text-slate-400 block text-xs">Alasan Kecurigaan:</span>
                       <span className="font-semibold text-navy-900 dark:text-white">
-                        {formData.alasanKecurigaan}
+                        {formData.alasanKecurigaan === "Lainnya"
+                          ? formData.alasanLainnya
+                          : formData.alasanKecurigaan}
                       </span>
                     </div>
                     <div className="sm:col-span-2">
@@ -1211,6 +1314,15 @@ export function PengujianCepatForm() {
           </div>
         </form>
       </div>
+
+      {/* Overlay Loading Layar Penuh saat Proses Menyimpan */}
+      <ServiceSavingOverlay
+        isOpen={isSubmitting}
+        serviceName="Layanan Pengujian Cepat"
+        title="Menyimpan Pengajuan Uji Cepat..."
+        description="Sistem sedang memvalidasi data sampel pangan, menyimpan permohonan uji cepat ke server BBPOM di Palembang, dan menerbitkan kode tiket resmi Anda."
+        hasFileUpload={false}
+      />
     </div>
   );
 }

@@ -10,21 +10,26 @@ import { ContactSection } from "@/components/landing/ContactSection";
 import { Footer } from "@/components/landing/Footer";
 import { getLandingHeroData } from "@/app/actions/settings-hero";
 import { getLandingServicesData } from "@/app/actions/admin-layanan";
-import { getVideoSettings } from "@/app/actions/settings-video";
 import { getKontakSettings } from "@/app/actions/settings-kontak";
 import { getLandingPenilaianData } from "@/app/actions/landing-penilaian";
 
-export const dynamic = "force-dynamic";
+// ISR Caching 60 detik (Otomatis di-revalidate secara instan saat Admin memperbarui pengaturan melalui revalidatePath("/"))
+export const revalidate = 60;
 
 export default async function Home() {
-  const [heroData, servicesData, videoData, contactData, penilaianData] =
+  const [heroData, servicesData, contactData, penilaianData] =
     await Promise.all([
       getLandingHeroData(),
       getLandingServicesData(),
-      getVideoSettings(),
       getKontakSettings(),
       getLandingPenilaianData(),
     ]);
+
+  // Gunakan data video yang sudah diambil di dalam getLandingHeroData() untuk menghindari query database ganda
+  const videoData = {
+    id: 1,
+    ...heroData.video,
+  };
 
   return (
     <main className="min-h-screen bg-white dark:bg-slate-950 text-slate-800 dark:text-slate-100 flex flex-col selection:bg-teal-700 selection:text-white overflow-x-hidden transition-colors duration-300">

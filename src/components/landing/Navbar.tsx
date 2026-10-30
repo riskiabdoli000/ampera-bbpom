@@ -181,11 +181,11 @@ export function Navbar() {
             </button>
 
             <Link
-              href="/cindo"
+              href="/garda-ampera"
               onClick={() => setActiveSection("")}
               className={`${ctaClass} max-lg:hidden`}
             >
-              <span>Cindo</span>
+              <span>Garda Ampera</span>
               <ArrowRight className="w-4 h-4 transition-transform duration-200 group-hover:translate-x-1" />
             </Link>
 
@@ -229,14 +229,14 @@ export function Navbar() {
             </nav>
 
             <Link
-              href="/cindo"
+              href="/garda-ampera"
               onClick={() => {
                 setActiveSection("");
                 setMobileMenuOpen(false);
               }}
               className={`${ctaClass} w-full justify-center mt-4`}
             >
-              <span>Cindo</span>
+              <span>Garda Ampera</span>
               <ArrowRight className="w-4 h-4" />
             </Link>
 

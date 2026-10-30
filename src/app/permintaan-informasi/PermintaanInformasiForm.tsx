@@ -29,6 +29,7 @@ import {
   type PermintaanInformasiResponse,
 } from "@/app/actions/permintaan-informasi";
 import { lookupNikAction } from "@/app/actions/lookup-nik";
+import { ServiceSavingOverlay } from "@/components/common/ServiceSavingOverlay";
 
 export function PermintaanInformasiForm() {
   const [currentStep, setCurrentStep] = useState<1 | 2 | 3>(1);
@@ -269,6 +270,7 @@ export function PermintaanInformasiForm() {
     try {
       const response = await submitPermintaanInformasiAction(formData);
       if (response.success) {
+        try { localStorage.setItem("ampera_new_submission_signal", String(Date.now())); } catch {}
         setSubmissionResult(response);
         window.scrollTo({ top: 200, behavior: "smooth" });
       } else {
@@ -1202,6 +1204,15 @@ export function PermintaanInformasiForm() {
           )}
         </form>
       </div>
+
+      {/* Overlay Loading Layar Penuh saat Proses Menyimpan */}
+      <ServiceSavingOverlay
+        isOpen={isSubmitting}
+        serviceName="Permintaan Informasi BBPOM"
+        title="Menyimpan Permintaan Informasi..."
+        description="Sistem sedang mengenkripsi data pemohon, menyimpan rincian permintaan informasi ke server BBPOM di Palembang, dan menerbitkan kode tiket resmi Anda."
+        hasFileUpload={false}
+      />
     </div>
   );
 }

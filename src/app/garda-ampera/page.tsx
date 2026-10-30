@@ -1,6 +1,6 @@
 import React from "react";
 import type { Metadata } from "next";
-import { SubpageNavbar } from "@/components/common/SubpageNavbar";
+import { GardaAmperaNavbar } from "@/components/common/GardaAmperaNavbar";
 import { Footer } from "@/components/landing/Footer";
 import { GardaAmperaContainer } from "@/components/garda-ampera/GardaAmperaContainer";
 import { ShieldCheck, Award, BookOpen, GraduationCap, CheckCircle } from "lucide-react";
@@ -14,8 +14,8 @@ export const metadata: Metadata = {
 export default function GardaAmperaPage() {
   return (
     <main className="min-h-screen bg-gradient-to-b from-[#f2f7ff] via-white to-[#f0f6ff] dark:from-slate-950 dark:via-[#06122e]/40 dark:to-slate-950 text-slate-800 dark:text-slate-100 flex flex-col selection:bg-brand-orange selection:text-white overflow-x-hidden transition-colors duration-300">
-      {/* 1. Navbar Subpage Konsisten */}
-      <SubpageNavbar activePage="edukasi" />
+      {/* 1. Navbar Subpage Khusus Garda Ampera POM */}
+      <GardaAmperaNavbar />
 
       {/* 2. Container Halaman Utama */}
       <div className="flex-1 w-full pt-28 sm:pt-32 pb-16 sm:pb-24">
@@ -24,7 +24,7 @@ export default function GardaAmperaPage() {
           <div className="relative mb-8 sm:mb-12 max-w-3xl mx-auto text-center animate-fade-up">
             <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-blue-100 dark:bg-blue-950/70 border border-blue-200 dark:border-blue-800 text-blue-800 dark:text-blue-300 text-xs font-bold uppercase tracking-widest mb-3">
               <ShieldCheck className="w-4 h-4 text-brand-orange" />
-              PORTAL EDUKASI & SERTIFIKASI RESMI
+              PORTAL E-LEARNING
             </div>
 
             <h1 className="font-brand font-extrabold text-3xl sm:text-4xl lg:text-[46px] leading-[1.15] tracking-tight text-navy-900 dark:text-white">
@@ -32,7 +32,7 @@ export default function GardaAmperaPage() {
             </h1>
 
             <p className="text-sm sm:text-base font-semibold text-blue-700 dark:text-blue-300 mt-1 uppercase tracking-wide">
-              Gerakan Sadar Obat & Makanan Aman • BBPOM di Palembang
+              Gerakan Antisipasi Risiko, Deteksi, dan Aksi untuk Amankan <br />Produk, Edukasi Masyarakat
             </p>
 
             <p className="mt-3 text-xs sm:text-sm text-ink-soft dark:text-slate-300 leading-relaxed max-w-2xl mx-auto">

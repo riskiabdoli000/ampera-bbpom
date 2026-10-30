@@ -2,6 +2,7 @@
 
 import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
+import { verifyAdminSession } from "@/lib/auth/session";
 
 export interface PenilaianItem {
   id: number;
@@ -63,6 +64,10 @@ export interface AdminPenilaianOverviewResponse {
  */
 export async function getAdminPenilaianOverviewAction(): Promise<AdminPenilaianOverviewResponse> {
   try {
+    const session = await verifyAdminSession();
+    if (!session) {
+      throw new Error("Akses ditolak. Silakan login sebagai Admin.");
+    }
     const rawData = await prisma.surveiLayanan.findMany({
       orderBy: { createdAt: "desc" },
       include: {
@@ -219,22 +224,16 @@ export async function deletePenilaianAction(
   id: number
 ): Promise<{ success: boolean; message: string }> {
   try {
-    const existing = await prisma.surveiLayanan.findUnique({
-      where: { id },
-    });
-
-    if (!existing) {
-      return { success: false, message: "Data penilaian tidak ditemukan." };
+    const session = await verifyAdminSession();
+    if (!session) {
+      return { success: false, message: "Akses ditolak. Silakan login sebagai Admin." };
     }
-
     await prisma.surveiLayanan.delete({
       where: { id },
     });
 
     try {
-      revalidatePath("/admin/penilaian");
-      revalidatePath("/admin/data-ampera");
-      revalidatePath("/admin");
+      revalidatePath("/");
     } catch {
       // Ignore outside request context
     }

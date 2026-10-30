@@ -136,8 +136,6 @@ export async function saveKontakSettingsAction(data: KontakSettingsInput) {
       },
     });
 
-    revalidatePath("/admin/settings/kontak");
-    revalidatePath("/admin/settings");
     revalidatePath("/");
 
     return {
@@ -176,8 +174,6 @@ export async function toggleMasterSosmedAction(isActive: boolean) {
       },
     });
 
-    revalidatePath("/admin/settings/kontak");
-    revalidatePath("/admin/settings");
     revalidatePath("/");
 
     return {
@@ -231,8 +227,6 @@ export async function toggleIndividualSosmedAction(
       },
     });
 
-    revalidatePath("/admin/settings/kontak");
-    revalidatePath("/admin/settings");
     revalidatePath("/");
 
     return {

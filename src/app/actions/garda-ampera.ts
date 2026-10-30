@@ -2,6 +2,7 @@
 
 import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
+import { verifyAdminSession } from "@/lib/auth/session";
 import {
   SOAL_PRE_TEST,
   SOAL_POST_TEST,
@@ -180,11 +181,47 @@ export async function getGardaPublicDataAction(): Promise<{
       }));
   }
 
+  // Ambil 10 butir soal secara acak dari bank soal (20 butir) untuk Pre-Test
+  // Sesuai ketentuan alur pengguna: Soal Post-Test dibuat sama persis dengan Pre-Test beserta urutan nomornya
+  const pool = preList.length > 0 ? preList : postList;
+  const selectedSoal = shuffleAndPick(pool, 10);
+
   return {
-    preTestSoal: shuffleAndPick(preList, 10),
-    postTestSoal: shuffleAndPick(postList, 10),
+    preTestSoal: selectedSoal,
+    postTestSoal: selectedSoal,
     modules: formattedModules,
   };
+}
+
+const ROMAN_MONTHS = ["I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X", "XI", "XII"];
+
+/**
+ * Format nomor sertifikat resmi GARDA AMPERA sesuai format:
+ * {Urutan 3-digit}/GARDAAMPERA/BBPOMPLG/{BulanRomawi}/{Tahun}
+ * Contoh: 001/GARDAAMPERA/BBPOMPLG/X/2026
+ */
+function formatNomorSertifikatGarda(urutan: number, date = new Date()): string {
+  const pad = String(urutan).padStart(3, "0");
+  const month = ROMAN_MONTHS[date.getMonth()];
+  const year = date.getFullYear();
+  return `${pad}/GARDAAMPERA/BBPOMPLG/${month}/${year}`;
+}
+
+/**
+ * Mendapatkan nomor sertifikat berikutnya yang otomatis berurutan
+ */
+export async function getNextGardaNomorSertifikatAction(): Promise<string> {
+  try {
+    if ((prisma as any).gardaPeserta) {
+      const count = await (prisma as any).gardaPeserta.count({
+        where: { isLulus: true },
+      });
+      return formatNomorSertifikatGarda(count + 1);
+    }
+  } catch (err: any) {
+    console.warn("Gagal menghitung nomor sertifikat berikutnya:", err.message);
+  }
+  return formatNomorSertifikatGarda(globalFallback.pesertaList.filter((p) => p.isLulus).length + 1);
 }
 
 /**
@@ -198,9 +235,61 @@ export async function submitGardaPesertaAssessmentAction(payload: {
   isLulus: boolean;
   nomorSertifikat?: string;
   evaluasi?: EvaluasiGarda | null;
-}): Promise<{ success: boolean; id?: number; message?: string }> {
+}): Promise<{ success: boolean; id?: number; nomorSertifikat?: string; message?: string }> {
   try {
-    const { biodata, preTestScore, postTestScore, postTestAttempts, isLulus, nomorSertifikat, evaluasi } = payload;
+    const { biodata, preTestScore, postTestScore, postTestAttempts, isLulus, evaluasi } = payload;
+    const cleanNik = (biodata.nik || "").trim();
+
+    // Cek terlebih dahulu apakah NIK ini sudah pernah lulus dan mendapatkan sertifikat (1 orang hanya bisa 1 kali)
+    if (cleanNik && (prisma as any).gardaPeserta) {
+      try {
+        const existingGraduated = await (prisma as any).gardaPeserta.findFirst({
+          where: { nik: cleanNik, isLulus: true },
+          orderBy: { createdAt: "desc" },
+        });
+        if (existingGraduated) {
+          return {
+            success: true,
+            id: existingGraduated.id,
+            nomorSertifikat: existingGraduated.nomorSertifikat || undefined,
+            message: "Peserta dengan NIK ini sudah pernah menyelesaikan Garda Ampera.",
+          };
+        }
+      } catch (e) {
+        console.warn("Gagal memeriksa duplikasi NIK peserta:", e);
+      }
+    }
+
+    // Tentukan nomor sertifikat resmi secara berurutan langsung dari database jika lulus
+    let finalNomorSertifikat = payload.nomorSertifikat;
+    if (isLulus) {
+      try {
+        let nextSeq =
+          (await (prisma as any).gardaPeserta.count({
+            where: { isLulus: true },
+          })) + 1;
+        let candidate = formatNomorSertifikatGarda(nextSeq);
+        // Pastikan tidak bentrok dengan constraint @unique pada nomorSertifikat
+        while (
+          await (prisma as any).gardaPeserta.findUnique({
+            where: { nomorSertifikat: candidate },
+            select: { id: true },
+          })
+        ) {
+          nextSeq++;
+          candidate = formatNomorSertifikatGarda(nextSeq);
+        }
+        finalNomorSertifikat = candidate;
+      } catch {
+        if (!finalNomorSertifikat || !finalNomorSertifikat.includes("/GARDAAMPERA/BBPOMPLG/")) {
+          finalNomorSertifikat = formatNomorSertifikatGarda(
+            globalFallback.pesertaList.filter((p) => p.isLulus).length + 1
+          );
+        }
+      }
+    } else {
+      finalNomorSertifikat = undefined;
+    }
 
     // Coba simpan ke database Prisma
     if ((prisma as any).gardaPeserta) {
@@ -219,7 +308,7 @@ export async function submitGardaPesertaAssessmentAction(payload: {
           postTestScore,
           postTestAttempts,
           isLulus,
-          nomorSertifikat: nomorSertifikat || null,
+          nomorSertifikat: finalNomorSertifikat || null,
           tanggalLulus: isLulus ? new Date() : null,
           ...(evaluasi
             ? {
@@ -238,13 +327,19 @@ export async function submitGardaPesertaAssessmentAction(payload: {
       });
 
       revalidatePath("/admin/garda-ampera");
-      return { success: true, id: created.id };
+      return { success: true, id: created.id, nomorSertifikat: finalNomorSertifikat };
     }
   } catch (err: any) {
     console.warn("Prisma save failed, saving to fallback cache:", err.message);
   }
 
   // Fallback memory cache
+  const isLulus = payload.isLulus;
+  let finalNomorSertifikat = payload.nomorSertifikat;
+  if (isLulus && (!finalNomorSertifikat || !finalNomorSertifikat.includes("/GARDAAMPERA/BBPOMPLG/"))) {
+    finalNomorSertifikat = formatNomorSertifikatGarda(globalFallback.pesertaList.filter((p) => p.isLulus).length + 1);
+  }
+
   const newId = globalFallback.pesertaList.length + 1;
   const newRecord = {
     id: newId,
@@ -261,7 +356,7 @@ export async function submitGardaPesertaAssessmentAction(payload: {
     postTestScore: payload.postTestScore,
     postTestAttempts: payload.postTestAttempts,
     isLulus: payload.isLulus,
-    nomorSertifikat: payload.nomorSertifikat || null,
+    nomorSertifikat: finalNomorSertifikat || null,
     tanggalLulus: payload.isLulus ? new Date() : null,
     evaluasi: payload.evaluasi
       ? {
@@ -277,7 +372,7 @@ export async function submitGardaPesertaAssessmentAction(payload: {
 
   globalFallback.pesertaList.unshift(newRecord);
   revalidatePath("/admin/garda-ampera");
-  return { success: true, id: newId };
+  return { success: true, id: newId, nomorSertifikat: finalNomorSertifikat };
 }
 
 // =========================================================================
@@ -334,6 +429,25 @@ export interface GardaAdminOverviewResponse {
  * Mengambil rekapitulasi data peserta, bank soal, dan modul materi untuk Admin CMS
  */
 export async function getAdminGardaOverviewAction(): Promise<GardaAdminOverviewResponse> {
+  const session = await verifyAdminSession();
+  if (!session) {
+    return {
+      pesertaList: [],
+      stats: {
+        totalPeserta: 0,
+        totalLulus: 0,
+        totalRemidi: 0,
+        tingkatKelulusanPersen: 0,
+        rataRataPreTest: 0,
+        rataRataPostTest: 0,
+        peningkatanNilai: 0,
+        rataRataRatingSistem: 0,
+      },
+      soalList: [],
+      materiList: [],
+      isDbConnected: false,
+    };
+  }
   let isDb = false;
   let rawPeserta: any[] = [];
   let rawSoal: any[] = [];
@@ -449,6 +563,10 @@ export async function adminUpsertSoalAction(payload: {
   penjelasan?: string;
   urutan?: number;
 }): Promise<{ success: boolean; message: string }> {
+  const session = await verifyAdminSession();
+  if (!session) {
+    return { success: false, message: "Akses ditolak. Silakan login sebagai Admin." };
+  }
   try {
     if ((prisma as any).gardaSoal) {
       if (payload.id) {
@@ -461,7 +579,6 @@ export async function adminUpsertSoalAction(payload: {
           data: payload,
         });
       }
-      revalidatePath("/admin/garda-ampera");
       return { success: true, message: "Soal berhasil disimpan ke database." };
     }
   } catch (err: any) {
@@ -484,7 +601,6 @@ export async function adminUpsertSoalAction(payload: {
     });
   }
 
-  revalidatePath("/admin/garda-ampera");
   return { success: true, message: "Soal berhasil disimpan." };
 }
 
@@ -492,12 +608,15 @@ export async function adminUpsertSoalAction(payload: {
  * Hapus Soal Ujian
  */
 export async function adminDeleteSoalAction(id: number): Promise<{ success: boolean; message: string }> {
+  const session = await verifyAdminSession();
+  if (!session) {
+    return { success: false, message: "Akses ditolak. Silakan login sebagai Admin." };
+  }
   try {
     if ((prisma as any).gardaSoal) {
       await (prisma as any).gardaSoal.delete({
         where: { id },
       });
-      revalidatePath("/admin/garda-ampera");
       return { success: true, message: "Soal berhasil dihapus dari database." };
     }
   } catch (err: any) {
@@ -505,8 +624,32 @@ export async function adminDeleteSoalAction(id: number): Promise<{ success: bool
   }
 
   globalFallback.soalList = globalFallback.soalList.filter((s) => s.id !== id);
-  revalidatePath("/admin/garda-ampera");
   return { success: true, message: "Soal berhasil dihapus." };
+}
+
+/**
+ * Hapus Data Peserta Garda Ampera
+ */
+export async function adminDeletePesertaAction(
+  id: number
+): Promise<{ success: boolean; message: string }> {
+  const session = await verifyAdminSession();
+  if (!session) {
+    return { success: false, message: "Akses ditolak. Silakan login sebagai Admin." };
+  }
+  try {
+    if ((prisma as any).gardaPeserta) {
+      await (prisma as any).gardaPeserta.delete({
+        where: { id },
+      });
+      return { success: true, message: "Data peserta berhasil dihapus dari database." };
+    }
+  } catch (err: any) {
+    console.warn("DB delete peserta failed, using fallback:", err.message);
+  }
+
+  globalFallback.pesertaList = globalFallback.pesertaList.filter((p) => p.id !== id);
+  return { success: true, message: "Data peserta berhasil dihapus." };
 }
 
 /**
@@ -516,13 +659,16 @@ export async function adminToggleSoalStatusAction(
   id: number,
   isAktif: boolean
 ): Promise<{ success: boolean; message: string }> {
+  const session = await verifyAdminSession();
+  if (!session) {
+    return { success: false, message: "Akses ditolak. Silakan login sebagai Admin." };
+  }
   try {
     if ((prisma as any).gardaSoal) {
       await (prisma as any).gardaSoal.update({
         where: { id },
         data: { isAktif },
       });
-      revalidatePath("/admin/garda-ampera");
       return { success: true, message: "Status soal diperbarui." };
     }
   } catch (err) {
@@ -533,7 +679,6 @@ export async function adminToggleSoalStatusAction(
   if (idx !== -1) {
     globalFallback.soalList[idx].isAktif = isAktif;
   }
-  revalidatePath("/admin/garda-ampera");
   return { success: true, message: "Status soal diperbarui." };
 }
 
@@ -557,6 +702,16 @@ export async function adminPreviewMateriFileAction(formData: FormData): Promise<
   message?: string;
 }> {
   try {
+    const session = await verifyAdminSession();
+    if (!session) {
+      return {
+        success: false,
+        fileName: "",
+        fileSizeText: "",
+        totalSlides: 0,
+        message: "Akses ditolak. Silakan login sebagai Admin.",
+      };
+    }
     const file = formData.get("file") as File | null;
     const judul = (formData.get("judul") as string)?.trim() || "Modul Materi Pembelajaran";
     const nomor = parseInt((formData.get("nomor") as string) || "1", 10);
@@ -687,6 +842,10 @@ export async function adminUploadMateriAction(formData: FormData): Promise<{
   id?: number;
 }> {
   try {
+    const session = await verifyAdminSession();
+    if (!session) {
+      return { success: false, message: "Akses ditolak. Silakan login sebagai Admin." };
+    }
     const file = formData.get("file") as File | null;
     const judul = (formData.get("judul") as string)?.trim() || "Modul Materi Pembelajaran";
     const ringkasan =
@@ -962,6 +1121,10 @@ export async function adminUpdateMateriAction(payload: {
   durasi: string;
   pdfUrl?: string;
 }): Promise<{ success: boolean; message: string }> {
+  const session = await verifyAdminSession();
+  if (!session) {
+    return { success: false, message: "Akses ditolak. Silakan login sebagai Admin." };
+  }
   try {
     if ((prisma as any).gardaMateri) {
       await (prisma as any).gardaMateri.update({
@@ -1000,6 +1163,10 @@ export async function adminCreateMateriAction(payload: {
     badge?: string;
   }>;
 }): Promise<{ success: boolean; message: string; id?: number }> {
+  const session = await verifyAdminSession();
+  if (!session) {
+    return { success: false, message: "Akses ditolak. Silakan login sebagai Admin." };
+  }
   try {
     const nextNomor = payload.nomor || globalFallback.materiList.length + 1;
 
@@ -1116,6 +1283,10 @@ export async function adminCreateMateriAction(payload: {
  * Hapus Modul Materi oleh Admin beserta berkas fisiknya di public/uploads/materi
  */
 export async function adminDeleteMateriAction(id: number): Promise<{ success: boolean; message: string }> {
+  const session = await verifyAdminSession();
+  if (!session) {
+    return { success: false, message: "Akses ditolak. Silakan login sebagai Admin." };
+  }
   let fileToDelete: string | null = null;
 
   try {
@@ -1192,6 +1363,10 @@ export async function adminBatchCreateSoalAction(
     penjelasan?: string;
   }>
 ): Promise<{ success: boolean; count: number; message: string }> {
+  const session = await verifyAdminSession();
+  if (!session) {
+    return { success: false, count: 0, message: "Akses ditolak. Silakan login sebagai Admin." };
+  }
   if (!soalItems || soalItems.length === 0) {
     return { success: false, count: 0, message: "Tidak ada butir soal yang valid untuk disimpan." };
   }
@@ -1340,6 +1515,13 @@ export interface GardaTamuLookupResult {
   found: boolean;
   source?: "tamu" | "garda" | "buku_tamu";
   message: string;
+  alreadyCompleted?: boolean;
+  existingCertificate?: {
+    nomorSertifikat: string;
+    tanggalLulus: string;
+    postTestScore: number;
+    biodata: BiodataGarda;
+  };
   data?: {
     nik: string;
     nama: string;
@@ -1381,6 +1563,8 @@ export async function lookupGardaTamuByNikAction(
     };
     let found = false;
     let source: "tamu" | "garda" | "buku_tamu" = "tamu";
+    let alreadyCompleted = false;
+    let existingCertificate: GardaTamuLookupResult["existingCertificate"] = undefined;
 
     // 1. Cek tabel Tamu di database PostgreSQL Ampera-BBPOM
     if ((prisma as any).tamu) {
@@ -1414,17 +1598,87 @@ export async function lookupGardaTamuByNikAction(
 
         if (prevPeserta) {
           found = true;
-          if (!resultData.nama) resultData.nama = prevPeserta.nama;
-          if (!resultData.alamat) resultData.alamat = prevPeserta.alamat;
-          if (!resultData.instansi) resultData.instansi = prevPeserta.instansi;
-          if (!resultData.usia && prevPeserta.usia) resultData.usia = String(prevPeserta.usia);
-          if (!resultData.jenisKelamin) resultData.jenisKelamin = prevPeserta.jenisKelamin;
-          if (!resultData.pendidikan) resultData.pendidikan = prevPeserta.pendidikan;
-          if (!resultData.pekerjaan) resultData.pekerjaan = prevPeserta.pekerjaan;
+          resultData.nama = prevPeserta.nama || resultData.nama;
+          resultData.alamat = prevPeserta.alamat || resultData.alamat;
+          resultData.instansi = prevPeserta.instansi || resultData.instansi;
+          if (prevPeserta.usia) resultData.usia = String(prevPeserta.usia);
+          if (prevPeserta.jenisKelamin) resultData.jenisKelamin = prevPeserta.jenisKelamin;
+          if (prevPeserta.pendidikan) resultData.pendidikan = prevPeserta.pendidikan;
+          if (prevPeserta.pekerjaan) resultData.pekerjaan = prevPeserta.pekerjaan;
           source = "garda";
+
+          if (prevPeserta.isLulus) {
+            alreadyCompleted = true;
+            const tglLulusDate = prevPeserta.tanggalLulus
+              ? new Date(prevPeserta.tanggalLulus)
+              : new Date(prevPeserta.createdAt || Date.now());
+            const validJk: "" | "Laki-laki" | "Perempuan" =
+              prevPeserta.jenisKelamin === "Laki-laki" || prevPeserta.jenisKelamin === "Perempuan"
+                ? prevPeserta.jenisKelamin
+                : "Laki-laki";
+
+            existingCertificate = {
+              nomorSertifikat:
+                prevPeserta.nomorSertifikat ||
+                formatNomorSertifikatGarda(prevPeserta.id || 1, tglLulusDate),
+              tanggalLulus: tglLulusDate.toLocaleDateString("id-ID", {
+                day: "numeric",
+                month: "long",
+                year: "numeric",
+              }),
+              postTestScore: prevPeserta.postTestScore ?? 80,
+              biodata: {
+                nik: cleanNik,
+                nama: prevPeserta.nama || "",
+                tanggalTes: new Date(prevPeserta.tanggalTes || Date.now())
+                  .toISOString()
+                  .split("T")[0],
+                alamat: prevPeserta.alamat || "",
+                usia: String(prevPeserta.usia || "25"),
+                jenisKelamin: validJk,
+                pendidikan: prevPeserta.pendidikan || "",
+                pekerjaan: prevPeserta.pekerjaan || "",
+                instansi: prevPeserta.instansi || "",
+              },
+            };
+          }
         }
       } catch (err) {
         console.warn("Gagal lookup tabel gardaPeserta:", err);
+      }
+    }
+
+    // Cek juga fallback memory store jika DB belum menemukan kelulusan
+    if (!alreadyCompleted) {
+      const fbPrev = globalFallback.pesertaList.find(
+        (p) => p.nik === cleanNik && p.isLulus
+      );
+      if (fbPrev) {
+        found = true;
+        alreadyCompleted = true;
+        source = "garda";
+        resultData.nama = fbPrev.nama || resultData.nama;
+        const tglLulusDate = fbPrev.tanggalLulus ? new Date(fbPrev.tanggalLulus) : new Date();
+        existingCertificate = {
+          nomorSertifikat: fbPrev.nomorSertifikat || formatNomorSertifikatGarda(1, tglLulusDate),
+          tanggalLulus: tglLulusDate.toLocaleDateString("id-ID", {
+            day: "numeric",
+            month: "long",
+            year: "numeric",
+          }),
+          postTestScore: fbPrev.postTestScore ?? 80,
+          biodata: {
+            nik: cleanNik,
+            nama: fbPrev.nama || "",
+            tanggalTes: new Date(fbPrev.tanggalTes || Date.now()).toISOString().split("T")[0],
+            alamat: fbPrev.alamat || "",
+            usia: String(fbPrev.usia || "25"),
+            jenisKelamin: fbPrev.jenisKelamin === "Perempuan" ? "Perempuan" : "Laki-laki",
+            pendidikan: fbPrev.pendidikan || "",
+            pekerjaan: fbPrev.pekerjaan || "",
+            instansi: fbPrev.instansi || "",
+          },
+        };
       }
     }
 
@@ -1451,7 +1705,11 @@ export async function lookupGardaTamuByNikAction(
       return {
         found: true,
         source,
-        message: `Data tamu terdaftar atas nama '${resultData.nama}'. Formulir telah diisi otomatis.`,
+        alreadyCompleted,
+        existingCertificate,
+        message: alreadyCompleted
+          ? `NIK ${cleanNik} atas nama '${resultData.nama}' tercatat sudah menyelesaikan Garda Ampera dan memiliki Sertifikat.`
+          : `Data tamu terdaftar atas nama '${resultData.nama}'. Formulir telah diisi otomatis.`,
         data: resultData,
       };
     }
@@ -1468,3 +1726,616 @@ export async function lookupGardaTamuByNikAction(
     };
   }
 }
+
+// =========================================================================
+// 6. DASHBOARD ANALYTICS (UNTUK GRAFIK DEMOGRAFI & TREN PESERTA GARDA AMPERA)
+// =========================================================================
+
+export interface GardaDashboardFilterInput {
+  pekerjaan?: string;
+  pendidikan?: string;
+  jenisKelamin?: string;
+  rentangUmur?: string; // "ALL" | "<20" | "20-29" | "30-39" | "40-49" | ">=50"
+  bulan?: string; // "ALL" | "1".."12"
+  tahun?: string; // "ALL" | "2026", dll
+  secondaryBulan?: string;
+  secondaryTahun?: string;
+  secondaryTanggal?: string;
+}
+
+export interface GardaTimeSeriesItem {
+  monthIndex: number; // 0..11
+  monthLabel: string; // "Jan", "Feb", ... "Des"
+  fullMonthName: string;
+  count: number;
+}
+
+export interface GardaStatBarItem {
+  label: string;
+  count: number;
+  percentage: number;
+  color: string;
+}
+
+export interface GardaDashboardAnalyticsData {
+  timeSeries: GardaTimeSeriesItem[];
+  totalFilteredPeserta: number;
+  totalAllPeserta: number;
+  pekerjaanStats: GardaStatBarItem[];
+  genderStats: {
+    lakiLaki: number;
+    perempuan: number;
+    total: number;
+    persenLaki: number;
+    persenPerempuan: number;
+  };
+  pendidikanStats: GardaStatBarItem[];
+  options: {
+    pekerjaanList: string[];
+    pendidikanList: string[];
+    tahunList: string[];
+  };
+}
+
+const PEKERJAAN_PALETTE: Record<string, string> = {
+  "Pegawai Negeri Sipil / ASN": "#3b82f6",
+  "Aparatur Sipil Negara (ASN / PNS / PPPK)": "#3b82f6",
+  "Pegawai Swasta": "#10b981",
+  "Karyawan Swasta / BUMN": "#10b981",
+  "Wiraswasta / Usahawan": "#8b5cf6",
+  "Wiraswasta / Pelaku Usaha UMKM": "#8b5cf6",
+  "Mahasiswa / Pelajar": "#f97316",
+  "Tenaga Kesehatan": "#06b6d4",
+  "Lainnya": "#64748b",
+};
+
+const PENDIDIKAN_PALETTE: Record<string, string> = {
+  "SMA / SMK Sederajat": "#2563eb",
+  "SMA/SMK": "#2563eb",
+  "Diploma (D3 / D4)": "#10b981",
+  "D3": "#10b981",
+  "Sarjana (S1)": "#8b5cf6",
+  "S1": "#8b5cf6",
+  "Magister (S2)": "#f97316",
+  "S2": "#f97316",
+  "Doktor (S3)": "#e11d48",
+  "S3": "#e11d48",
+};
+
+// Data sample peserta pelengkap jika data database masih baru/sedikit
+const SAMPLE_DEMO_PESERTA = [
+  { nik: "1671010101900001", nama: "Ahmad Fauzi", jenisKelamin: "Laki-laki", usia: 29, pekerjaan: "Pegawai Swasta", pendidikan: "S1", createdAt: "2026-10-05T08:00:00Z" },
+  { nik: "1671010101900002", nama: "Bambang Kurnia", jenisKelamin: "Laki-laki", usia: 34, pekerjaan: "Pegawai Swasta", pendidikan: "S1", createdAt: "2026-10-06T09:30:00Z" },
+  { nik: "1671010101900003", nama: "Citra Lestari", jenisKelamin: "Perempuan", usia: 27, pekerjaan: "Pegawai Swasta", pendidikan: "S1", createdAt: "2026-10-08T10:15:00Z" },
+  { nik: "1671010101900004", nama: "Dedi Prasetyo", jenisKelamin: "Laki-laki", usia: 31, pekerjaan: "Pegawai Swasta", pendidikan: "S1", createdAt: "2026-10-10T11:00:00Z" },
+  { nik: "1671010101900005", nama: "Eko Pratama", jenisKelamin: "Laki-laki", usia: 26, pekerjaan: "Pegawai Swasta", pendidikan: "SMA/SMK", createdAt: "2026-10-11T13:20:00Z" },
+  { nik: "1671010101900006", nama: "Fajar Nugraha", jenisKelamin: "Laki-laki", usia: 28, pekerjaan: "Pegawai Swasta", pendidikan: "SMA/SMK", createdAt: "2026-10-12T14:10:00Z" },
+  { nik: "1671010101900007", nama: "Gilang Ramadhan", jenisKelamin: "Laki-laki", usia: 33, pekerjaan: "Pegawai Swasta", pendidikan: "D3", createdAt: "2026-10-14T09:40:00Z" },
+  { nik: "1671010101900008", nama: "Hendra Wijaya", jenisKelamin: "Laki-laki", usia: 38, pekerjaan: "Pegawai Swasta", pendidikan: "S1", createdAt: "2026-10-15T15:00:00Z" },
+  { nik: "1671010101900009", nama: "Indah Permata", jenisKelamin: "Perempuan", usia: 25, pekerjaan: "Pegawai Swasta", pendidikan: "S1", createdAt: "2026-10-16T10:00:00Z" },
+  { nik: "1671010101900010", nama: "Joko Susilo", jenisKelamin: "Laki-laki", usia: 42, pekerjaan: "Pegawai Swasta", pendidikan: "SMA/SMK", createdAt: "2026-10-17T11:45:00Z" },
+  { nik: "1671010101900011", nama: "Kurniawan", jenisKelamin: "Laki-laki", usia: 30, pekerjaan: "Pegawai Swasta", pendidikan: "SMA/SMK", createdAt: "2026-10-18T13:30:00Z" },
+  { nik: "1671010101900012", nama: "Lukman Hakim", jenisKelamin: "Laki-laki", usia: 39, pekerjaan: "Wiraswasta / Usahawan", pendidikan: "S1", createdAt: "2026-10-19T08:30:00Z" },
+  { nik: "1671010101900013", nama: "Maya Safitri", jenisKelamin: "Perempuan", usia: 32, pekerjaan: "Wiraswasta / Usahawan", pendidikan: "SMA/SMK", createdAt: "2026-10-20T10:15:00Z" },
+  { nik: "1671010101900014", nama: "Nugroho", jenisKelamin: "Laki-laki", usia: 45, pekerjaan: "Wiraswasta / Usahawan", pendidikan: "S1", createdAt: "2026-10-21T14:20:00Z" },
+  { nik: "1671010101900015", nama: "Oki Setiawan", jenisKelamin: "Laki-laki", usia: 36, pekerjaan: "Wiraswasta / Usahawan", pendidikan: "D3", createdAt: "2026-10-22T09:50:00Z" },
+  { nik: "1671010101900016", nama: "Putri Anggraini", jenisKelamin: "Perempuan", usia: 28, pekerjaan: "Wiraswasta / Usahawan", pendidikan: "S2", createdAt: "2026-10-23T11:10:00Z" },
+  { nik: "1671010101900017", nama: "Rahmat Hidayat", jenisKelamin: "Laki-laki", usia: 41, pekerjaan: "Pegawai Negeri Sipil / ASN", pendidikan: "S1", createdAt: "2026-10-24T08:45:00Z" },
+  { nik: "1671010101900018", nama: "Surya Dharma", jenisKelamin: "Laki-laki", usia: 48, pekerjaan: "Pegawai Negeri Sipil / ASN", pendidikan: "S2", createdAt: "2026-10-25T13:15:00Z" },
+  { nik: "1671010101900019", nama: "Tia Agustina", jenisKelamin: "Perempuan", usia: 22, pekerjaan: "Mahasiswa / Pelajar", pendidikan: "SMA/SMK", createdAt: "2026-10-26T15:30:00Z" },
+];
+
+/**
+ * Server Action: Mengambil data analitik dan statistik demografi Garda Ampera
+ */
+export async function getAdminGardaDashboardAnalyticsAction(
+  filter: GardaDashboardFilterInput = {}
+): Promise<GardaDashboardAnalyticsData> {
+  const session = await verifyAdminSession();
+  if (!session) {
+    return {
+      timeSeries: [],
+      totalFilteredPeserta: 0,
+      totalAllPeserta: 0,
+      pekerjaanStats: [],
+      genderStats: { lakiLaki: 0, perempuan: 0, total: 0, persenLaki: 0, persenPerempuan: 0 },
+      pendidikanStats: [],
+      options: { pekerjaanList: [], pendidikanList: [], tahunList: [] },
+    };
+  }
+  const MONTH_NAMES = [
+    { label: "Jan", fullName: "Januari" },
+    { label: "Feb", fullName: "Februari" },
+    { label: "Mar", fullName: "Maret" },
+    { label: "Apr", fullName: "April" },
+    { label: "Mei", fullName: "Mei" },
+    { label: "Jun", fullName: "Juni" },
+    { label: "Jul", fullName: "Juli" },
+    { label: "Agu", fullName: "Agustus" },
+    { label: "Sep", fullName: "September" },
+    { label: "Okt", fullName: "Oktober" },
+    { label: "Nov", fullName: "November" },
+    { label: "Des", fullName: "Desember" },
+  ];
+
+  let rawList: any[] = [];
+
+  try {
+    if ((prisma as any).gardaPeserta) {
+      const dbPeserta = await (prisma as any).gardaPeserta.findMany({
+        orderBy: { createdAt: "desc" },
+      });
+      if (Array.isArray(dbPeserta)) {
+        rawList = dbPeserta.map((p: any) => ({
+          ...p,
+          createdAt: p.createdAt instanceof Date ? p.createdAt.toISOString() : p.createdAt,
+        }));
+      }
+    }
+  } catch (err: any) {
+    console.warn("DB query error in getAdminGardaDashboardAnalyticsAction:", err.message);
+  }
+
+  // Gunakan fallback in-memory jika database kosong/offline dan fallback terisi
+  if (rawList.length === 0 && globalFallback.pesertaList.length > 0) {
+    rawList = globalFallback.pesertaList;
+  }
+
+  const totalAllPeserta = rawList.length;
+
+  // Normalizer Helper
+  const normalizePekerjaan = (str?: string): string => {
+    if (!str) return "Lainnya";
+    const s = str.toLowerCase();
+    if (s.includes("pns") || s.includes("asn") || s.includes("sipil") || s.includes("pppk")) {
+      return "Pegawai Negeri Sipil / ASN";
+    }
+    if (s.includes("swasta") || s.includes("bumn") || s.includes("karyawan")) {
+      return "Pegawai Swasta";
+    }
+    if (s.includes("wira") || s.includes("usaha") || s.includes("pedagang") || s.includes("bisnis")) {
+      return "Wiraswasta / Usahawan";
+    }
+    if (s.includes("mahasiswa") || s.includes("pelajar") || s.includes("siswa")) {
+      return "Mahasiswa / Pelajar";
+    }
+    if (s.includes("medis") || s.includes("dokter") || s.includes("perawat") || s.includes("apoteker") || s.includes("kesehatan")) {
+      return "Tenaga Medis / Kesehatan";
+    }
+    return "Lainnya";
+  };
+
+  const normalizePendidikan = (str?: string): string => {
+    if (!str) return "SMA/SMK";
+    const s = str.toUpperCase();
+    if (s.includes("S3") || s.includes("DOKTOR")) return "S3";
+    if (s.includes("S2") || s.includes("MAGISTER")) return "S2";
+    if (s.includes("S1") || s.includes("SARJANA")) return "S1";
+    if (s.includes("D3") || s.includes("DIPLOMA")) return "D3";
+    if (s.includes("SMA") || s.includes("SMK") || s.includes("SLTA")) return "SMA/SMK";
+    return "SMA/SMK";
+  };
+
+  const normalizeGender = (str?: string): "Laki-laki" | "Perempuan" => {
+    if (!str) return "Laki-laki";
+    const s = str.toLowerCase();
+    if (s.startsWith("p") || s.includes("perempuan") || s.includes("wanita")) return "Perempuan";
+    return "Laki-laki";
+  };
+
+  // 1. FILTER UNTUK GRAFIK UTAMA (Jumlah Peserta per Waktu)
+  const filteredForTimeSeries = rawList.filter((item) => {
+    const itemDate = new Date(item.createdAt || item.tanggalTes || Date.now());
+    const itemYear = itemDate.getFullYear().toString();
+    const itemMonth = (itemDate.getMonth() + 1).toString();
+    const itemAge = Number(item.usia) || 25;
+    const itemGender = normalizeGender(item.jenisKelamin);
+    const itemJob = normalizePekerjaan(item.pekerjaan);
+    const itemEdu = normalizePendidikan(item.pendidikan);
+
+    // Filter Pekerjaan
+    if (filter.pekerjaan && filter.pekerjaan !== "ALL" && filter.pekerjaan !== "Semua Pekerjaan") {
+      if (itemJob !== normalizePekerjaan(filter.pekerjaan)) return false;
+    }
+
+    // Filter Pendidikan
+    if (filter.pendidikan && filter.pendidikan !== "ALL" && filter.pendidikan !== "Semua Pendidikan") {
+      if (itemEdu !== normalizePendidikan(filter.pendidikan)) return false;
+    }
+
+    // Filter Jenis Kelamin
+    if (filter.jenisKelamin && filter.jenisKelamin !== "ALL" && filter.jenisKelamin !== "Semua Jenis Kelamin") {
+      if (itemGender !== normalizeGender(filter.jenisKelamin)) return false;
+    }
+
+    // Filter Rentang Umur
+    if (filter.rentangUmur && filter.rentangUmur !== "ALL" && filter.rentangUmur !== "Semua Umur") {
+      if (filter.rentangUmur === "<20" && itemAge >= 20) return false;
+      if (filter.rentangUmur === "20-29" && (itemAge < 20 || itemAge > 29)) return false;
+      if (filter.rentangUmur === "30-39" && (itemAge < 30 || itemAge > 39)) return false;
+      if (filter.rentangUmur === "40-49" && (itemAge < 40 || itemAge > 49)) return false;
+      if (filter.rentangUmur === ">=50" && itemAge < 50) return false;
+    }
+
+    // Filter Tahun
+    if (filter.tahun && filter.tahun !== "ALL" && filter.tahun !== "Semua Tahun") {
+      if (itemYear !== filter.tahun) return false;
+    }
+
+    // Filter Bulan (untuk grafik utama jika dipilih bulan spesifik)
+    if (filter.bulan && filter.bulan !== "ALL" && filter.bulan !== "Semua Bulan") {
+      if (itemMonth !== filter.bulan) return false;
+    }
+
+    return true;
+  });
+
+  const totalFilteredPeserta = filteredForTimeSeries.length;
+
+  // Agregasi 12 Bulan untuk grafik utama
+  const timeSeries: GardaTimeSeriesItem[] = MONTH_NAMES.map((m, idx) => ({
+    monthIndex: idx,
+    monthLabel: m.label,
+    fullMonthName: m.fullName,
+    count: 0,
+  }));
+
+  filteredForTimeSeries.forEach((item) => {
+    const itemDate = new Date(item.createdAt || item.tanggalTes || Date.now());
+    const mIdx = itemDate.getMonth();
+    if (mIdx >= 0 && mIdx < 12) {
+      timeSeries[mIdx].count += 1;
+    }
+  });
+
+  // 2. FILTER UNTUK 3 GRAFIK DEMOGRAFI (Filter Grafik Lainnya)
+  const filteredForDemographics = rawList.filter((item) => {
+    const itemDate = new Date(item.createdAt || item.tanggalTes || Date.now());
+    const itemYear = itemDate.getFullYear().toString();
+    const itemMonth = (itemDate.getMonth() + 1).toString();
+    const itemDateStr = itemDate.toISOString().split("T")[0];
+
+    // Filter Tahun
+    if (filter.secondaryTahun && filter.secondaryTahun !== "ALL" && filter.secondaryTahun !== "Semua Tahun") {
+      if (itemYear !== filter.secondaryTahun) return false;
+    }
+
+    // Filter Bulan
+    if (filter.secondaryBulan && filter.secondaryBulan !== "ALL" && filter.secondaryBulan !== "Semua Bulan") {
+      if (itemMonth !== filter.secondaryBulan) return false;
+    }
+
+    // Filter Tanggal Spesifik
+    if (filter.secondaryTanggal && filter.secondaryTanggal !== "ALL" && filter.secondaryTanggal !== "Semua Tanggal") {
+      if (itemDateStr !== filter.secondaryTanggal) return false;
+    }
+
+    return true;
+  });
+
+  const actualDemoCount = filteredForDemographics.length;
+  const demoTotal = actualDemoCount > 0 ? actualDemoCount : 1;
+
+  // Demografi 1: Pekerjaan (Horizontal Bar)
+  const jobCountMap: Record<string, number> = {
+    "Pegawai Negeri Sipil / ASN": 0,
+    "Pegawai Swasta": 0,
+    "Wiraswasta / Usahawan": 0,
+    "Mahasiswa / Pelajar": 0,
+  };
+
+  filteredForDemographics.forEach((item) => {
+    const j = normalizePekerjaan(item.pekerjaan);
+    jobCountMap[j] = (jobCountMap[j] || 0) + 1;
+  });
+
+  const pekerjaanStats: GardaStatBarItem[] = [
+    {
+      label: "Pegawai Negeri Sipil / ASN",
+      count: jobCountMap["Pegawai Negeri Sipil / ASN"] || 0,
+      percentage: actualDemoCount > 0 ? Math.round(((jobCountMap["Pegawai Negeri Sipil / ASN"] || 0) / actualDemoCount) * 100) : 0,
+      color: "#3b82f6",
+    },
+    {
+      label: "Pegawai Swasta",
+      count: jobCountMap["Pegawai Swasta"] || 0,
+      percentage: actualDemoCount > 0 ? Math.round(((jobCountMap["Pegawai Swasta"] || 0) / actualDemoCount) * 100) : 0,
+      color: "#10b981",
+    },
+    {
+      label: "Wiraswasta / Usahawan",
+      count: jobCountMap["Wiraswasta / Usahawan"] || 0,
+      percentage: actualDemoCount > 0 ? Math.round(((jobCountMap["Wiraswasta / Usahawan"] || 0) / actualDemoCount) * 100) : 0,
+      color: "#8b5cf6",
+    },
+    {
+      label: "Mahasiswa / Pelajar",
+      count: jobCountMap["Mahasiswa / Pelajar"] || 0,
+      percentage: actualDemoCount > 0 ? Math.round(((jobCountMap["Mahasiswa / Pelajar"] || 0) / actualDemoCount) * 100) : 0,
+      color: "#f97316",
+    },
+  ];
+
+  // Demografi 2: Jenis Kelamin (Donut Chart)
+  let lakiCount = 0;
+  let perempuanCount = 0;
+
+  filteredForDemographics.forEach((item) => {
+    const g = normalizeGender(item.jenisKelamin);
+    if (g === "Perempuan") perempuanCount++;
+    else lakiCount++;
+  });
+
+  const genderTotal = lakiCount + perempuanCount;
+  const persenLaki = genderTotal > 0 ? Math.round((lakiCount / genderTotal) * 100) : 0;
+  const persenPerempuan = genderTotal > 0 ? 100 - persenLaki : 0;
+
+  const genderStats = {
+    lakiLaki: lakiCount,
+    perempuan: perempuanCount,
+    total: genderTotal,
+    persenLaki,
+    persenPerempuan,
+  };
+
+  // Demografi 3: Pendidikan Terakhir (Pie Chart)
+  const eduCountMap: Record<string, number> = {
+    "SMA/SMK": 0,
+    "D3": 0,
+    "S1": 0,
+    "S2": 0,
+  };
+
+  filteredForDemographics.forEach((item) => {
+    const e = normalizePendidikan(item.pendidikan);
+    eduCountMap[e] = (eduCountMap[e] || 0) + 1;
+  });
+
+  const pendidikanStats: GardaStatBarItem[] = [
+    {
+      label: "SMA/SMK",
+      count: eduCountMap["SMA/SMK"] || 0,
+      percentage: actualDemoCount > 0 ? Math.round(((eduCountMap["SMA/SMK"] || 0) / actualDemoCount) * 100) : 0,
+      color: "#2563eb",
+    },
+    {
+      label: "D3",
+      count: eduCountMap["D3"] || 0,
+      percentage: actualDemoCount > 0 ? Math.round(((eduCountMap["D3"] || 0) / actualDemoCount) * 100) : 0,
+      color: "#10b981",
+    },
+    {
+      label: "S1",
+      count: eduCountMap["S1"] || 0,
+      percentage: actualDemoCount > 0 ? Math.round(((eduCountMap["S1"] || 0) / actualDemoCount) * 100) : 0,
+      color: "#8b5cf6",
+    },
+    {
+      label: "S2",
+      count: eduCountMap["S2"] || 0,
+      percentage: actualDemoCount > 0 ? Math.round(((eduCountMap["S2"] || 0) / actualDemoCount) * 100) : 0,
+      color: "#f97316",
+    },
+  ];
+
+  // Options untuk Filter
+  const currentYear = new Date().getFullYear().toString();
+  const tahunSet = new Set<string>([currentYear, "2025"]);
+  rawList.forEach((item) => {
+    if (item.createdAt) {
+      tahunSet.add(new Date(item.createdAt).getFullYear().toString());
+    }
+  });
+
+  return {
+    timeSeries,
+    totalFilteredPeserta,
+    totalAllPeserta,
+    pekerjaanStats,
+    genderStats,
+    pendidikanStats,
+    options: {
+      pekerjaanList: [
+        "Pegawai Negeri Sipil / ASN",
+        "Pegawai Swasta",
+        "Wiraswasta / Usahawan",
+        "Mahasiswa / Pelajar",
+      ],
+      pendidikanList: ["SMA/SMK", "D3", "S1", "S2"],
+      tahunList: Array.from(tahunSet).sort((a, b) => b.localeCompare(a)),
+    },
+  };
+}
+
+// =========================================================================
+// 4. HASIL EVALUASI PESERTA GARDA AMPERA
+// =========================================================================
+
+export interface GardaEvaluasiRecord {
+  id: number;
+  pesertaId: number;
+  nama: string;
+  nik: string;
+  instansi: string;
+  pekerjaan: string;
+  usia: number;
+  jenisKelamin: string;
+  tanggalTes: string | Date;
+  ratingKemudahan: number;
+  ratingMateri: number;
+  ratingSoal: number;
+  ratingManfaat: number;
+  rataRata: number;
+  kritikSaran: string | null;
+  createdAt: string | Date;
+}
+
+export interface GardaEvaluasiSummaryStats {
+  totalResponden: number;
+  rataRataKeseluruhan: number;
+  rataRataKemudahan: number;
+  rataRataMateri: number;
+  rataRataSoal: number;
+  rataRataManfaat: number;
+  persentaseSangatPuas: number;
+  persentasePuas: number;
+  distribusiBintang: {
+    bintang5: number;
+    bintang4: number;
+    bintang3: number;
+    bintang2: number;
+    bintang1: number;
+  };
+}
+
+export async function getAdminGardaEvaluasiAction(): Promise<{
+  evaluasiList: GardaEvaluasiRecord[];
+  stats: GardaEvaluasiSummaryStats;
+}> {
+  const session = await verifyAdminSession();
+  if (!session) {
+    return {
+      evaluasiList: [],
+      stats: {
+        totalResponden: 0,
+        rataRataKeseluruhan: 0,
+        rataRataKemudahan: 0,
+        rataRataMateri: 0,
+        rataRataSoal: 0,
+        rataRataManfaat: 0,
+        persentaseSangatPuas: 0,
+        persentasePuas: 0,
+        distribusiBintang: { bintang5: 0, bintang4: 0, bintang3: 0, bintang2: 0, bintang1: 0 },
+      },
+    };
+  }
+  let records: GardaEvaluasiRecord[] = [];
+
+  try {
+    if ((prisma as any).gardaEvaluasi) {
+      const dbData = await (prisma as any).gardaEvaluasi.findMany({
+        orderBy: { createdAt: "desc" },
+        include: {
+          peserta: true,
+        },
+      });
+
+      if (dbData && dbData.length > 0) {
+        records = dbData.map((e: any) => {
+          const avg =
+            (e.ratingKemudahan + e.ratingMateri + e.ratingSoal + e.ratingManfaat) / 4;
+          return {
+            id: e.id,
+            pesertaId: e.pesertaId,
+            nama: e.peserta?.nama || "Anonim",
+            nik: e.peserta?.nik || "-",
+            instansi: e.peserta?.instansi || "-",
+            pekerjaan: e.peserta?.pekerjaan || "-",
+            usia: e.peserta?.usia || 0,
+            jenisKelamin: e.peserta?.jenisKelamin || "-",
+            tanggalTes: e.peserta?.tanggalTes || e.createdAt,
+            ratingKemudahan: e.ratingKemudahan,
+            ratingMateri: e.ratingMateri,
+            ratingSoal: e.ratingSoal,
+            ratingManfaat: e.ratingManfaat,
+            rataRata: parseFloat(avg.toFixed(1)),
+            kritikSaran: e.kritikSaran,
+            createdAt: e.createdAt,
+          };
+        });
+      }
+    }
+  } catch (err: any) {
+    console.warn("DB query error in getAdminGardaEvaluasiAction:", err.message);
+  }
+
+  // Fallback to in-memory store if DB has no records or failed
+  if (records.length === 0 && globalFallback.pesertaList.length > 0) {
+    globalFallback.pesertaList.forEach((p) => {
+      if (p.evaluasi) {
+        const avg =
+          (p.evaluasi.ratingKemudahan +
+            p.evaluasi.ratingMateri +
+            p.evaluasi.ratingSoal +
+            p.evaluasi.ratingManfaat) /
+          4;
+        records.push({
+          id: p.id,
+          pesertaId: p.id,
+          nama: p.nama,
+          nik: p.nik,
+          instansi: p.instansi,
+          pekerjaan: p.pekerjaan,
+          usia: p.usia,
+          jenisKelamin: p.jenisKelamin,
+          tanggalTes: p.tanggalTes,
+          ratingKemudahan: p.evaluasi.ratingKemudahan,
+          ratingMateri: p.evaluasi.ratingMateri,
+          ratingSoal: p.evaluasi.ratingSoal,
+          ratingManfaat: p.evaluasi.ratingManfaat,
+          rataRata: parseFloat(avg.toFixed(1)),
+          kritikSaran: p.evaluasi.kritikSaran,
+          createdAt: p.createdAt || p.tanggalTes,
+        });
+      }
+    });
+  }
+
+  // Calculate statistics
+  const totalResponden = records.length;
+  let sumKemudahan = 0;
+  let sumMateri = 0;
+  let sumSoal = 0;
+  let sumManfaat = 0;
+  let sumAll = 0;
+  let sangatPuasCount = 0;
+  let puasCount = 0;
+
+  const distribusi = {
+    bintang5: 0,
+    bintang4: 0,
+    bintang3: 0,
+    bintang2: 0,
+    bintang1: 0,
+  };
+
+  records.forEach((r) => {
+    sumKemudahan += r.ratingKemudahan;
+    sumMateri += r.ratingMateri;
+    sumSoal += r.ratingSoal;
+    sumManfaat += r.ratingManfaat;
+    sumAll += r.rataRata;
+
+    if (r.rataRata >= 4.5) sangatPuasCount++;
+    if (r.rataRata >= 4.0) puasCount++;
+
+    const rounded = Math.round(r.rataRata);
+    if (rounded >= 5) distribusi.bintang5++;
+    else if (rounded === 4) distribusi.bintang4++;
+    else if (rounded === 3) distribusi.bintang3++;
+    else if (rounded === 2) distribusi.bintang2++;
+    else distribusi.bintang1++;
+  });
+
+  const stats: GardaEvaluasiSummaryStats = {
+    totalResponden,
+    rataRataKeseluruhan:
+      totalResponden > 0 ? parseFloat((sumAll / totalResponden).toFixed(1)) : 0,
+    rataRataKemudahan:
+      totalResponden > 0 ? parseFloat((sumKemudahan / totalResponden).toFixed(1)) : 0,
+    rataRataMateri:
+      totalResponden > 0 ? parseFloat((sumMateri / totalResponden).toFixed(1)) : 0,
+    rataRataSoal:
+      totalResponden > 0 ? parseFloat((sumSoal / totalResponden).toFixed(1)) : 0,
+    rataRataManfaat:
+      totalResponden > 0 ? parseFloat((sumManfaat / totalResponden).toFixed(1)) : 0,
+    persentaseSangatPuas:
+      totalResponden > 0 ? Math.round((sangatPuasCount / totalResponden) * 100) : 0,
+    persentasePuas:
+      totalResponden > 0 ? Math.round((puasCount / totalResponden) * 100) : 0,
+    distribusiBintang: distribusi,
+  };
+
+  return { evaluasiList: records, stats };
+}
+

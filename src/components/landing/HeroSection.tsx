@@ -126,7 +126,6 @@ export function HeroSection({ initialData }: HeroSectionProps) {
                 priority={index === 0}
                 sizes="100vw"
                 className="object-cover object-[68%_center]"
-                unoptimized={slide.image.startsWith("http")}
               />
             </div>
           ))}
@@ -174,7 +173,6 @@ export function HeroSection({ initialData }: HeroSectionProps) {
                     sizes="(max-width: 1024px) 100vw, 50vw"
                     className="object-cover"
                     style={{ objectPosition: slide.mobilePosition || "center center" }}
-                    unoptimized={slide.image.startsWith("http")}
                   />
                 </div>
               ))}
