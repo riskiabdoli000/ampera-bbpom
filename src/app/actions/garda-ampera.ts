@@ -238,17 +238,31 @@ export async function submitGardaPesertaAssessmentAction(payload: {
   try {
     const { biodata, preTestScore, postTestScore, postTestAttempts, isLulus, evaluasi } = payload;
 
-    // Tentukan nomor sertifikat resmi jika lulus
+    // Tentukan nomor sertifikat resmi secara berurutan langsung dari database jika lulus
     let finalNomorSertifikat = payload.nomorSertifikat;
     if (isLulus) {
-      if (!finalNomorSertifikat || !finalNomorSertifikat.includes("/GARDAAMPERA/BBPOMPLG/")) {
-        try {
-          const count = await (prisma as any).gardaPeserta.count({
+      try {
+        let nextSeq =
+          (await (prisma as any).gardaPeserta.count({
             where: { isLulus: true },
-          });
-          finalNomorSertifikat = formatNomorSertifikatGarda(count + 1);
-        } catch {
-          finalNomorSertifikat = formatNomorSertifikatGarda(globalFallback.pesertaList.filter((p) => p.isLulus).length + 1);
+          })) + 1;
+        let candidate = formatNomorSertifikatGarda(nextSeq);
+        // Pastikan tidak bentrok dengan constraint @unique pada nomorSertifikat
+        while (
+          await (prisma as any).gardaPeserta.findUnique({
+            where: { nomorSertifikat: candidate },
+            select: { id: true },
+          })
+        ) {
+          nextSeq++;
+          candidate = formatNomorSertifikatGarda(nextSeq);
+        }
+        finalNomorSertifikat = candidate;
+      } catch {
+        if (!finalNomorSertifikat || !finalNomorSertifikat.includes("/GARDAAMPERA/BBPOMPLG/")) {
+          finalNomorSertifikat = formatNomorSertifikatGarda(
+            globalFallback.pesertaList.filter((p) => p.isLulus).length + 1
+          );
         }
       }
     } else {

@@ -216,21 +216,21 @@ export async function generateGardaCertificatePdf({
     color: rgb(0.1, 0.1, 0.1),
   });
 
-  // Cap Stempel BBPOM Palembang (cap-bpom.png)
+  // Cap Stempel BBPOM Palembang (cap-bpom.png) -> sesuai -translate-x-20 & -translate-y-2
   const stempelW = 86;
   const stempelH = 86;
   page.drawImage(capImage, {
-    x: centerSignX - 74,
-    y: 106, // disesuaikan naik sedikit sesuai permintaan pengguna
+    x: centerSignX - 96,
+    y: 106,
     width: stempelW,
     height: stempelH,
   });
 
-  // Tanda Tangan Elektronik Bu Yani (tte-bu-yani.png)
+  // Tanda Tangan Elektronik Bu Yani (tte-bu-yani.png) -> sesuai translate-x-2
   const ttdW = 105;
   const ttdH = 70;
   page.drawImage(tteImage, {
-    x: centerSignX - 18,
+    x: centerSignX - 28,
     y: 108,
     width: ttdW,
     height: ttdH,

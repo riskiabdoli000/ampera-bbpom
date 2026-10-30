@@ -4,7 +4,6 @@ import React, { useState, useRef, useEffect } from "react";
 import {
   ClipboardList,
   GraduationCap,
-  Clock,
   CheckCircle2,
   AlertTriangle,
   ArrowRight,
@@ -14,6 +13,7 @@ import {
   BookOpen,
   Award,
   HelpCircle,
+  KeyRound,
 } from "lucide-react";
 import { SoalUjian } from "./types";
 
@@ -46,6 +46,17 @@ export function QuizView({
   const [currentIdx, setCurrentIdx] = useState(0);
   const paletteRef = useRef<HTMLDivElement>(null);
 
+  // Sinkronkan state jawaban & reset nomor soal ke #1 saat mengulang (retry)
+  useEffect(() => {
+    setAnswers(savedAnswers);
+  }, [savedAnswers]);
+
+  useEffect(() => {
+    if (!isSubmitted) {
+      setCurrentIdx(0);
+    }
+  }, [attemptsCount, isSubmitted]);
+
   // Auto-scroll hanya pada kontainer nomor soal (tidak menggeser window/halaman browser)
   useEffect(() => {
     if (!paletteRef.current) return;
@@ -62,7 +73,16 @@ export function QuizView({
 
   const isPreTest = type === "pre-test";
   const title = isPreTest ? "Pre-Test Garda Ampera" : "Post-Test Evaluasi Kelulusan";
-  const badgeLabel = isPreTest ? "Langkah 2 dari 6 • Pre-Test" : "Langkah 4 dari 6 • Post-Test";
+  const badgeLabel = isPreTest
+    ? "Langkah 2 dari 6 • Pre-Test"
+    : attemptsCount > 1
+    ? `Langkah 4 dari 6 • Post-Test (Percobaan #${attemptsCount})`
+    : "Langkah 4 dari 6 • Post-Test";
+
+  // Bantuan kunci jawaban aktif pada Post-Test percobaan ke-3 (setelah gagal 2 kali)
+  // Hanya diberikan untuk 8 soal pertama (Soal #1 s.d. #8), sedangkan Soal #9 & #10 tanpa kunci
+  const showAnswerKeyHelper = !isPreTest && attemptsCount >= 3;
+  const isQuestionWithKey = showAnswerKeyHelper && currentIdx < 8;
 
   if (!soalList || soalList.length === 0) {
     return (
@@ -217,13 +237,27 @@ export function QuizView({
                   diunduh.
                 </p>
               </div>
+            ) : attemptsCount >= 2 ? (
+              <div className="bg-amber-950/50 backdrop-blur-sm rounded-xl p-4 text-xs sm:text-sm text-amber-100 text-left border border-amber-400/40 space-y-1.5">
+                <p className="font-semibold flex items-center gap-1.5 text-amber-200">
+                  <KeyRound className="w-4 h-4 text-amber-300 shrink-0" />
+                  Bantuan Kunci Jawaban Akan Diaktifkan pada Percobaan Berikutnya!
+                </p>
+                <p className="text-amber-100/90 leading-relaxed">
+                  Anda telah menyelesaikan <strong>{attemptsCount} kali percobaan</strong> dengan nilai{" "}
+                  <strong>{submittedScore}</strong> (di bawah KKM 70). Saat Anda menekan tombol{" "}
+                  <strong>Ulangi Pengerjaan Post-Test</strong> di bawah, sistem akan menampilkan{" "}
+                  <strong>kunci jawaban pada 8 dari 10 soal (Soal #1 s.d. #8)</strong> agar Anda dapat
+                  lulus ke tahap Evaluasi dan mengunduh Sertifikat.
+                </p>
+              </div>
             ) : (
               <div className="bg-red-950/40 backdrop-blur-sm rounded-xl p-4 text-xs sm:text-sm text-rose-100 text-left border border-rose-500/30">
-                <p className="font-semibold mb-1">⚠️ Batas Kelulusan Belum Tercapai:</p>
+                <p className="font-semibold mb-1">⚠️ Batas Kelulusan Belum Tercapai (Percobaan #1):</p>
                 <p className="text-rose-200">
                   Batas kelulusan minimal (KKM) Post-Test adalah <strong>70</strong>. Nilai
-                  Anda adalah <strong>{submittedScore}</strong>. Mohon ulangi pengerjaan
-                  Post-Test atau pelajari kembali modul materi agar pemahaman Anda lebih matang.
+                  Anda adalah <strong>{submittedScore}</strong>. Silakan ulangi pengerjaan
+                  Post-Test (Percobaan ke-2 belum disertai kunci jawaban) atau pelajari kembali modul materi.
                 </p>
               </div>
             )}
@@ -278,7 +312,9 @@ export function QuizView({
                 className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-4 py-2.5 sm:px-6 sm:py-3 rounded-xl bg-amber-600 hover:bg-amber-500 text-white font-bold text-xs sm:text-sm shadow-md shadow-amber-600/20 transition-all hover:scale-[1.02] cursor-pointer whitespace-nowrap"
               >
                 <RotateCcw className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />
-                Ulangi Pengerjaan Post-Test
+                {attemptsCount >= 2
+                  ? `Ulangi Post-Test (Percobaan #${attemptsCount + 1} + Bantuan Kunci Jawaban)`
+                  : `Ulangi Pengerjaan Post-Test (Percobaan #${attemptsCount + 1})`}
               </button>
             </>
           )}
@@ -346,6 +382,23 @@ export function QuizView({
         </div>
       </div>
 
+      {/* Banner Bantuan Kunci Jawaban (Hanya tampil saat Post-Test Percobaan >= 3) */}
+      {showAnswerKeyHelper && (
+        <div className="bg-emerald-50 dark:bg-emerald-950/40 border-b border-emerald-200 dark:border-emerald-800/60 px-4 sm:px-6 py-3 flex items-start sm:items-center gap-3 text-xs text-emerald-900 dark:text-emerald-200">
+          <div className="w-7 h-7 rounded-lg bg-emerald-600 text-white flex items-center justify-center shrink-0 mt-0.5 sm:mt-0">
+            <KeyRound className="w-4 h-4" />
+          </div>
+          <div className="flex-1 leading-relaxed">
+            <strong className="font-bold">Bantuan Kunci Jawaban Aktif (Percobaan #{attemptsCount}):</strong>{" "}
+            Kunci jawaban telah ditandai pada <strong>8 soal pertama (Soal #1 s.d. #8)</strong>. Silakan klik sendiri pilihan jawaban yang bertanda{" "}
+            <span className="inline-flex items-center px-1.5 py-0.5 rounded bg-emerald-600 text-white font-bold text-[10px]">
+              ✓ Kunci Jawaban
+            </span>
+            , sedangkan <strong>Soal #9 dan #10</strong> tetap dijawab secara mandiri.
+          </div>
+        </div>
+      )}
+
       {/* Progress & Palette Strip */}
       <div className="bg-slate-50 dark:bg-slate-800/60 px-4 sm:px-6 py-3 border-b border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2.5">
         <div className="flex items-center gap-2 text-xs">
@@ -393,9 +446,23 @@ export function QuizView({
       {/* Soal Active Content */}
       <div className="p-6 sm:p-8 space-y-6">
         <div>
-          <span className="text-xs font-extrabold uppercase tracking-widest text-blue-600 dark:text-blue-400">
-            Pertanyaan #{currentIdx + 1}
-          </span>
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <span className="text-xs font-extrabold uppercase tracking-widest text-blue-600 dark:text-blue-400">
+              Pertanyaan #{currentIdx + 1}
+            </span>
+            {showAnswerKeyHelper && (
+              isQuestionWithKey ? (
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-100 dark:bg-emerald-950/70 border border-emerald-300 dark:border-emerald-700 text-emerald-800 dark:text-emerald-300 text-[11px] font-bold">
+                  <KeyRound className="w-3 h-3" />
+                  Bantuan Kunci Jawaban ({currentIdx + 1}/8)
+                </span>
+              ) : (
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-amber-100 dark:bg-amber-950/70 border border-amber-300 dark:border-amber-700 text-amber-800 dark:text-amber-300 text-[11px] font-bold">
+                  Soal Mandiri (Tanpa Kunci Jawaban)
+                </span>
+              )
+            )}
+          </div>
           <h3 className="text-lg sm:text-xl font-bold text-navy-900 dark:text-white mt-1.5 leading-relaxed">
             {currentSoal.pertanyaan}
           </h3>
@@ -405,6 +472,7 @@ export function QuizView({
         <div className="space-y-3">
           {currentSoal.pilihan.map((pil) => {
             const isPicked = answers[currentSoal.id] === pil.id;
+            const isKeyOption = isQuestionWithKey && pil.id === currentSoal.jawabanBenar;
 
             return (
               <button
@@ -414,6 +482,8 @@ export function QuizView({
                 className={`w-full text-left p-4 rounded-xl border transition-all flex items-start gap-3.5 group cursor-pointer ${
                   isPicked
                     ? "border-blue-600 dark:border-blue-500 bg-blue-50/70 dark:bg-blue-950/40 text-navy-950 dark:text-blue-100 shadow-sm"
+                    : isKeyOption
+                    ? "border-emerald-400 dark:border-emerald-600 bg-emerald-50/40 dark:bg-emerald-950/20 text-slate-800 dark:text-slate-200 hover:bg-emerald-50/70"
                     : "border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 bg-white dark:bg-slate-800/80 text-slate-700 dark:text-slate-300 hover:bg-slate-50/50"
                 }`}
               >
@@ -421,12 +491,22 @@ export function QuizView({
                   className={`w-8 h-8 rounded-lg flex items-center justify-center font-bold text-xs shrink-0 transition-colors ${
                     isPicked
                       ? "bg-blue-600 text-white"
+                      : isKeyOption
+                      ? "bg-emerald-600 text-white"
                       : "bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 group-hover:bg-slate-200"
                   }`}
                 >
                   {pil.id}
                 </span>
-                <span className="text-sm pt-1 leading-snug">{pil.teks}</span>
+                <div className="flex-1 flex flex-col sm:flex-row sm:items-center justify-between gap-2 pt-1">
+                  <span className="text-sm leading-snug">{pil.teks}</span>
+                  {isKeyOption && (
+                    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-emerald-600 text-white text-[11px] font-bold shrink-0 self-start sm:self-center shadow-xs">
+                      <KeyRound className="w-3 h-3" />
+                      ✓ Kunci Jawaban
+                    </span>
+                  )}
+                </div>
               </button>
             );
           })}

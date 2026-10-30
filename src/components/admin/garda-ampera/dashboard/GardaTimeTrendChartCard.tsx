@@ -429,7 +429,7 @@ export function GardaTimeTrendChartCard({
           <div className="pl-2 border-l border-slate-200 dark:border-slate-800 flex items-center gap-3">
             <div>
               <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
-                TOTAL TAMU
+                TOTAL PESERTA
               </p>
               <p className="text-2xl font-black text-navy-900 dark:text-white leading-none">
                 {totalCount}
@@ -445,7 +445,7 @@ export function GardaTimeTrendChartCard({
               title="Unduh Grafik dalam Bentuk Gambar PNG"
             >
               <Download className={`w-3.5 h-3.5 ${isExporting ? "animate-bounce" : ""}`} />
-              <span>{isExporting ? "Menyimpan..." : "Unduh Gambar"}</span>
+              <span>{isExporting ? "Menyimpan..." : "Unduh"}</span>
             </button>
           </div>
         </div>

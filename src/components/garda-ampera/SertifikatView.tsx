@@ -194,13 +194,13 @@ export function SertifikatView({
                 <img
                   src="/sertifikat/assets/cap-bpom.png"
                   alt="Cap BBPOM Palembang"
-                  className="absolute h-20 sm:h-28 md:h-32 object-contain transform -translate-x-10 sm:-translate-x-12 -translate-y-1 md:-translate-y-2 opacity-95 pointer-events-none"
+                  className="absolute h-20 sm:h-28 md:h-32 object-contain transform -translate-x-12 sm:-translate-x-20 -translate-y-1 md:-translate-y-2 opacity-95 pointer-events-none"
                 />
                 {/* TTE Bu Yani */}
                 <img
                   src="/sertifikat/assets/tte-bu-yani.png"
                   alt="TTE Bu Yani"
-                  className="absolute h-14 sm:h-20 md:h-28 object-contain transform translate-x-3 sm:translate-x-4 pointer-events-none"
+                  className="absolute h-14 sm:h-20 md:h-28 object-contain transform translate-x-3 sm:translate-x-2 pointer-events-none"
                 />
               </div>
 

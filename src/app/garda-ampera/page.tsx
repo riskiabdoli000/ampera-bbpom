@@ -32,7 +32,7 @@ export default function GardaAmperaPage() {
             </h1>
 
             <p className="text-sm sm:text-base font-semibold text-blue-700 dark:text-blue-300 mt-1 uppercase tracking-wide">
-              Gerakan Antisipasi Risiko, Deteksi, dan Aksi untuk Amankan Produk, Edukasi Masyarakat
+              Gerakan Antisipasi Risiko, Deteksi, dan Aksi untuk Amankan <br />Produk, Edukasi Masyarakat
             </p>
 
             <p className="mt-3 text-xs sm:text-sm text-ink-soft dark:text-slate-300 leading-relaxed max-w-2xl mx-auto">

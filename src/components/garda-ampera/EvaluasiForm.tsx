@@ -19,33 +19,24 @@ interface EvaluasiFormProps {
 }
 
 export function EvaluasiForm({ initialData, onSubmit }: EvaluasiFormProps) {
-  const [ratingKemudahan, setRatingKemudahan] = useState(initialData?.ratingKemudahan || 5);
-  const [ratingMateri, setRatingMateri] = useState(initialData?.ratingMateri || 5);
-  const [ratingSoal, setRatingSoal] = useState(initialData?.ratingSoal || 5);
-  const [ratingManfaat, setRatingManfaat] = useState(initialData?.ratingManfaat || 5);
-  const [kritikSaran, setKritikSaran] = useState(
-    initialData?.kritikSaran ||
-      "Sistem Garda Ampera sangat membantu dan interaktif. Materi Cek KLIK dan pengenalan bahan berbahaya sangat jelas dan mudah dipahami."
-  );
+  const [ratingKemudahan, setRatingKemudahan] = useState(initialData?.ratingKemudahan || 0);
+  const [ratingMateri, setRatingMateri] = useState(initialData?.ratingMateri || 0);
+  const [ratingSoal, setRatingSoal] = useState(initialData?.ratingSoal || 0);
+  const [ratingManfaat, setRatingManfaat] = useState(initialData?.ratingManfaat || 0);
+  const [kritikSaran, setKritikSaran] = useState(initialData?.kritikSaran || "");
 
-  const handleQuickFill = () => {
-    setRatingKemudahan(5);
-    setRatingMateri(5);
-    setRatingSoal(5);
-    setRatingManfaat(5);
-    setKritikSaran(
-      "Program Garda Ampera sangat inspiratif dan bermanfaat bagi edukasi masyarakat. Tampilan sistem sangat modern, responsif, dan mudah digunakan!"
-    );
-  };
+  const isRatingComplete =
+    ratingMateri > 0 && ratingSoal > 0 && ratingKemudahan > 0 && ratingManfaat > 0;
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!isRatingComplete) return;
     onSubmit({
       ratingKemudahan,
       ratingMateri,
       ratingSoal,
       ratingManfaat,
-      kritikSaran,
+      kritikSaran: kritikSaran.trim(),
     });
   };
 
@@ -81,8 +72,8 @@ export function EvaluasiForm({ initialData, onSubmit }: EvaluasiFormProps) {
               />
             </button>
           ))}
-          <span className="ml-2 text-xs font-bold text-amber-600 dark:text-amber-400 min-w-8">
-            {value} / 5
+          <span className="ml-2 text-xs font-bold text-amber-600 dark:text-amber-400 min-w-16 text-right">
+            {value > 0 ? `${value} / 5` : "Pilih bintang"}
           </span>
         </div>
       </div>
@@ -108,16 +99,6 @@ export function EvaluasiForm({ initialData, onSubmit }: EvaluasiFormProps) {
               dapat diunduh dalam format PDF.
             </p>
           </div>
-
-          <button
-            type="button"
-            onClick={handleQuickFill}
-            className="self-start sm:self-center inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-white hover:bg-amber-50 text-amber-900 font-bold text-xs shadow-md transition-all cursor-pointer whitespace-nowrap"
-            title="Bantu isi cepat untuk demo"
-          >
-            <Sparkles className="w-4 h-4 text-amber-600" />
-            ⚡ Isi Cepat Evaluasi (Demo)
-          </button>
         </div>
       </div>
 
@@ -125,24 +106,24 @@ export function EvaluasiForm({ initialData, onSubmit }: EvaluasiFormProps) {
       <form onSubmit={handleSubmit} className="p-6 sm:p-8 space-y-6">
         <div className="space-y-4">
           {renderStarRating(
-            "1. Kemudahan Antarmuka & Navigasi",
-            "Seberapa mudah Anda memahami alur pengisian data, pengerjaan kuis, dan navigasi slide?",
-            ratingKemudahan,
-            setRatingKemudahan
-          )}
-
-          {renderStarRating(
-            "2. Kualitas & Kejelasan Materi Slide",
+            "1. Kualitas & Kejelasan Materi Slide",
             "Apakah 3 modul materi edukasi BBPOM Palembang mudah dipahami dan menarik dibaca?",
             ratingMateri,
             setRatingMateri
           )}
 
           {renderStarRating(
-            "3. Bobot & Relevansi Soal Ujian",
+            "2. Bobot & Relevansi Soal Ujian",
             "Apakah soal Pre-Test dan Post-Test sesuai dengan materi edukasi yang disampaikan?",
             ratingSoal,
             setRatingSoal
+          )}
+
+          {renderStarRating(
+            "3. Kemudahan Antarmuka & Navigasi",
+            "Seberapa mudah Anda memahami alur pengisian data, pengerjaan kuis, dan navigasi slide?",
+            ratingKemudahan,
+            setRatingKemudahan
           )}
 
           {renderStarRating(
@@ -176,9 +157,14 @@ export function EvaluasiForm({ initialData, onSubmit }: EvaluasiFormProps) {
 
           <button
             type="submit"
-            className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-amber-600 hover:bg-amber-500 text-white font-bold text-sm shadow-md shadow-amber-600/20 transition-all hover:scale-[1.01] cursor-pointer"
+            disabled={!isRatingComplete}
+            className={`w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl font-bold text-sm transition-all ${
+              isRatingComplete
+                ? "bg-amber-600 hover:bg-amber-500 text-white shadow-md shadow-amber-600/20 hover:scale-[1.01] cursor-pointer"
+                : "bg-slate-200 dark:bg-slate-800 text-slate-400 cursor-not-allowed"
+            }`}
           >
-            Kirim Evaluasi & Buka Sertifikat
+            {isRatingComplete ? "Kirim Evaluasi & Buka Sertifikat" : "Berikan Penilaian pada 4 Aspek di Atas"}
             <ArrowRight className="w-4 h-4" />
           </button>
         </div>
