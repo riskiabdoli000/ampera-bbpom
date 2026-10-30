@@ -134,11 +134,19 @@ export async function createPetugasAction(formData: FormData) {
   }
 
   try {
-    const inserted = await prisma.$queryRawUnsafe<PetugasRecord[]>(
+    const fullRecord = await prisma.$queryRawUnsafe<PetugasRecord[]>(
       `
-      INSERT INTO "Petugas" (nip, nama, telepon, jabatan, "fotoUrl", "fotoPath", "isAktif", "layananId", "createdAt", "updatedAt")
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW(), NOW())
-      RETURNING *;
+      WITH inserted AS (
+        INSERT INTO "Petugas" (nip, nama, telepon, jabatan, "fotoUrl", "fotoPath", "isAktif", "layananId", "createdAt", "updatedAt")
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW(), NOW())
+        RETURNING *
+      )
+      SELECT 
+        i.*,
+        l.kode as "layananKode",
+        l.nama as "layananNama"
+      FROM inserted i
+      LEFT JOIN "Layanan" l ON i."layananId" = l.id;
       `,
       nip,
       nama,
@@ -150,25 +158,9 @@ export async function createPetugasAction(formData: FormData) {
       layananId
     );
 
-    // Ambil record lengkap dengan JOIN nama & kode layanan
-    const fullRecord = await prisma.$queryRawUnsafe<PetugasRecord[]>(
-      `
-      SELECT 
-        p.*,
-        l.kode as "layananKode",
-        l.nama as "layananNama"
-      FROM "Petugas" p
-      LEFT JOIN "Layanan" l ON p."layananId" = l.id
-      WHERE p.id = $1
-      LIMIT 1;
-      `,
-      inserted[0].id
-    );
-
-    revalidatePath("/admin/petugas");
     return {
       success: true,
-      data: fullRecord[0] || inserted[0],
+      data: fullRecord[0],
     };
   } catch (err: unknown) {
     console.error("Error creating Petugas:", err);
@@ -206,24 +198,24 @@ export async function updatePetugasAction(id: number, formData: FormData) {
     return { success: false, error: "Nama lengkap petugas wajib diisi." };
   }
 
-  // Cek apakah data petugas ada
-  const currentPetugas = await prisma.$queryRawUnsafe<PetugasRecord[]>(
-    `SELECT * FROM "Petugas" WHERE id = $1 LIMIT 1;`,
-    id
-  );
+  // Cek keberadaan data petugas & keunikan NIP secara paralel
+  const [currentPetugas, duplicateNip] = await Promise.all([
+    prisma.$queryRawUnsafe<PetugasRecord[]>(
+      `SELECT * FROM "Petugas" WHERE id = $1 LIMIT 1;`,
+      id
+    ),
+    prisma.$queryRawUnsafe<PetugasRecord[]>(
+      `SELECT id FROM "Petugas" WHERE nip = $1 AND id != $2 LIMIT 1;`,
+      nip,
+      id
+    ),
+  ]);
 
   if (currentPetugas.length === 0) {
     return { success: false, error: "Data petugas tidak ditemukan." };
   }
 
   const existing = currentPetugas[0];
-
-  // Cek keunikan NIP selain id saat ini
-  const duplicateNip = await prisma.$queryRawUnsafe<PetugasRecord[]>(
-    `SELECT id FROM "Petugas" WHERE nip = $1 AND id != $2 LIMIT 1;`,
-    nip,
-    id
-  );
 
   if (duplicateNip.length > 0) {
     return {
@@ -237,7 +229,7 @@ export async function updatePetugasAction(id: number, formData: FormData) {
 
   // Jika admin menghapus foto
   if (removeFoto && fotoPath) {
-    await deleteImage(fotoPath);
+    deleteImage(fotoPath).catch(() => {});
     fotoUrl = null;
     fotoPath = null;
   }
@@ -247,7 +239,7 @@ export async function updatePetugasAction(id: number, formData: FormData) {
     try {
       const uploadResult = await uploadImage(fotoFile, "petugas");
       if (fotoPath) {
-        await deleteImage(fotoPath);
+        deleteImage(fotoPath).catch(() => {});
       }
       fotoUrl = uploadResult.url;
       fotoPath = uploadResult.path;
@@ -261,20 +253,29 @@ export async function updatePetugasAction(id: number, formData: FormData) {
   }
 
   try {
-    await prisma.$queryRawUnsafe(
+    const updatedFull = await prisma.$queryRawUnsafe<PetugasRecord[]>(
       `
-      UPDATE "Petugas"
-      SET 
-        nip = $1,
-        nama = $2,
-        telepon = $3,
-        jabatan = $4,
-        "fotoUrl" = $5,
-        "fotoPath" = $6,
-        "isAktif" = $7,
-        "layananId" = $8,
-        "updatedAt" = NOW()
-      WHERE id = $9;
+      WITH updated AS (
+        UPDATE "Petugas"
+        SET 
+          nip = $1,
+          nama = $2,
+          telepon = $3,
+          jabatan = $4,
+          "fotoUrl" = $5,
+          "fotoPath" = $6,
+          "isAktif" = $7,
+          "layananId" = $8,
+          "updatedAt" = NOW()
+        WHERE id = $9
+        RETURNING *
+      )
+      SELECT 
+        u.*,
+        l.kode as "layananKode",
+        l.nama as "layananNama"
+      FROM updated u
+      LEFT JOIN "Layanan" l ON u."layananId" = l.id;
       `,
       nip,
       nama,
@@ -287,22 +288,6 @@ export async function updatePetugasAction(id: number, formData: FormData) {
       id
     );
 
-    // Ambil data lengkap dengan nama & kode layanan
-    const updatedFull = await prisma.$queryRawUnsafe<PetugasRecord[]>(
-      `
-      SELECT 
-        p.*,
-        l.kode as "layananKode",
-        l.nama as "layananNama"
-      FROM "Petugas" p
-      LEFT JOIN "Layanan" l ON p."layananId" = l.id
-      WHERE p.id = $1
-      LIMIT 1;
-      `,
-      id
-    );
-
-    revalidatePath("/admin/petugas");
     return {
       success: true,
       data: updatedFull[0],
@@ -323,42 +308,28 @@ export async function togglePetugasStatusAction(id: number) {
   await verifyAdminSession();
 
   try {
-    const current = await prisma.$queryRawUnsafe<PetugasRecord[]>(
-      `SELECT "isAktif" FROM "Petugas" WHERE id = $1 LIMIT 1;`,
+    const updated = await prisma.$queryRawUnsafe<PetugasRecord[]>(
+      `
+      WITH toggled AS (
+        UPDATE "Petugas"
+        SET "isAktif" = NOT "isAktif", "updatedAt" = NOW()
+        WHERE id = $1
+        RETURNING *
+      )
+      SELECT 
+        t.*,
+        l.kode as "layananKode",
+        l.nama as "layananNama"
+      FROM toggled t
+      LEFT JOIN "Layanan" l ON t."layananId" = l.id;
+      `,
       id
     );
 
-    if (current.length === 0) {
+    if (updated.length === 0) {
       return { success: false, error: "Petugas tidak ditemukan." };
     }
 
-    const newStatus = !current[0].isAktif;
-
-    await prisma.$queryRawUnsafe(
-      `
-      UPDATE "Petugas"
-      SET "isAktif" = $1, "updatedAt" = NOW()
-      WHERE id = $2;
-      `,
-      newStatus,
-      id
-    );
-
-    const updated = await prisma.$queryRawUnsafe<PetugasRecord[]>(
-      `
-      SELECT 
-        p.*,
-        l.kode as "layananKode",
-        l.nama as "layananNama"
-      FROM "Petugas" p
-      LEFT JOIN "Layanan" l ON p."layananId" = l.id
-      WHERE p.id = $1
-      LIMIT 1;
-      `,
-      id
-    );
-
-    revalidatePath("/admin/petugas");
     return {
       success: true,
       data: updated[0],
@@ -378,22 +349,19 @@ export async function deletePetugasAction(id: number) {
   await verifyAdminSession();
 
   try {
-    const current = await prisma.$queryRawUnsafe<PetugasRecord[]>(
-      `SELECT "fotoPath" FROM "Petugas" WHERE id = $1 LIMIT 1;`,
+    const deleted = await prisma.$queryRawUnsafe<Array<{ fotoPath: string | null }>>(
+      `DELETE FROM "Petugas" WHERE id = $1 RETURNING "fotoPath";`,
       id
     );
 
-    if (current.length === 0) {
+    if (deleted.length === 0) {
       return { success: false, error: "Data petugas tidak ditemukan." };
     }
 
-    if (current[0].fotoPath) {
-      await deleteImage(current[0].fotoPath);
+    if (deleted[0].fotoPath) {
+      deleteImage(deleted[0].fotoPath).catch(() => {});
     }
 
-    await prisma.$executeRawUnsafe(`DELETE FROM "Petugas" WHERE id = $1;`, id);
-
-    revalidatePath("/admin/petugas");
     return { success: true };
   } catch (err: unknown) {
     return {

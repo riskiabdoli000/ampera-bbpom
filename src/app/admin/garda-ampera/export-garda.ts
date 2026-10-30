@@ -1,7 +1,4 @@
-import ExcelJS from "exceljs";
-import jsPDF from "jspdf";
-import autoTable from "jspdf-autotable";
-import { GardaPesertaItem, GardaAdminStats } from "@/app/actions/garda-ampera";
+import type { GardaPesertaItem, GardaAdminStats } from "@/app/actions/garda-ampera";
 
 /**
  * Format tanggal Indonesia lengkap (cth: "Rabu, 28 Oktober 2026, 10.30 WIB")
@@ -61,6 +58,7 @@ export async function exportGardaToExcel(
   pesertaList: GardaPesertaItem[],
   stats: GardaAdminStats
 ): Promise<void> {
+  const ExcelJS = (await import("exceljs")).default;
   const workbook = new ExcelJS.Workbook();
   workbook.creator = "Sistem Informasi AMPERA - BBPOM di Palembang";
   workbook.lastModifiedBy = "Admin BBPOM Palembang";
@@ -243,6 +241,10 @@ export async function exportGardaToPdf(
   pesertaList: GardaPesertaItem[],
   stats: GardaAdminStats
 ): Promise<void> {
+  const [{ default: jsPDF }, { default: autoTable }] = await Promise.all([
+    import("jspdf"),
+    import("jspdf-autotable"),
+  ]);
   // A4 Landscape: 297mm x 210mm
   const doc = new jsPDF({
     orientation: "landscape",

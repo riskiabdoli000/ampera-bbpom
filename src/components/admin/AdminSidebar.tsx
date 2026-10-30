@@ -14,7 +14,6 @@ import {
   PhoneCall,
   ChevronDown,
   ChevronRight,
-  LogOut,
   FileSpreadsheet,
   FolderKanban,
   FileQuestion,
@@ -30,9 +29,20 @@ import {
 interface AdminSidebarProps {
   isOpen: boolean;
   onClose: () => void;
+  waitingByService?: {
+    INFO: number;
+    UJI_CEPAT: number;
+    ADUAN: number;
+    KIP: number;
+    total: number;
+  };
 }
 
-export function AdminSidebar({ isOpen, onClose }: AdminSidebarProps) {
+export function AdminSidebar({
+  isOpen,
+  onClose,
+  waitingByService = { INFO: 0, UJI_CEPAT: 0, ADUAN: 0, KIP: 0, total: 0 },
+}: AdminSidebarProps) {
   const pathname = usePathname();
   const navRef = useRef<HTMLElement>(null);
 
@@ -59,10 +69,30 @@ export function AdminSidebar({ isOpen, onClose }: AdminSidebarProps) {
   ];
 
   const laporanSubItems = [
-    { title: "Data Informasi", href: "/admin/laporan/informasi", icon: FileQuestion },
-    { title: "Data Pengujian Cepat", href: "/admin/laporan/pengujian-cepat", icon: FlaskConical },
-    { title: "Data Pengaduan", href: "/admin/laporan/pengaduan", icon: AlertTriangle },
-    { title: "Data KIP", href: "/admin/laporan/kip", icon: FileLock },
+    {
+      title: "Data Informasi",
+      href: "/admin/laporan/informasi",
+      icon: FileQuestion,
+      badgeCount: waitingByService.INFO,
+    },
+    {
+      title: "Data Pengujian Cepat",
+      href: "/admin/laporan/pengujian-cepat",
+      icon: FlaskConical,
+      badgeCount: waitingByService.UJI_CEPAT,
+    },
+    {
+      title: "Data Pengaduan",
+      href: "/admin/laporan/pengaduan",
+      icon: AlertTriangle,
+      badgeCount: waitingByService.ADUAN,
+    },
+    {
+      title: "Data KIP",
+      href: "/admin/laporan/kip",
+      icon: FileLock,
+      badgeCount: waitingByService.KIP,
+    },
   ];
 
   const isAnyLaporanSubActive = laporanSubItems.some((item) => pathname === item.href);
@@ -279,11 +309,33 @@ export function AdminSidebar({ isOpen, onClose }: AdminSidebarProps) {
                     />
                     <span>Data Laporan</span>
                   </div>
-                  {laporanOpen ? (
-                    <ChevronDown className="h-4 w-4 text-white/80 transition-colors group-hover:text-white" />
-                  ) : (
-                    <ChevronRight className="h-4 w-4 text-white/80 transition-colors group-hover:text-white" />
-                  )}
+                  <div className="flex items-center gap-2">
+                    {waitingByService.total > 0 && (
+                      <span
+                        className="inline-flex h-5 min-w-[20px] items-center justify-center rounded-full bg-red-500 px-1.5 text-[10px] font-extrabold leading-none text-white shadow-xs"
+                        title={`${waitingByService.total} pengajuan menunggu verifikasi`}
+                      >
+                        {waitingByService.total > 99 ? "99+" : waitingByService.total}
+                      </span>
+                    )}
+                    {laporanOpen ? (
+                      <ChevronDown
+                        className={`h-4 w-4 transition-colors ${
+                          isLaporanParentActive
+                            ? "text-[#0b2a6b] dark:text-blue-400"
+                            : "text-white/80 group-hover:text-white"
+                        }`}
+                      />
+                    ) : (
+                      <ChevronRight
+                        className={`h-4 w-4 transition-colors ${
+                          isLaporanParentActive
+                            ? "text-[#0b2a6b] dark:text-blue-400"
+                            : "text-white/80 group-hover:text-white"
+                        }`}
+                      />
+                    )}
+                  </div>
                 </button>
 
                 {/* 4 Sub-items */}
@@ -298,20 +350,30 @@ export function AdminSidebar({ isOpen, onClose }: AdminSidebarProps) {
                           href={sub.href}
                           onClick={handleLinkClick}
                           data-active={active ? "true" : "false"}
-                          className={`group relative z-10 flex items-center gap-2.5 py-2.5 pl-5 pr-5 text-[13px] transition-colors duration-200 ${
+                          className={`group relative z-10 flex items-center justify-between gap-2 py-2.5 pl-5 pr-5 text-[13px] transition-colors duration-200 ${
                             active
                               ? "font-bold text-[#0b2a6b] dark:text-blue-400"
                               : "mr-4 rounded-xl font-medium text-white hover:bg-white/15"
                           }`}
                         >
-                          <SubIcon
-                            className={`h-4 w-4 shrink-0 transition-colors duration-200 ${
-                              active
-                                ? "text-[#0b2a6b] dark:text-blue-400"
-                                : "text-white/90 group-hover:text-white"
-                            }`}
-                          />
-                          <span>{sub.title}</span>
+                          <div className="flex items-center gap-2.5 min-w-0">
+                            <SubIcon
+                              className={`h-4 w-4 shrink-0 transition-colors duration-200 ${
+                                active
+                                  ? "text-[#0b2a6b] dark:text-blue-400"
+                                  : "text-white/90 group-hover:text-white"
+                              }`}
+                            />
+                            <span className="truncate">{sub.title}</span>
+                          </div>
+                          {sub.badgeCount > 0 && (
+                            <span
+                              className="inline-flex h-5 min-w-[20px] shrink-0 items-center justify-center rounded-full bg-red-500 px-1.5 text-[10px] font-extrabold leading-none text-white shadow-xs"
+                              title={`${sub.badgeCount} laporan menunggu verifikasi`}
+                            >
+                              {sub.badgeCount > 99 ? "99+" : sub.badgeCount}
+                            </span>
+                          )}
                         </Link>
                       );
                     })}
@@ -321,7 +383,7 @@ export function AdminSidebar({ isOpen, onClose }: AdminSidebarProps) {
 
               {masterItems.map(renderLink)}
 
-              {/* Garda Ampera (Collapsible Navlink with 2 Sub-items: Dashboard & Manajemen) */}
+              {/* Garda Ampera (Collapsible Navlink with 3 Sub-items) */}
               <div>
                 <button
                   type="button"
@@ -352,7 +414,6 @@ export function AdminSidebar({ isOpen, onClose }: AdminSidebarProps) {
                   )}
                 </button>
 
-                {/* 2 Sub-items: Dashboard Garda Ampera & Manajemen Garda Ampera */}
                 {gardaOpen && (
                   <div className="mt-1 space-y-1 pl-3">
                     {gardaSubItems.map((sub) => {
@@ -393,7 +454,7 @@ export function AdminSidebar({ isOpen, onClose }: AdminSidebarProps) {
               General
             </p>
             <div className="space-y-1.5">
-              {/* Website Settings (Collapsible Navlink with 4 Sub-items) */}
+              {/* Website Settings (Collapsible Navlink with Sub-items) */}
               <div>
                 <button
                   type="button"
@@ -422,7 +483,6 @@ export function AdminSidebar({ isOpen, onClose }: AdminSidebarProps) {
                   )}
                 </button>
 
-                {/* 4 Sub-items */}
                 {settingsOpen && (
                   <div className="mt-1 space-y-1 pl-3">
                     {websiteSubItems.map((sub) => {
@@ -466,7 +526,6 @@ export function AdminSidebar({ isOpen, onClose }: AdminSidebarProps) {
 
         {/* Gambar Jembatan Emas sebagai layer latar belakang di bagian bawah (z-0) agar navlink berada di atasnya */}
         <div className="pointer-events-none absolute inset-x-0 bottom-0 z-0 h-44 sm:h-48 overflow-hidden">
-          {/* Gambar Jembatan Emas selebar horizontal sidebar */}
           <div className="relative h-full w-full">
             <Image
               src="/assets-landingpage/Jembatan-emas.png"
@@ -476,7 +535,6 @@ export function AdminSidebar({ isOpen, onClose }: AdminSidebarProps) {
               className="object-cover opacity-80 brightness-90"
               style={{ objectPosition: "center 15%" }}
             />
-            {/* Overlay gradasi biru tua (#0b2a6b) agar gambar lebih gelap, menyatu mulus, dan navlink sangat kontras */}
             <div className="absolute inset-0 bg-gradient-to-b from-[#0b2a6b] via-[#0b2a6b]/45 to-[#0b2a6b]/50" />
           </div>
         </div>

@@ -31,6 +31,7 @@ import {
   type PengaduanResponse,
 } from "@/app/actions/pengaduan";
 import { lookupNikAction } from "@/app/actions/lookup-nik";
+import { ServiceSavingOverlay } from "@/components/common/ServiceSavingOverlay";
 
 const MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024; // 10MB
 const BUKTI_ALLOWED_EXTS = [".jpg", ".jpeg", ".png"];
@@ -388,6 +389,7 @@ export function PengaduanForm() {
 
       const response = await submitPengaduanAction(body);
       if (response.success) {
+        try { localStorage.setItem("ampera_new_submission_signal", String(Date.now())); } catch {}
         setSubmissionResult(response);
         window.scrollTo({ top: 200, behavior: "smooth" });
       } else {
@@ -1534,6 +1536,15 @@ export function PengaduanForm() {
           </div>
         </form>
       </div>
+
+      {/* Overlay Loading Layar Penuh saat Proses Menyimpan */}
+      <ServiceSavingOverlay
+        isOpen={isSubmitting}
+        serviceName="Layanan Pengaduan Masyarakat"
+        title="Mengirim & Menyimpan Laporan Pengaduan..."
+        description="Sistem sedang mengunggah foto bukti kelengkapan & identitas KTP, menyimpan laporan ke server BBPOM di Palembang, serta menerbitkan kode tiket pengaduan Anda."
+        hasFileUpload={true}
+      />
     </div>
   );
 }

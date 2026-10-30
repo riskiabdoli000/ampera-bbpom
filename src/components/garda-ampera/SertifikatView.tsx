@@ -253,20 +253,6 @@ export function SertifikatView({
           </div>
         </div>
       </div>
-
-      {/* Reviewer / Reset Options */}
-      {onResetAll && (
-        <div className="no-print text-center pt-2">
-          <button
-            type="button"
-            onClick={onResetAll}
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold text-slate-500 hover:text-navy-900 dark:text-slate-400 dark:hover:text-white transition-colors cursor-pointer"
-          >
-            <RotateCcw className="w-3.5 h-3.5" />
-            Uji Coba Ulang Seluruh Alur (Reset Data Demo)
-          </button>
-        </div>
-      )}
     </div>
   );
 }

@@ -71,15 +71,15 @@ export default async function AdminDashboardPage() {
   const todayStr = formatter.format(now);
   const startOfToday = new Date(`${todayStr}T00:00:00+07:00`);
   const endOfToday = new Date(`${todayStr}T23:59:59.999+07:00`);
+  const oneYearAgo = new Date(now.getFullYear() - 1, 0, 1);
 
   try {
-    const [tCount, mCount, pCount, sCount, dCount, recents, pList, pTotal, pAktif, allList] =
+    const [statusCounts, recents, pList, pCounts, allList] =
       await Promise.all([
-        prisma.pengajuanLayanan.count(),
-        prisma.pengajuanLayanan.count({ where: { status: "MENUNGGU_VERIFIKASI" } }),
-        prisma.pengajuanLayanan.count({ where: { status: "DIPROSES" } }),
-        prisma.pengajuanLayanan.count({ where: { status: "SELESAI" } }),
-        prisma.pengajuanLayanan.count({ where: { status: "DITOLAK" } }),
+        prisma.pengajuanLayanan.groupBy({
+          by: ["status"],
+          _count: { _all: true },
+        }),
         prisma.pengajuanLayanan.findMany({
           where: {
             createdAt: {
@@ -100,9 +100,16 @@ export default async function AdminDashboardPage() {
           ORDER BY p."isAktif" DESC, p.id ASC
           LIMIT 3;
         `).catch(() => []),
-        prisma.$queryRawUnsafe<any[]>('SELECT COUNT(*)::text as count FROM "Petugas"').catch(() => [{ count: "0" }]),
-        prisma.$queryRawUnsafe<any[]>('SELECT COUNT(*)::text as count FROM "Petugas" WHERE "isAktif" = true').catch(() => [{ count: "0" }]),
+        prisma.$queryRawUnsafe<any[]>(`
+          SELECT
+            COUNT(*)::int as total,
+            COUNT(*) FILTER (WHERE "isAktif" = true)::int as aktif
+          FROM "Petugas"
+        `).catch(() => [{ total: 0, aktif: 0 }]),
         prisma.pengajuanLayanan.findMany({
+          where: {
+            createdAt: { gte: oneYearAgo },
+          },
           select: {
             id: true,
             status: true,
@@ -110,15 +117,20 @@ export default async function AdminDashboardPage() {
           },
         }),
       ]);
-    totalPengajuan = tCount;
-    menungguVerifikasi = mCount;
-    sedangDiproses = pCount;
-    selesai = sCount;
-    ditolak = dCount;
+
+    for (const row of statusCounts) {
+      const c = row._count._all;
+      totalPengajuan += c;
+      if (row.status === "MENUNGGU_VERIFIKASI") menungguVerifikasi = c;
+      else if (row.status === "DIPROSES") sedangDiproses = c;
+      else if (row.status === "SELESAI") selesai = c;
+      else if (row.status === "DITOLAK") ditolak = c;
+    }
+
     rawRecent = recents;
     rawPetugas = pList || [];
-    totalPetugas = Number(pTotal[0]?.count || 0);
-    petugasAktif = Number(pAktif[0]?.count || 0);
+    totalPetugas = Number(pCounts[0]?.total || 0);
+    petugasAktif = Number(pCounts[0]?.aktif || 0);
     allSubmissions = allList;
   } catch (err) {
     console.warn("[Admin Dashboard] Gagal membaca data pengajuan/petugas database:", err);
@@ -150,7 +162,7 @@ export default async function AdminDashboardPage() {
     }
 
     let statusKey: "MENUNGGU" | "DIPROSES" | "SELESAI" | "DITOLAK" = "MENUNGGU";
-    if (p.status === "SEDANG_DIPROSES") statusKey = "DIPROSES";
+    if (p.status === "DIPROSES" || p.status === "SEDANG_DIPROSES") statusKey = "DIPROSES";
     else if (p.status === "SELESAI") statusKey = "SELESAI";
     else if (p.status === "DITOLAK") statusKey = "DITOLAK";
 

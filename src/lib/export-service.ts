@@ -1,7 +1,4 @@
-import ExcelJS from "exceljs";
-import jsPDF from "jspdf";
-import autoTable from "jspdf-autotable";
-import { PengajuanItem, PenggunaItem, DataAmperaStats } from "@/app/actions/data-ampera";
+import type { PengajuanItem, PenggunaItem, DataAmperaStats } from "@/app/actions/data-ampera";
 
 /**
  * Format tanggal Indonesia lengkap (cth: "Rabu, 28 Oktober 2026, 10.30 WIB")
@@ -30,6 +27,36 @@ function formatTanggalPendek(dateInput: Date | string): string {
     month: "2-digit",
     year: "numeric",
   });
+}
+
+/**
+ * Menghitung durasi penyelesaian antara waktu masuk (createdAt) dan waktu selesai (updatedAt)
+ */
+function formatDurasiPenyelesaian(
+  startDate: Date | string,
+  endDate: Date | string
+): string {
+  const start = new Date(startDate).getTime();
+  const end = new Date(endDate).getTime();
+  if (isNaN(start) || isNaN(end)) return "-";
+  const diffMs = Math.max(0, end - start);
+  const totalMinutes = Math.floor(diffMs / (1000 * 60));
+
+  if (totalMinutes < 1) {
+    const seconds = Math.max(1, Math.floor(diffMs / 1000));
+    return `${seconds} detik`;
+  }
+
+  const days = Math.floor(totalMinutes / (60 * 24));
+  const hours = Math.floor((totalMinutes % (60 * 24)) / 60);
+  const minutes = totalMinutes % 60;
+
+  const parts: string[] = [];
+  if (days > 0) parts.push(`${days} hari`);
+  if (hours > 0) parts.push(`${hours} jam`);
+  if (minutes > 0) parts.push(`${minutes} menit`);
+
+  return parts.join(" ");
 }
 
 /**
@@ -71,6 +98,7 @@ export async function exportToExcelProfessional({
   stats,
   serviceTitle = "Data Pengguna & Layanan Ampera",
 }: ExportExcelOptions) {
+  const ExcelJS = (await import("exceljs")).default;
   const workbook = new ExcelJS.Workbook();
   workbook.creator = "Sistem Informasi AMPERA - BBPOM di Palembang";
   workbook.lastModifiedBy = "Admin BBPOM Palembang";
@@ -86,19 +114,19 @@ export async function exportToExcelProfessional({
     });
 
     // 1. Judul & Kop Dokumen Excel
-    worksheet.mergeCells("A1:M1");
+    worksheet.mergeCells("A1:N1");
     const titleCell = worksheet.getCell("A1");
     titleCell.value = "BADAN PENGAWAS OBAT DAN MAKANAN - BALAI BESAR POM DI PALEMBANG";
     titleCell.font = { name: "Segoe UI", size: 14, bold: true, color: { argb: "FF06132F" } };
     titleCell.alignment = { vertical: "middle", horizontal: "center" };
 
-    worksheet.mergeCells("A2:M2");
+    worksheet.mergeCells("A2:N2");
     const subTitleCell = worksheet.getCell("A2");
     subTitleCell.value = `REKAPITULASI LAPORAN LAYANAN PUBLIK (${serviceTitle.toUpperCase()})`;
     subTitleCell.font = { name: "Segoe UI", size: 11, bold: true, color: { argb: "FFFF7A1A" } };
     subTitleCell.alignment = { vertical: "middle", horizontal: "center" };
 
-    worksheet.mergeCells("A3:M3");
+    worksheet.mergeCells("A3:N3");
     const metaCell = worksheet.getCell("A3");
     metaCell.value = `Waktu Ekspor: ${nowFormatted} | Total Pengajuan: ${pengajuanList.length} berkas | Terverifikasi Selesai: ${stats.selesai} | Sedang Diproses: ${stats.sedangDiproses} | Menunggu: ${stats.menungguVerifikasi} | Ditolak: ${stats.ditolak}`;
     metaCell.font = { name: "Segoe UI", size: 9, italic: true, color: { argb: "FF64748B" } };
@@ -139,6 +167,7 @@ export async function exportToExcelProfessional({
       "Kode Pengajuan",
       "Tanggal Masuk",
       "Status",
+      "Durasi Penyelesaian",
       "Layanan BBPOM",
       "Nama Pemohon",
       "NIK (KTP)",
@@ -176,11 +205,17 @@ export async function exportToExcelProfessional({
         p.rincianInformasiKip ||
         "-";
 
+      const durasiStr =
+        p.status === "SELESAI"
+          ? `Selesai dalam ${formatDurasiPenyelesaian(p.createdAt, p.updatedAt)}`
+          : "-";
+
       const row = worksheet.addRow([
         idx + 1,
         p.kodePengajuan,
         formatTanggalPendek(p.createdAt),
         p.status.replace("_", " "),
+        durasiStr,
         p.layanan.nama,
         p.tamu.nama,
         String(p.tamu.nik), // Text mode for NIK
@@ -191,7 +226,7 @@ export async function exportToExcelProfessional({
         p.catatanPetugas || "-",
         p.lampiranTindakan && p.lampiranTindakan.length > 0
           ? `${p.lampiranTindakan.length} Berkas Bukti`
-          : "Belum Ada",
+          : "Tidak Ada",
       ]);
 
       row.height = 24;
@@ -217,12 +252,12 @@ export async function exportToExcelProfessional({
         }
 
         // Alignments khusus
-        if (colNumber === 1 || colNumber === 3 || colNumber === 13) {
+        if (colNumber === 1 || colNumber === 3 || colNumber === 5 || colNumber === 14) {
           cell.alignment = { vertical: "middle", horizontal: "center" };
         }
 
         // Format Text untuk NIK dan Telepon (Mencegah scientific notation 1.671E+15)
-        if (colNumber === 7 || colNumber === 8) {
+        if (colNumber === 8 || colNumber === 9) {
           cell.numFmt = "@";
           cell.alignment = { vertical: "middle", horizontal: "center" };
         }
@@ -244,6 +279,11 @@ export async function exportToExcelProfessional({
             cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFFFE4E6" } };
           }
         }
+
+        // Styling Kolom Durasi Penyelesaian (Kolom 5) jika Selesai
+        if (colNumber === 5 && p.status === "SELESAI") {
+          cell.font = { name: "Segoe UI", size: 9, bold: true, color: { argb: "FF065F46" } };
+        }
       });
     });
 
@@ -262,7 +302,7 @@ export async function exportToExcelProfessional({
     // Aktifkan AutoFilter Excel
     worksheet.autoFilter = {
       from: { row: 7, column: 1 },
-      to: { row: 7, column: 13 },
+      to: { row: 7, column: 14 },
     };
   } else {
     // TAB PENGGUNA (DATA TAMU)
@@ -409,6 +449,10 @@ export async function exportToPdfOfficial({
   stats,
   serviceTitle = "Data Pengguna & Layanan Ampera",
 }: ExportPdfOptions) {
+  const [{ default: jsPDF }, { default: autoTable }] = await Promise.all([
+    import("jspdf"),
+    import("jspdf-autotable"),
+  ]);
   // A4 Landscape: 297mm x 210mm
   const doc = new jsPDF({
     orientation: "landscape",
@@ -545,6 +589,11 @@ export async function exportToPdfOfficial({
         p.rincianInformasiKip ||
         "-";
 
+      const statusWithDurasi =
+        p.status === "SELESAI"
+          ? `SELESAI\n(${formatDurasiPenyelesaian(p.createdAt, p.updatedAt)})`
+          : p.status.replace("_", " ");
+
       return [
         idx + 1,
         p.kodePengajuan,
@@ -553,7 +602,7 @@ export async function exportToPdfOfficial({
         p.layanan.nama,
         ringkasan,
         p.catatanPetugas || "-",
-        p.status.replace("_", " "),
+        statusWithDurasi,
         p.lampiranTindakan && p.lampiranTindakan.length > 0
           ? `${p.lampiranTindakan.length} File`
           : "-",
@@ -573,7 +622,7 @@ export async function exportToPdfOfficial({
           "Layanan",
           "Rincian / Kebutuhan",
           "Catatan Petugas BBPOM",
-          "Status",
+          "Status & Durasi",
           "Bukti",
         ],
       ],
@@ -603,17 +652,17 @@ export async function exportToPdfOfficial({
         1: { cellWidth: 29, fontStyle: "bold" },
         2: { cellWidth: 18, halign: "center" },
         3: { cellWidth: 44 },
-        4: { cellWidth: 30 },
-        5: { cellWidth: 56 },
-        6: { cellWidth: 50 },
-        7: { cellWidth: 24, halign: "center", fontStyle: "bold" },
+        4: { cellWidth: 28 },
+        5: { cellWidth: 52 },
+        6: { cellWidth: 48 },
+        7: { cellWidth: 32, halign: "center", fontStyle: "bold" },
         8: { cellWidth: 14, halign: "center", fontStyle: "bold" },
       },
       didParseCell: (data) => {
         // Warnai sel status agar profesional
         if (data.section === "body" && data.column.index === 7) {
           const val = String(data.cell.raw);
-          if (val === "SELESAI") {
+          if (val.startsWith("SELESAI")) {
             data.cell.styles.textColor = [6, 95, 70];
             data.cell.styles.fillColor = [209, 250, 229];
           } else if (val === "DIPROSES") {

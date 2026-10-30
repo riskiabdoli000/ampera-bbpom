@@ -1,5 +1,4 @@
-import { PDFDocument, rgb, StandardFonts } from "pdf-lib";
-import { BiodataGarda } from "./types";
+import type { BiodataGarda } from "./types";
 
 interface GenerateCertificateOptions {
   biodata: BiodataGarda;
@@ -32,6 +31,7 @@ export async function generateGardaCertificatePdf({
   nomorSertifikat,
   tanggalLulus,
 }: GenerateCertificateOptions): Promise<void> {
+  const { PDFDocument, rgb, StandardFonts } = await import("pdf-lib");
   const pdfDoc = await PDFDocument.create();
 
   // Dimensi A4 Landscape (841.89 x 595.28 pt)

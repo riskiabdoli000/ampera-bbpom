@@ -64,21 +64,24 @@ export async function createLayananAction(data: {
     };
   }
 
-  // Cek apakah kode atau nama sudah dipakai
-  const existingKode = await prisma.layanan.findUnique({
-    where: { kode: validated.data.kode },
+  // Cek apakah kode atau nama sudah dipakai dalam 1 query tunggal
+  const existingConflict = await prisma.layanan.findFirst({
+    where: {
+      OR: [
+        { kode: validated.data.kode },
+        { nama: validated.data.nama },
+      ],
+    },
+    select: { kode: true, nama: true },
   });
-  if (existingKode) {
-    return {
-      success: false,
-      error: `Kode layanan "${validated.data.kode}" sudah terdaftar. Gunakan kode lain.`,
-    };
-  }
 
-  const existingNama = await prisma.layanan.findUnique({
-    where: { nama: validated.data.nama },
-  });
-  if (existingNama) {
+  if (existingConflict) {
+    if (existingConflict.kode === validated.data.kode) {
+      return {
+        success: false,
+        error: `Kode layanan "${validated.data.kode}" sudah terdaftar. Gunakan kode lain.`,
+      };
+    }
     return {
       success: false,
       error: `Nama layanan "${validated.data.nama}" sudah terdaftar.`,
@@ -95,7 +98,6 @@ export async function createLayananAction(data: {
       },
     });
 
-    revalidatePath("/admin/layanan");
     revalidatePath("/");
 
     return {
@@ -138,28 +140,25 @@ export async function updateLayananAction(
     };
   }
 
-  // Cek apakah kode dipakai layanan lain
-  const existingKode = await prisma.layanan.findFirst({
+  // Cek apakah kode atau nama dipakai layanan lain dalam 1 query tunggal
+  const existingConflict = await prisma.layanan.findFirst({
     where: {
-      kode: validated.data.kode,
       NOT: { id },
+      OR: [
+        { kode: validated.data.kode },
+        { nama: validated.data.nama },
+      ],
     },
+    select: { kode: true, nama: true },
   });
-  if (existingKode) {
-    return {
-      success: false,
-      error: `Kode layanan "${validated.data.kode}" sudah digunakan layanan lain.`,
-    };
-  }
 
-  // Cek apakah nama dipakai layanan lain
-  const existingNama = await prisma.layanan.findFirst({
-    where: {
-      nama: validated.data.nama,
-      NOT: { id },
-    },
-  });
-  if (existingNama) {
+  if (existingConflict) {
+    if (existingConflict.kode === validated.data.kode) {
+      return {
+        success: false,
+        error: `Kode layanan "${validated.data.kode}" sudah digunakan layanan lain.`,
+      };
+    }
     return {
       success: false,
       error: `Nama layanan "${validated.data.nama}" sudah digunakan layanan lain.`,
@@ -177,7 +176,6 @@ export async function updateLayananAction(
       },
     });
 
-    revalidatePath("/admin/layanan");
     revalidatePath("/");
 
     return {
@@ -217,7 +215,6 @@ export async function toggleLayananStatusAction(id: number) {
       data: { isAktif: !current.isAktif },
     });
 
-    revalidatePath("/admin/layanan");
     revalidatePath("/");
 
     return {
@@ -267,7 +264,6 @@ export async function deleteLayananAction(id: number) {
       where: { id },
     });
 
-    revalidatePath("/admin/layanan");
     revalidatePath("/");
 
     return {

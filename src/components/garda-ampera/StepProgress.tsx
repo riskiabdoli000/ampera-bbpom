@@ -87,7 +87,11 @@ export function StepProgress({ currentStep, completedSteps, onStepClick }: StepP
         {STEPS.map((step, idx) => {
           const isCurrent = step.key === currentStep;
           const isDone = completedSteps.has(step.key);
-          const isLocked = !isDone && !isCurrent && idx > currentIndex;
+          const isCertificateIssued =
+            currentStep === "sertifikat" || completedSteps.has("sertifikat");
+          const isLocked =
+            (isCertificateIssued && step.key !== "sertifikat") ||
+            (!isDone && !isCurrent && idx > currentIndex);
           const Icon = step.icon;
 
           return (

@@ -45,34 +45,23 @@ export async function getAdminAccountDataAction(): Promise<
   try {
     const session = await verifyAdminSession();
 
-    const [currentAdminDb, rawAccounts] = await Promise.all([
-      prisma.admin.findUnique({
-        where: { id: session.id },
-        select: {
-          id: true,
-          username: true,
-          nama: true,
-          role: true,
-          isAktif: true,
-          createdAt: true,
+    const rawAccounts = await prisma.admin.findMany({
+      select: {
+        id: true,
+        username: true,
+        nama: true,
+        role: true,
+        isAktif: true,
+        createdAt: true,
+        updatedAt: true,
+        _count: {
+          select: { verifikasi: true },
         },
-      }),
-      prisma.admin.findMany({
-        select: {
-          id: true,
-          username: true,
-          nama: true,
-          role: true,
-          isAktif: true,
-          createdAt: true,
-          updatedAt: true,
-          _count: {
-            select: { verifikasi: true },
-          },
-        },
-        orderBy: [{ role: "asc" }, { createdAt: "desc" }],
-      }),
-    ]);
+      },
+      orderBy: [{ role: "asc" }, { createdAt: "desc" }],
+    });
+
+    const currentAdminDb = rawAccounts.find((a) => a.id === session.id);
 
     if (!currentAdminDb) {
       return {

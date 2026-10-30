@@ -43,37 +43,37 @@ export interface LandingPenilaianData {
  */
 export async function getLandingPenilaianData(): Promise<LandingPenilaianData> {
   try {
-    const rawSurvei = await prisma.surveiLayanan.findMany({
-      orderBy: { createdAt: "desc" },
-      take: 6, // 6 ulasan terbaru untuk carousel / grid landing page
-      include: {
-        pengajuan: {
-          include: {
-            layanan: true,
-            tamu: true,
+    // Eksekusi paralel: 6 ulasan terbaru + agregasi SQL langsung (tanpa full-table scan di memori Node.js)
+    const [rawSurvei, aggregateStats, starDistribution] = await Promise.all([
+      prisma.surveiLayanan.findMany({
+        orderBy: { createdAt: "desc" },
+        take: 6, // 6 ulasan terbaru untuk carousel / grid landing page
+        include: {
+          pengajuan: {
+            include: {
+              layanan: true,
+              tamu: true,
+            },
           },
         },
-      },
-    });
+      }),
+      prisma.surveiLayanan.aggregate({
+        _count: { _all: true },
+        _avg: {
+          ratingBintang: true,
+          kualitasPelayanan: true,
+          manfaatPelayanan: true,
+          kualitasWebsite: true,
+          manfaatWebsite: true,
+        },
+      }),
+      prisma.surveiLayanan.groupBy({
+        by: ["ratingBintang"],
+        _count: { _all: true },
+      }),
+    ]);
 
-    const allSurvei = await prisma.surveiLayanan.findMany({
-      select: {
-        ratingBintang: true,
-        kualitasPelayanan: true,
-        manfaatPelayanan: true,
-        kualitasWebsite: true,
-        manfaatWebsite: true,
-      },
-    });
-
-    const total = allSurvei.length;
-
-    let sumBintang = 0;
-    let sumKualitasPelayanan = 0;
-    let sumManfaatPelayanan = 0;
-    let sumKualitasWebsite = 0;
-    let sumManfaatWebsite = 0;
-    let countPuas = 0;
+    const total = aggregateStats._count._all;
 
     const dist = {
       bintang5: 0,
@@ -83,31 +83,26 @@ export async function getLandingPenilaianData(): Promise<LandingPenilaianData> {
       bintang1: 0,
     };
 
-    allSurvei.forEach((item) => {
-      sumBintang += item.ratingBintang;
-      sumKualitasPelayanan += item.kualitasPelayanan;
-      sumManfaatPelayanan += item.manfaatPelayanan;
-      sumKualitasWebsite += item.kualitasWebsite;
-      sumManfaatWebsite += item.manfaatWebsite;
+    for (const group of starDistribution) {
+      if (group.ratingBintang === 5) dist.bintang5 = group._count._all;
+      else if (group.ratingBintang === 4) dist.bintang4 = group._count._all;
+      else if (group.ratingBintang === 3) dist.bintang3 = group._count._all;
+      else if (group.ratingBintang === 2) dist.bintang2 = group._count._all;
+      else if (group.ratingBintang === 1) dist.bintang1 = group._count._all;
+    }
 
-      if (item.ratingBintang >= 4) countPuas++;
+    const countPuas = dist.bintang5 + dist.bintang4;
 
-      if (item.ratingBintang === 5) dist.bintang5++;
-      else if (item.ratingBintang === 4) dist.bintang4++;
-      else if (item.ratingBintang === 3) dist.bintang3++;
-      else if (item.ratingBintang === 2) dist.bintang2++;
-      else if (item.ratingBintang === 1) dist.bintang1++;
-    });
-
-    const avgRatingBintang = total > 0 ? Number((sumBintang / total).toFixed(1)) : 5.0;
+    const avgRatingBintang =
+      total > 0 ? Number((aggregateStats._avg.ratingBintang || 5.0).toFixed(1)) : 5.0;
     const avgKualitasPelayanan =
-      total > 0 ? Number((sumKualitasPelayanan / total).toFixed(1)) : 5.0;
+      total > 0 ? Number((aggregateStats._avg.kualitasPelayanan || 5.0).toFixed(1)) : 5.0;
     const avgManfaatPelayanan =
-      total > 0 ? Number((sumManfaatPelayanan / total).toFixed(1)) : 5.0;
+      total > 0 ? Number((aggregateStats._avg.manfaatPelayanan || 5.0).toFixed(1)) : 5.0;
     const avgKualitasWebsite =
-      total > 0 ? Number((sumKualitasWebsite / total).toFixed(1)) : 5.0;
+      total > 0 ? Number((aggregateStats._avg.kualitasWebsite || 5.0).toFixed(1)) : 5.0;
     const avgManfaatWebsite =
-      total > 0 ? Number((sumManfaatWebsite / total).toFixed(1)) : 5.0;
+      total > 0 ? Number((aggregateStats._avg.manfaatWebsite || 5.0).toFixed(1)) : 5.0;
 
     const rerata =
       total > 0

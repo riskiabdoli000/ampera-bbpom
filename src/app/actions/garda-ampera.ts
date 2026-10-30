@@ -2,6 +2,7 @@
 
 import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
+import { verifyAdminSession } from "@/lib/auth/session";
 import {
   SOAL_PRE_TEST,
   SOAL_POST_TEST,
@@ -237,6 +238,27 @@ export async function submitGardaPesertaAssessmentAction(payload: {
 }): Promise<{ success: boolean; id?: number; nomorSertifikat?: string; message?: string }> {
   try {
     const { biodata, preTestScore, postTestScore, postTestAttempts, isLulus, evaluasi } = payload;
+    const cleanNik = (biodata.nik || "").trim();
+
+    // Cek terlebih dahulu apakah NIK ini sudah pernah lulus dan mendapatkan sertifikat (1 orang hanya bisa 1 kali)
+    if (cleanNik && (prisma as any).gardaPeserta) {
+      try {
+        const existingGraduated = await (prisma as any).gardaPeserta.findFirst({
+          where: { nik: cleanNik, isLulus: true },
+          orderBy: { createdAt: "desc" },
+        });
+        if (existingGraduated) {
+          return {
+            success: true,
+            id: existingGraduated.id,
+            nomorSertifikat: existingGraduated.nomorSertifikat || undefined,
+            message: "Peserta dengan NIK ini sudah pernah menyelesaikan Garda Ampera.",
+          };
+        }
+      } catch (e) {
+        console.warn("Gagal memeriksa duplikasi NIK peserta:", e);
+      }
+    }
 
     // Tentukan nomor sertifikat resmi secara berurutan langsung dari database jika lulus
     let finalNomorSertifikat = payload.nomorSertifikat;
@@ -407,6 +429,25 @@ export interface GardaAdminOverviewResponse {
  * Mengambil rekapitulasi data peserta, bank soal, dan modul materi untuk Admin CMS
  */
 export async function getAdminGardaOverviewAction(): Promise<GardaAdminOverviewResponse> {
+  const session = await verifyAdminSession();
+  if (!session) {
+    return {
+      pesertaList: [],
+      stats: {
+        totalPeserta: 0,
+        totalLulus: 0,
+        totalRemidi: 0,
+        tingkatKelulusanPersen: 0,
+        rataRataPreTest: 0,
+        rataRataPostTest: 0,
+        peningkatanNilai: 0,
+        rataRataRatingSistem: 0,
+      },
+      soalList: [],
+      materiList: [],
+      isDbConnected: false,
+    };
+  }
   let isDb = false;
   let rawPeserta: any[] = [];
   let rawSoal: any[] = [];
@@ -522,6 +563,10 @@ export async function adminUpsertSoalAction(payload: {
   penjelasan?: string;
   urutan?: number;
 }): Promise<{ success: boolean; message: string }> {
+  const session = await verifyAdminSession();
+  if (!session) {
+    return { success: false, message: "Akses ditolak. Silakan login sebagai Admin." };
+  }
   try {
     if ((prisma as any).gardaSoal) {
       if (payload.id) {
@@ -534,7 +579,6 @@ export async function adminUpsertSoalAction(payload: {
           data: payload,
         });
       }
-      revalidatePath("/admin/garda-ampera");
       return { success: true, message: "Soal berhasil disimpan ke database." };
     }
   } catch (err: any) {
@@ -557,7 +601,6 @@ export async function adminUpsertSoalAction(payload: {
     });
   }
 
-  revalidatePath("/admin/garda-ampera");
   return { success: true, message: "Soal berhasil disimpan." };
 }
 
@@ -565,12 +608,15 @@ export async function adminUpsertSoalAction(payload: {
  * Hapus Soal Ujian
  */
 export async function adminDeleteSoalAction(id: number): Promise<{ success: boolean; message: string }> {
+  const session = await verifyAdminSession();
+  if (!session) {
+    return { success: false, message: "Akses ditolak. Silakan login sebagai Admin." };
+  }
   try {
     if ((prisma as any).gardaSoal) {
       await (prisma as any).gardaSoal.delete({
         where: { id },
       });
-      revalidatePath("/admin/garda-ampera");
       return { success: true, message: "Soal berhasil dihapus dari database." };
     }
   } catch (err: any) {
@@ -578,7 +624,6 @@ export async function adminDeleteSoalAction(id: number): Promise<{ success: bool
   }
 
   globalFallback.soalList = globalFallback.soalList.filter((s) => s.id !== id);
-  revalidatePath("/admin/garda-ampera");
   return { success: true, message: "Soal berhasil dihapus." };
 }
 
@@ -588,13 +633,15 @@ export async function adminDeleteSoalAction(id: number): Promise<{ success: bool
 export async function adminDeletePesertaAction(
   id: number
 ): Promise<{ success: boolean; message: string }> {
+  const session = await verifyAdminSession();
+  if (!session) {
+    return { success: false, message: "Akses ditolak. Silakan login sebagai Admin." };
+  }
   try {
     if ((prisma as any).gardaPeserta) {
       await (prisma as any).gardaPeserta.delete({
         where: { id },
       });
-      revalidatePath("/admin/garda-ampera");
-      revalidatePath("/admin/garda-ampera/dashboard");
       return { success: true, message: "Data peserta berhasil dihapus dari database." };
     }
   } catch (err: any) {
@@ -602,8 +649,6 @@ export async function adminDeletePesertaAction(
   }
 
   globalFallback.pesertaList = globalFallback.pesertaList.filter((p) => p.id !== id);
-  revalidatePath("/admin/garda-ampera");
-  revalidatePath("/admin/garda-ampera/dashboard");
   return { success: true, message: "Data peserta berhasil dihapus." };
 }
 
@@ -614,13 +659,16 @@ export async function adminToggleSoalStatusAction(
   id: number,
   isAktif: boolean
 ): Promise<{ success: boolean; message: string }> {
+  const session = await verifyAdminSession();
+  if (!session) {
+    return { success: false, message: "Akses ditolak. Silakan login sebagai Admin." };
+  }
   try {
     if ((prisma as any).gardaSoal) {
       await (prisma as any).gardaSoal.update({
         where: { id },
         data: { isAktif },
       });
-      revalidatePath("/admin/garda-ampera");
       return { success: true, message: "Status soal diperbarui." };
     }
   } catch (err) {
@@ -631,7 +679,6 @@ export async function adminToggleSoalStatusAction(
   if (idx !== -1) {
     globalFallback.soalList[idx].isAktif = isAktif;
   }
-  revalidatePath("/admin/garda-ampera");
   return { success: true, message: "Status soal diperbarui." };
 }
 
@@ -655,6 +702,16 @@ export async function adminPreviewMateriFileAction(formData: FormData): Promise<
   message?: string;
 }> {
   try {
+    const session = await verifyAdminSession();
+    if (!session) {
+      return {
+        success: false,
+        fileName: "",
+        fileSizeText: "",
+        totalSlides: 0,
+        message: "Akses ditolak. Silakan login sebagai Admin.",
+      };
+    }
     const file = formData.get("file") as File | null;
     const judul = (formData.get("judul") as string)?.trim() || "Modul Materi Pembelajaran";
     const nomor = parseInt((formData.get("nomor") as string) || "1", 10);
@@ -785,6 +842,10 @@ export async function adminUploadMateriAction(formData: FormData): Promise<{
   id?: number;
 }> {
   try {
+    const session = await verifyAdminSession();
+    if (!session) {
+      return { success: false, message: "Akses ditolak. Silakan login sebagai Admin." };
+    }
     const file = formData.get("file") as File | null;
     const judul = (formData.get("judul") as string)?.trim() || "Modul Materi Pembelajaran";
     const ringkasan =
@@ -1060,6 +1121,10 @@ export async function adminUpdateMateriAction(payload: {
   durasi: string;
   pdfUrl?: string;
 }): Promise<{ success: boolean; message: string }> {
+  const session = await verifyAdminSession();
+  if (!session) {
+    return { success: false, message: "Akses ditolak. Silakan login sebagai Admin." };
+  }
   try {
     if ((prisma as any).gardaMateri) {
       await (prisma as any).gardaMateri.update({
@@ -1098,6 +1163,10 @@ export async function adminCreateMateriAction(payload: {
     badge?: string;
   }>;
 }): Promise<{ success: boolean; message: string; id?: number }> {
+  const session = await verifyAdminSession();
+  if (!session) {
+    return { success: false, message: "Akses ditolak. Silakan login sebagai Admin." };
+  }
   try {
     const nextNomor = payload.nomor || globalFallback.materiList.length + 1;
 
@@ -1214,6 +1283,10 @@ export async function adminCreateMateriAction(payload: {
  * Hapus Modul Materi oleh Admin beserta berkas fisiknya di public/uploads/materi
  */
 export async function adminDeleteMateriAction(id: number): Promise<{ success: boolean; message: string }> {
+  const session = await verifyAdminSession();
+  if (!session) {
+    return { success: false, message: "Akses ditolak. Silakan login sebagai Admin." };
+  }
   let fileToDelete: string | null = null;
 
   try {
@@ -1290,6 +1363,10 @@ export async function adminBatchCreateSoalAction(
     penjelasan?: string;
   }>
 ): Promise<{ success: boolean; count: number; message: string }> {
+  const session = await verifyAdminSession();
+  if (!session) {
+    return { success: false, count: 0, message: "Akses ditolak. Silakan login sebagai Admin." };
+  }
   if (!soalItems || soalItems.length === 0) {
     return { success: false, count: 0, message: "Tidak ada butir soal yang valid untuk disimpan." };
   }
@@ -1438,6 +1515,13 @@ export interface GardaTamuLookupResult {
   found: boolean;
   source?: "tamu" | "garda" | "buku_tamu";
   message: string;
+  alreadyCompleted?: boolean;
+  existingCertificate?: {
+    nomorSertifikat: string;
+    tanggalLulus: string;
+    postTestScore: number;
+    biodata: BiodataGarda;
+  };
   data?: {
     nik: string;
     nama: string;
@@ -1479,6 +1563,8 @@ export async function lookupGardaTamuByNikAction(
     };
     let found = false;
     let source: "tamu" | "garda" | "buku_tamu" = "tamu";
+    let alreadyCompleted = false;
+    let existingCertificate: GardaTamuLookupResult["existingCertificate"] = undefined;
 
     // 1. Cek tabel Tamu di database PostgreSQL Ampera-BBPOM
     if ((prisma as any).tamu) {
@@ -1512,17 +1598,87 @@ export async function lookupGardaTamuByNikAction(
 
         if (prevPeserta) {
           found = true;
-          if (!resultData.nama) resultData.nama = prevPeserta.nama;
-          if (!resultData.alamat) resultData.alamat = prevPeserta.alamat;
-          if (!resultData.instansi) resultData.instansi = prevPeserta.instansi;
-          if (!resultData.usia && prevPeserta.usia) resultData.usia = String(prevPeserta.usia);
-          if (!resultData.jenisKelamin) resultData.jenisKelamin = prevPeserta.jenisKelamin;
-          if (!resultData.pendidikan) resultData.pendidikan = prevPeserta.pendidikan;
-          if (!resultData.pekerjaan) resultData.pekerjaan = prevPeserta.pekerjaan;
+          resultData.nama = prevPeserta.nama || resultData.nama;
+          resultData.alamat = prevPeserta.alamat || resultData.alamat;
+          resultData.instansi = prevPeserta.instansi || resultData.instansi;
+          if (prevPeserta.usia) resultData.usia = String(prevPeserta.usia);
+          if (prevPeserta.jenisKelamin) resultData.jenisKelamin = prevPeserta.jenisKelamin;
+          if (prevPeserta.pendidikan) resultData.pendidikan = prevPeserta.pendidikan;
+          if (prevPeserta.pekerjaan) resultData.pekerjaan = prevPeserta.pekerjaan;
           source = "garda";
+
+          if (prevPeserta.isLulus) {
+            alreadyCompleted = true;
+            const tglLulusDate = prevPeserta.tanggalLulus
+              ? new Date(prevPeserta.tanggalLulus)
+              : new Date(prevPeserta.createdAt || Date.now());
+            const validJk: "" | "Laki-laki" | "Perempuan" =
+              prevPeserta.jenisKelamin === "Laki-laki" || prevPeserta.jenisKelamin === "Perempuan"
+                ? prevPeserta.jenisKelamin
+                : "Laki-laki";
+
+            existingCertificate = {
+              nomorSertifikat:
+                prevPeserta.nomorSertifikat ||
+                formatNomorSertifikatGarda(prevPeserta.id || 1, tglLulusDate),
+              tanggalLulus: tglLulusDate.toLocaleDateString("id-ID", {
+                day: "numeric",
+                month: "long",
+                year: "numeric",
+              }),
+              postTestScore: prevPeserta.postTestScore ?? 80,
+              biodata: {
+                nik: cleanNik,
+                nama: prevPeserta.nama || "",
+                tanggalTes: new Date(prevPeserta.tanggalTes || Date.now())
+                  .toISOString()
+                  .split("T")[0],
+                alamat: prevPeserta.alamat || "",
+                usia: String(prevPeserta.usia || "25"),
+                jenisKelamin: validJk,
+                pendidikan: prevPeserta.pendidikan || "",
+                pekerjaan: prevPeserta.pekerjaan || "",
+                instansi: prevPeserta.instansi || "",
+              },
+            };
+          }
         }
       } catch (err) {
         console.warn("Gagal lookup tabel gardaPeserta:", err);
+      }
+    }
+
+    // Cek juga fallback memory store jika DB belum menemukan kelulusan
+    if (!alreadyCompleted) {
+      const fbPrev = globalFallback.pesertaList.find(
+        (p) => p.nik === cleanNik && p.isLulus
+      );
+      if (fbPrev) {
+        found = true;
+        alreadyCompleted = true;
+        source = "garda";
+        resultData.nama = fbPrev.nama || resultData.nama;
+        const tglLulusDate = fbPrev.tanggalLulus ? new Date(fbPrev.tanggalLulus) : new Date();
+        existingCertificate = {
+          nomorSertifikat: fbPrev.nomorSertifikat || formatNomorSertifikatGarda(1, tglLulusDate),
+          tanggalLulus: tglLulusDate.toLocaleDateString("id-ID", {
+            day: "numeric",
+            month: "long",
+            year: "numeric",
+          }),
+          postTestScore: fbPrev.postTestScore ?? 80,
+          biodata: {
+            nik: cleanNik,
+            nama: fbPrev.nama || "",
+            tanggalTes: new Date(fbPrev.tanggalTes || Date.now()).toISOString().split("T")[0],
+            alamat: fbPrev.alamat || "",
+            usia: String(fbPrev.usia || "25"),
+            jenisKelamin: fbPrev.jenisKelamin === "Perempuan" ? "Perempuan" : "Laki-laki",
+            pendidikan: fbPrev.pendidikan || "",
+            pekerjaan: fbPrev.pekerjaan || "",
+            instansi: fbPrev.instansi || "",
+          },
+        };
       }
     }
 
@@ -1549,7 +1705,11 @@ export async function lookupGardaTamuByNikAction(
       return {
         found: true,
         source,
-        message: `Data tamu terdaftar atas nama '${resultData.nama}'. Formulir telah diisi otomatis.`,
+        alreadyCompleted,
+        existingCertificate,
+        message: alreadyCompleted
+          ? `NIK ${cleanNik} atas nama '${resultData.nama}' tercatat sudah menyelesaikan Garda Ampera dan memiliki Sertifikat.`
+          : `Data tamu terdaftar atas nama '${resultData.nama}'. Formulir telah diisi otomatis.`,
         data: resultData,
       };
     }
@@ -1671,6 +1831,18 @@ const SAMPLE_DEMO_PESERTA = [
 export async function getAdminGardaDashboardAnalyticsAction(
   filter: GardaDashboardFilterInput = {}
 ): Promise<GardaDashboardAnalyticsData> {
+  const session = await verifyAdminSession();
+  if (!session) {
+    return {
+      timeSeries: [],
+      totalFilteredPeserta: 0,
+      totalAllPeserta: 0,
+      pekerjaanStats: [],
+      genderStats: { lakiLaki: 0, perempuan: 0, total: 0, persenLaki: 0, persenPerempuan: 0 },
+      pendidikanStats: [],
+      options: { pekerjaanList: [], pendidikanList: [], tahunList: [] },
+    };
+  }
   const MONTH_NAMES = [
     { label: "Jan", fullName: "Januari" },
     { label: "Feb", fullName: "Februari" },
@@ -2020,6 +2192,23 @@ export async function getAdminGardaEvaluasiAction(): Promise<{
   evaluasiList: GardaEvaluasiRecord[];
   stats: GardaEvaluasiSummaryStats;
 }> {
+  const session = await verifyAdminSession();
+  if (!session) {
+    return {
+      evaluasiList: [],
+      stats: {
+        totalResponden: 0,
+        rataRataKeseluruhan: 0,
+        rataRataKemudahan: 0,
+        rataRataMateri: 0,
+        rataRataSoal: 0,
+        rataRataManfaat: 0,
+        persentaseSangatPuas: 0,
+        persentasePuas: 0,
+        distribusiBintang: { bintang5: 0, bintang4: 0, bintang3: 0, bintang2: 0, bintang1: 0 },
+      },
+    };
+  }
   let records: GardaEvaluasiRecord[] = [];
 
   try {

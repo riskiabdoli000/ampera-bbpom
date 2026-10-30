@@ -126,6 +126,9 @@ model PengajuanLayanan {
   @@index([kodePengajuan])
   @@index([tamuId])
   @@index([layananId])
+  @@index([status])
+  @@index([createdAt])
+  @@index([status, createdAt])
 }
 
 // Bukti Lampiran Tindakan Petugas BBPOM (Foto Hasil Uji, Dokumen BAP, Tanggapan Resmi, dsb.)

@@ -40,7 +40,7 @@ import {
   exportToExcelProfessional,
   exportToPdfOfficial,
 } from "@/lib/export-service";
-import { PengajuanDetailModal } from "../data-ampera/PengajuanDetailModal";
+import { PengajuanDetailModal, formatDurasiPenyelesaian } from "../data-ampera/PengajuanDetailModal";
 import { PenggunaDetailModal } from "../data-ampera/PenggunaDetailModal";
 import { AdminPagination } from "@/components/admin/AdminPagination";
 
@@ -216,6 +216,9 @@ export function ServiceReportClient({
             item.id === pengajuanId ? { ...item, status: newStatus } : item
           )
         );
+        if (typeof window !== "undefined") {
+          window.dispatchEvent(new CustomEvent("ampera-pengajuan-updated"));
+        }
         setFeedback({
           type: "success",
           message: `Status pengajuan #${kodePengajuan} berhasil diubah menjadi ${newStatus.replace(
@@ -247,10 +250,16 @@ export function ServiceReportClient({
     setPengajuanList((prev) =>
       prev.map((item) => (item.id === updated.id ? updated : item))
     );
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new CustomEvent("ampera-pengajuan-updated"));
+    }
   };
 
   const handleDeleted = (deletedId: number) => {
     setPengajuanList((prev) => prev.filter((item) => item.id !== deletedId));
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new CustomEvent("ampera-pengajuan-updated"));
+    }
   };
 
   const handleSelectPengajuanFromUser = (kodePengajuan: string) => {
@@ -801,8 +810,14 @@ export function ServiceReportClient({
                             >
                               {st.label}
                             </span>
+                            {item.status === "SELESAI" && (
+                              <div className="flex items-center justify-center gap-1 text-[11px] font-semibold text-emerald-700 dark:text-emerald-400 mt-1">
+                                <Clock className="h-3 w-3 shrink-0" />
+                                <span>{formatDurasiPenyelesaian(item.createdAt, item.updatedAt)}</span>
+                              </div>
+                            )}
                             {item.lampiranTindakan && item.lampiranTindakan.length > 0 && (
-                              <div className="flex items-center justify-center gap-1.5 text-[11px] font-bold text-emerald-600 dark:text-emerald-400 mt-1.5">
+                              <div className="flex items-center justify-center gap-1.5 text-[11px] font-bold text-emerald-600 dark:text-emerald-400 mt-1">
                                 <FileCheck className="h-3.5 w-3.5 shrink-0" />
                                 <span>{item.lampiranTindakan.length} Bukti Tindakan</span>
                               </div>

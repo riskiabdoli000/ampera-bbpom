@@ -9,7 +9,6 @@ import {
   ArrowRight,
   ArrowLeft,
   RotateCcw,
-  Sparkles,
   BookOpen,
   Award,
   HelpCircle,
@@ -134,35 +133,6 @@ export function QuizView({
   const handleSubmit = () => {
     const finalScore = calculateScore(answers);
     onSubmit(answers, finalScore);
-  };
-
-  // Demo Helpers untuk Reviewer
-  const handleQuickFillPass = () => {
-    const perfectAnswers: Record<number, string> = {};
-    soalList.forEach((s, idx) => {
-      // 9 benar, 1 salah untuk nilai 90 yang natural
-      if (idx === 3) {
-        const wrongOption = s.pilihan.find((p) => p.id !== s.jawabanBenar)?.id || "A";
-        perfectAnswers[s.id] = wrongOption;
-      } else {
-        perfectAnswers[s.id] = s.jawabanBenar;
-      }
-    });
-    setAnswers(perfectAnswers);
-  };
-
-  const handleQuickFillFail = () => {
-    const failAnswers: Record<number, string> = {};
-    soalList.forEach((s, idx) => {
-      // 5 benar, 5 salah untuk nilai 50 (< 70)
-      if (idx < 5) {
-        failAnswers[s.id] = s.jawabanBenar;
-      } else {
-        const wrongOption = s.pilihan.find((p) => p.id !== s.jawabanBenar)?.id || "C";
-        failAnswers[s.id] = wrongOption;
-      }
-    });
-    setAnswers(failAnswers);
   };
 
   // =========================================================================
@@ -342,42 +312,6 @@ export function QuizView({
                 ? "Jawab 10 soal di bawah ini sebaik mungkin untuk mengukur pemahaman awal Anda."
                 : "Jawab 10 soal evaluasi materi. Batas minimal kelulusan (KKM) adalah nilai 70."}
             </p>
-          </div>
-
-          {/* Reviewer Quick Buttons */}
-          <div className="flex flex-wrap items-center gap-2">
-            {isPreTest ? (
-              <button
-                type="button"
-                onClick={handleQuickFillPass}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-sky-200 text-xs font-semibold border border-white/20 transition-colors cursor-pointer"
-                title="Bantu isi otomatis untuk uji coba"
-              >
-                <Sparkles className="w-3.5 h-3.5" />
-                ⚡ Jawab Otomatis (Demo)
-              </button>
-            ) : (
-              <>
-                <button
-                  type="button"
-                  onClick={handleQuickFillPass}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-200 text-xs font-semibold border border-emerald-400/30 transition-colors cursor-pointer"
-                  title="Simulasi Nilai Lulus (90) untuk lanjut ke Evaluasi & Sertifikat"
-                >
-                  <Sparkles className="w-3.5 h-3.5 text-emerald-300" />
-                  ⚡ Simulasi Lulus (90)
-                </button>
-                <button
-                  type="button"
-                  onClick={handleQuickFillFail}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 text-amber-200 text-xs font-semibold border border-amber-400/30 transition-colors cursor-pointer"
-                  title="Simulasi Nilai Gagal (50) untuk menguji fitur ulangi Post-Test"
-                >
-                  <Sparkles className="w-3.5 h-3.5 text-amber-300" />
-                  ⚡ Simulasi Remidi (50)
-                </button>
-              </>
-            )}
           </div>
         </div>
       </div>

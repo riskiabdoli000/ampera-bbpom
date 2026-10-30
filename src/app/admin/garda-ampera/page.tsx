@@ -455,13 +455,13 @@ export default function AdminGardaAmperaPage() {
         try {
           const res = await adminDeletePesertaAction(peserta.id);
           if (res.success) {
+            setPesertaList((prev) => prev.filter((p) => p.id !== peserta.id));
+            setSelectedPeserta(null);
             showToast(
               "Peserta Berhasil Dihapus",
               res.message || `Data peserta ${peserta.nama} berhasil dihapus.`,
               "success"
             );
-            setSelectedPeserta(null);
-            fetchData();
           } else {
             showToast("Gagal Menghapus", res.message || "Gagal menghapus data peserta.", "error");
           }
@@ -488,8 +488,8 @@ export default function AdminGardaAmperaPage() {
       onConfirm: async () => {
         const res = await adminDeleteSoalAction(id);
         if (res.success) {
+          setSoalList((prev) => prev.filter((s) => s.id !== id));
           showToast("Soal Berhasil Dihapus", res.message || "Soal telah dihapus dari database.", "success");
-          fetchData();
         } else {
           showToast("Gagal Menghapus Soal", res.message || "Soal gagal dihapus.", "error");
         }
@@ -498,6 +498,10 @@ export default function AdminGardaAmperaPage() {
   };
 
   const handleToggleSoal = async (id: number, currentStatus: boolean) => {
+    // Optimistic update langsung agar tombol responsif instan
+    setSoalList((prev) =>
+      prev.map((s) => (s.id === id ? { ...s, isAktif: !currentStatus } : s))
+    );
     const res = await adminToggleSoalStatusAction(id, !currentStatus);
     if (res.success) {
       showToast(
@@ -505,8 +509,11 @@ export default function AdminGardaAmperaPage() {
         res.message || `Status butir soal diperbarui.`,
         "info"
       );
-      fetchData();
     } else {
+      // Rollback jika gagal
+      setSoalList((prev) =>
+        prev.map((s) => (s.id === id ? { ...s, isAktif: currentStatus } : s))
+      );
       showToast("Gagal Mengubah Status", res.message || "Gagal memperbarui status butir soal.", "error");
     }
   };

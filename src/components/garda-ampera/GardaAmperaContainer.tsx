@@ -15,7 +15,7 @@ import {
   getNextGardaNomorSertifikatAction,
 } from "@/app/actions/garda-ampera";
 import { StepProgress } from "./StepProgress";
-import { BiodataForm } from "./BiodataForm";
+import { BiodataForm, ExistingCertificateInfo } from "./BiodataForm";
 import { QuizView } from "./QuizView";
 import { MateriViewer } from "./MateriViewer";
 import { EvaluasiForm } from "./EvaluasiForm";
@@ -155,7 +155,7 @@ export function GardaAmperaContainer() {
           if (saved.nomorSertifikat) setNomorSertifikat(saved.nomorSertifikat);
           if (saved.tanggalLulus) setTanggalLulus(saved.tanggalLulus);
 
-          if (saved.step !== "biodata") {
+          if (saved.step !== "biodata" && saved.step !== "sertifikat") {
             setRestoredBanner(true);
           }
         }
@@ -252,6 +252,20 @@ export function GardaAmperaContainer() {
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
+  // 1b. Lihat / Unduh Kembali Sertifikat bagi peserta yang sudah pernah lulus
+  const handleViewExistingCertificate = (cert: ExistingCertificateInfo) => {
+    setBiodata(cert.biodata);
+    setNomorSertifikat(cert.nomorSertifikat);
+    setTanggalLulus(cert.tanggalLulus);
+    setPostTestScore(cert.postTestScore);
+    setCompletedSteps(
+      new Set(["biodata", "pre-test", "materi", "post-test", "evaluasi", "sertifikat"])
+    );
+    setRestoredBanner(false);
+    setStep("sertifikat");
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
   // 2. Submit Pre-Test -> Hitung skor & Tampilkan skor
   const handlePreTestSubmit = (answers: Record<number, string>, score: number) => {
     setPreTestAnswers(answers);
@@ -344,6 +358,7 @@ export function GardaAmperaContainer() {
   const handleEvaluasiSubmit = async (data: EvaluasiGarda) => {
     setEvaluasiData(data);
     setEvaluasiSubmitted(true);
+    setRestoredBanner(false);
     markStepDone("evaluasi");
     markStepDone("sertifikat");
     setStep("sertifikat");
@@ -368,13 +383,13 @@ export function GardaAmperaContainer() {
     }
   };
 
-  // Reset demo
+  // Reset sesi (hanya untuk sesi yang belum selesai / belum sertifikat)
   const handleResetAll = () => {
     setConfirmConfig({
       isOpen: true,
-      title: "Mulai Ulang Seluruh Uji Coba?",
+      title: "Mulai Ulang Sesi Belajar?",
       message:
-        "Apakah Anda yakin ingin mengulang dari awal?\nSeluruh riwayat nilai dan jawaban akan direset kembali ke langkah Biodata.",
+        "Apakah Anda yakin ingin mengulang dari awal?\nSeluruh riwayat nilai dan jawaban sementara akan direset kembali ke langkah Biodata.",
       confirmText: "Ya, Mulai Ulang",
       cancelText: "Batal",
       type: "warning",
@@ -421,47 +436,59 @@ export function GardaAmperaContainer() {
       <StepProgress
         currentStep={step}
         completedSteps={completedSteps}
-        onStepClick={(targetStep) => setStep(targetStep)}
+        onStepClick={(targetStep) => {
+          if (step === "sertifikat" || completedSteps.has("sertifikat")) return;
+          setStep(targetStep);
+        }}
       />
 
-      {/* Sesi Restored Banner */}
-      {restoredBanner && step !== "biodata" && (
-        <div className="mb-6 p-4 sm:p-4.5 rounded-2xl bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/40 dark:to-indigo-950/40 border border-blue-200 dark:border-blue-800 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4 text-xs text-blue-950 dark:text-blue-200 shadow-sm animate-fade-up">
-          <div className="flex items-start gap-3 min-w-0 flex-1">
-            <div className="w-8 h-8 rounded-xl bg-blue-600/10 dark:bg-blue-500/20 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0 mt-0.5">
-              <Sparkles className="w-4 h-4 text-brand-orange" />
+      {/* Sesi Restored Banner (hanya tampil jika belum sampai tahap sertifikat) */}
+      {restoredBanner &&
+        step !== "biodata" &&
+        step !== "sertifikat" &&
+        !completedSteps.has("sertifikat") && (
+          <div className="mb-6 p-4 sm:p-4.5 rounded-2xl bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/40 dark:to-indigo-950/40 border border-blue-200 dark:border-blue-800 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4 text-xs text-blue-950 dark:text-blue-200 shadow-sm animate-fade-up">
+            <div className="flex items-start gap-3 min-w-0 flex-1">
+              <div className="w-8 h-8 rounded-xl bg-blue-600/10 dark:bg-blue-500/20 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0 mt-0.5">
+                <Sparkles className="w-4 h-4 text-brand-orange" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="font-bold text-navy-900 dark:text-white leading-tight">
+                  Sesi Belajar Anda Berhasil Dipulihkan
+                </p>
+                <p className="text-[11px] sm:text-xs text-slate-600 dark:text-slate-300 mt-1 leading-relaxed whitespace-normal break-words">
+                  Peserta <strong>{biodata.nama || "Tamu"}</strong> sedang berada pada tahap{" "}
+                  <strong>{step.toUpperCase()}</strong>. Seluruh progres sebelumnya tetap tersimpan
+                  aman di peramban Anda.
+                </p>
+              </div>
             </div>
-            <div className="min-w-0 flex-1">
-              <p className="font-bold text-navy-900 dark:text-white leading-tight">
-                Sesi Belajar Anda Berhasil Dipulihkan
-              </p>
-              <p className="text-[11px] sm:text-xs text-slate-600 dark:text-slate-300 mt-1 leading-relaxed whitespace-normal break-words">
-                Peserta <strong>{biodata.nama || "Tamu"}</strong> sedang berada pada tahap <strong>{step.toUpperCase()}</strong>. Seluruh progres sebelumnya tetap tersimpan aman di peramban Anda.
-              </p>
+            <div className="flex items-center gap-2 shrink-0 w-full sm:w-auto justify-between sm:justify-end pt-2 sm:pt-0 border-t sm:border-t-0 border-blue-200/60 dark:border-blue-800/60">
+              <button
+                type="button"
+                onClick={handleResetAll}
+                className="px-3.5 py-1.5 rounded-xl border border-slate-300 dark:border-slate-700 hover:bg-white dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 font-bold text-[11px] cursor-pointer transition-colors shadow-2xs"
+              >
+                Ulangi Dari Awal
+              </button>
+              <button
+                type="button"
+                onClick={() => setRestoredBanner(false)}
+                className="px-3 py-1.5 rounded-xl hover:bg-blue-100 dark:hover:bg-blue-900/50 text-blue-700 dark:text-blue-300 text-[11px] font-bold cursor-pointer transition-colors"
+              >
+                ✕ Tutup
+              </button>
             </div>
           </div>
-          <div className="flex items-center gap-2 shrink-0 w-full sm:w-auto justify-between sm:justify-end pt-2 sm:pt-0 border-t sm:border-t-0 border-blue-200/60 dark:border-blue-800/60">
-            <button
-              type="button"
-              onClick={handleResetAll}
-              className="px-3.5 py-1.5 rounded-xl border border-slate-300 dark:border-slate-700 hover:bg-white dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 font-bold text-[11px] cursor-pointer transition-colors shadow-2xs"
-            >
-              Ulangi Dari Awal
-            </button>
-            <button
-              type="button"
-              onClick={() => setRestoredBanner(false)}
-              className="px-3 py-1.5 rounded-xl hover:bg-blue-100 dark:hover:bg-blue-900/50 text-blue-700 dark:text-blue-300 text-[11px] font-bold cursor-pointer transition-colors"
-            >
-              ✕ Tutup
-            </button>
-          </div>
-        </div>
-      )}
+        )}
 
       {/* Render Steps */}
       {step === "biodata" && (
-        <BiodataForm initialData={biodata} onSubmit={handleBiodataSubmit} />
+        <BiodataForm
+          initialData={biodata}
+          onSubmit={handleBiodataSubmit}
+          onViewExistingCertificate={handleViewExistingCertificate}
+        />
       )}
 
       {step === "pre-test" && (

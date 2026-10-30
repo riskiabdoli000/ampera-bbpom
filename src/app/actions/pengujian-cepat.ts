@@ -10,7 +10,9 @@ export interface PengujianCepatFormState {
   alamat: string;
   telepon: string;
   produkDicurigai: string;
+  produkLainnya?: string;
   alasanKecurigaan: string;
+  alasanLainnya?: string;
   rincianProduk: string;
 }
 
@@ -34,8 +36,13 @@ export async function submitPengujianCepatAction(
   const cleanEmail = (formData.email || "").trim();
   const cleanAlamat = (formData.alamat || "").trim();
   const cleanProduk = (formData.produkDicurigai || "").trim();
+  const cleanProdukLainnya = (formData.produkLainnya || "").trim();
   const cleanAlasan = (formData.alasanKecurigaan || "").trim();
+  const cleanAlasanLainnya = (formData.alasanLainnya || "").trim();
   const cleanRincian = (formData.rincianProduk || "").trim();
+
+  const resolvedProduk = cleanProduk === "Lainnya" ? cleanProdukLainnya : cleanProduk;
+  const resolvedAlasan = cleanAlasan === "Lainnya" ? cleanAlasanLainnya : cleanAlasan;
 
   // 1. Validasi Input Dasar
   if (!cleanNik) {
@@ -122,10 +129,38 @@ export async function submitPengujianCepatAction(
     };
   }
 
+  if (cleanProduk === "Lainnya" && !cleanProdukLainnya) {
+    return {
+      success: false,
+      message: "Nama produk yang dicurigai wajib diisi jika memilih Lainnya.",
+      kodePengajuan: "",
+      data: {
+        ...formData,
+        tanggalPengajuan: new Date().toISOString(),
+        estimasiHasil: "15 - 30 Menit",
+        status: "MENUNGGU_VERIFIKASI",
+      },
+    };
+  }
+
   if (!cleanAlasan) {
     return {
       success: false,
       message: "Alasan kecurigaan wajib dipilih.",
+      kodePengajuan: "",
+      data: {
+        ...formData,
+        tanggalPengajuan: new Date().toISOString(),
+        estimasiHasil: "15 - 30 Menit",
+        status: "MENUNGGU_VERIFIKASI",
+      },
+    };
+  }
+
+  if (cleanAlasan === "Lainnya" && !cleanAlasanLainnya) {
+    return {
+      success: false,
+      message: "Alasan kecurigaan wajib diisi jika memilih Lainnya.",
       kodePengajuan: "",
       data: {
         ...formData,
@@ -171,8 +206,10 @@ export async function submitPengujianCepatAction(
     telepon: cleanTelepon,
     email: cleanEmail,
     alamat: cleanAlamat,
-    produkDicurigai: cleanProduk,
-    alasanKecurigaan: cleanAlasan,
+    produkDicurigai: resolvedProduk,
+    produkLainnya: cleanProduk === "Lainnya" ? cleanProdukLainnya : "",
+    alasanKecurigaan: resolvedAlasan,
+    alasanLainnya: cleanAlasan === "Lainnya" ? cleanAlasanLainnya : "",
     rincianProduk: cleanRincian,
     tanggalPengajuan: tanggalFormat,
     estimasiHasil: "15 - 30 Menit",
@@ -230,8 +267,10 @@ export async function submitPengujianCepatAction(
         kodePengajuan,
         tamuId: tamu.id,
         layananId: layanan.id,
-        produkDicurigai: cleanProduk,
-        alasanKecurigaan: cleanAlasan,
+        produkDicurigai: resolvedProduk,
+        produkLainnya: cleanProduk === "Lainnya" ? cleanProdukLainnya : null,
+        alasanKecurigaan: resolvedAlasan,
+        alasanLainnya: cleanAlasan === "Lainnya" ? cleanAlasanLainnya : null,
         rincianProduk: cleanRincian,
         status: "MENUNGGU_VERIFIKASI",
       },

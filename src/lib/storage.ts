@@ -31,17 +31,20 @@ function getSupabaseAdmin() {
 
 import { prisma } from "./prisma";
 
+let isBucketEnsured = false;
+
 /**
  * Memastikan bucket storage publik telah tersedia di Supabase
  * Menggunakan direct SQL superuser agar tidak terhalang izin RLS pada API client key
  */
 export async function ensureBucket(): Promise<boolean> {
+  if (isBucketEnsured) return true;
   try {
-    await prisma.$executeRawUnsafe(`
+    await prisma.$executeRaw`
       INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
       VALUES (
-        '${bucketName}',
-        '${bucketName}',
+        ${bucketName},
+        ${bucketName},
         true,
         26214400,
         ARRAY['image/jpeg', 'image/png', 'image/webp', 'image/jpg', 'application/pdf']::text[]
@@ -49,10 +52,12 @@ export async function ensureBucket(): Promise<boolean> {
       ON CONFLICT (id) DO UPDATE SET 
         public = true,
         allowed_mime_types = ARRAY['image/jpeg', 'image/png', 'image/webp', 'image/jpg', 'application/pdf']::text[];
-    `);
+    `;
+    isBucketEnsured = true;
     return true;
   } catch (err) {
     console.warn("Info ensureBucket SQL:", err);
+    isBucketEnsured = true;
     return true;
   }
 }
@@ -278,10 +283,15 @@ export async function deleteImage(rawPathOrUrl: string | null | undefined): Prom
   if (!cleanPath) return false;
 
   try {
-    // 1. Jika file lokal
+    // 1. Jika file lokal (dengan proteksi Path Traversal)
     if (cleanPath.startsWith("local:")) {
       const relativePath = cleanPath.replace("local:", "");
-      const fullPath = path.join(process.cwd(), "public", "uploads", relativePath);
+      const uploadsRoot = path.resolve(process.cwd(), "public", "uploads");
+      const fullPath = path.resolve(uploadsRoot, relativePath);
+      if (!fullPath.startsWith(uploadsRoot + path.sep)) {
+        console.warn("Percobaan penghapusan berkas di luar direktori uploads dicegah:", fullPath);
+        return false;
+      }
       await fs.unlink(fullPath).catch(() => {});
       return true;
     }
@@ -293,11 +303,11 @@ export async function deleteImage(rawPathOrUrl: string | null | undefined): Prom
         await supabase.storage.from(bucketName).remove([cleanPath]);
       }
 
-      // Pastikan juga terhapus bersih di database PostgreSQL storage.objects
-      await prisma.$executeRawUnsafe(`
+      // Pastikan juga terhapus bersih di database PostgreSQL storage.objects dengan parameterized query (Aman dari SQL Injection)
+      await prisma.$executeRaw`
         DELETE FROM storage.objects 
-        WHERE bucket_id = '${bucketName}' AND name = '${cleanPath}';
-      `).catch(() => {});
+        WHERE bucket_id = ${bucketName} AND name = ${cleanPath};
+      `.catch(() => {});
 
       return true;
     }
