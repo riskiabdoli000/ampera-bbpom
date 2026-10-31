@@ -248,7 +248,7 @@ export default function AdminLayout({
               © {new Date().getFullYear()} <strong className="text-navy-900 dark:text-sky-300">AMPERA</strong> — Balai Besar Pengawas Obat dan Makanan di Palembang.
             </p>
             <div className="text-[11px] font-medium text-[#7b8aa8] dark:text-slate-400">
-              Created by <span className="font-semibold text-[#0f2257] dark:text-white">Riski Abdoli & Tea</span>
+              Semangat <span className="font-semibold text-[#0f2257] dark:text-white">Bekerja</span>
             </div>
           </div>
         </footer>

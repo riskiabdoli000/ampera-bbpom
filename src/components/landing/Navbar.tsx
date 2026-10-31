@@ -130,10 +130,10 @@ export function Navbar() {
             </div>
             <div className="flex flex-col leading-none">
               <span className="font-brand font-extrabold text-xl sm:text-2xl tracking-tight text-navy-900 dark:text-white">
-                BBPOM
+                AMPERA
               </span>
               <span className="font-brand font-medium text-[11px] sm:text-xs text-brand-orange dark:text-orange-400 tracking-wide mt-0.5">
-                Palembang • Portal AMPERA
+                Amankan Produk, Edukasi Masyarakat
               </span>
             </div>
           </Link>

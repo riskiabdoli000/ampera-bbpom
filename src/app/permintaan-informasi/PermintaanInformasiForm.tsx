@@ -201,7 +201,15 @@ export function PermintaanInformasiForm() {
       errs.email = "Format email tidak valid (contoh: pemohon@domain.com)";
     }
 
-    // 5. Alamat / Asal Instansi
+    // 5. WhatsApp / Nomor Telepon
+    const tel = (formData.telepon || "").trim();
+    if (!tel) {
+      errs.telepon = "Nomor WhatsApp / telepon aktif wajib diisi";
+    } else if (tel.length < 8) {
+      errs.telepon = "Nomor WhatsApp minimal 8 digit";
+    }
+
+    // 6. Alamat / Asal Instansi
     if (!formData.alamatAsalInstansi.trim()) {
       errs.alamatAsalInstansi = "Alamat domisili atau asal instansi/perusahaan/kampus wajib diisi";
     } else if (formData.alamatAsalInstansi.trim().length < 5) {
@@ -900,13 +908,13 @@ export function PermintaanInformasiForm() {
                   )}
                 </div>
 
-                {/* Field 5: WhatsApp / Nomor Telepon (Opsional Pendukung) */}
+                {/* Field 5: WhatsApp / Nomor Telepon (Wajib) */}
                 <div>
                   <label
                     htmlFor="telepon"
                     className="block text-xs sm:text-[13px] font-bold text-navy-900 dark:text-slate-200 mb-2"
                   >
-                    Nomor WhatsApp / Telepon <span className="text-slate-400 font-normal">(Opsional)</span>
+                    Nomor WhatsApp / Telepon <span className="text-red-500">*</span>
                   </label>
                   <div className="relative">
                     <input
@@ -916,12 +924,23 @@ export function PermintaanInformasiForm() {
                       value={formData.telepon}
                       onChange={handleChange}
                       placeholder="Contoh: 081234567890"
-                      className="w-full rounded-2xl border border-slate-200 dark:border-slate-700/80 bg-white dark:bg-slate-950 px-4 py-3.5 text-sm text-navy-900 dark:text-white placeholder:text-slate-400 focus:outline-hidden focus:border-brand-orange focus:ring-2 focus:ring-brand-orange/20 transition-all duration-200"
+                      className={`w-full rounded-2xl border bg-white dark:bg-slate-950 px-4 py-3.5 text-sm text-navy-900 dark:text-white placeholder:text-slate-400 focus:outline-hidden transition-all duration-200 ${
+                        errors.telepon
+                          ? "border-red-400 focus:ring-2 focus:ring-red-400/20"
+                          : "border-slate-200 dark:border-slate-700/80 focus:border-brand-orange focus:ring-2 focus:ring-brand-orange/20"
+                      }`}
                     />
                   </div>
-                  <p className="mt-1 text-[11px] text-ink-soft dark:text-slate-400">
-                    Untuk konfirmasi cepat jika petugas membutuhkan klarifikasi.
-                  </p>
+                  {errors.telepon ? (
+                    <p className="mt-1.5 text-xs text-red-500 flex items-center gap-1">
+                      <AlertCircle className="w-3.5 h-3.5" />
+                      <span>{errors.telepon}</span>
+                    </p>
+                  ) : (
+                    <p className="mt-1 text-[11px] text-ink-soft dark:text-slate-400">
+                      Untuk konfirmasi cepat dan pengiriman notifikasi tindak lanjut permohonan.
+                    </p>
+                  )}
                 </div>
 
                 {/* Field 6: Alamat / Asal Instansi (Wajib Sesuai Prompt) */}
@@ -1120,20 +1139,18 @@ export function PermintaanInformasiForm() {
                       {formData.email}
                     </span>
                   </div>
+                  <div>
+                    <span className="text-ink-soft dark:text-slate-400 block text-xs">Nomor WhatsApp / Telepon:</span>
+                    <span className="font-semibold text-navy-900 dark:text-white">
+                      {formData.telepon}
+                    </span>
+                  </div>
                   <div className="sm:col-span-2">
                     <span className="text-ink-soft dark:text-slate-400 block text-xs">Alamat / Asal Instansi:</span>
                     <span className="font-semibold text-navy-900 dark:text-white">
                       {formData.alamatAsalInstansi}
                     </span>
                   </div>
-                  {formData.telepon && (
-                    <div>
-                      <span className="text-ink-soft dark:text-slate-400 block text-xs">Telepon / WhatsApp:</span>
-                      <span className="font-semibold text-navy-900 dark:text-white">
-                        {formData.telepon}
-                      </span>
-                    </div>
-                  )}
                 </div>
               </div>
 

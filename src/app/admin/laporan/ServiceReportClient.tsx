@@ -265,6 +265,7 @@ export function ServiceReportClient({
   const handleSelectPengajuanFromUser = (kodePengajuan: string) => {
     const found = pengajuanList.find((p) => p.kodePengajuan === kodePengajuan);
     if (found) {
+      setActiveTab("PENGAJUAN");
       handleOpenDetail(found);
     }
   };
