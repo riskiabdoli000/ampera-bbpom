@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import Image from "next/image";
+import Link from "next/link";
 import { ArrowRight, Play, ChevronLeft, ChevronRight } from "lucide-react";
 import { VideoModal } from "./VideoModal";
 import type { LandingHeroData, LandingHeroSlide } from "@/app/actions/settings-hero";
@@ -150,6 +151,14 @@ export function HeroSection({ initialData }: HeroSectionProps) {
               <span>{konten.ctaUtamaLabel || "Akses Layanan AMPERA"}</span>
               <ArrowRight className="w-[18px] h-[18px] transition-transform duration-200 group-hover:translate-x-1" />
             </a>
+
+            <Link
+              href="/garda-ampera"
+              className={`${ctaClass} lg:hidden mt-3 w-full sm:w-auto animate-fade-up [animation-delay:280ms]`}
+            >
+              <span>Garda Ampera</span>
+              <ArrowRight className="w-[18px] h-[18px] transition-transform duration-200 group-hover:translate-x-1" />
+            </Link>
           </div>
 
           {/* Foto (mobile/tablet) */}

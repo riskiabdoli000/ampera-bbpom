@@ -228,18 +228,6 @@ export function Navbar() {
               })}
             </nav>
 
-            <Link
-              href="/garda-ampera"
-              onClick={() => {
-                setActiveSection("");
-                setMobileMenuOpen(false);
-              }}
-              className={`${ctaClass} w-full justify-center mt-4`}
-            >
-              <span>Garda Ampera</span>
-              <ArrowRight className="w-4 h-4" />
-            </Link>
-
             <div className="mt-4 border-t border-slate-100 dark:border-slate-800 pt-4 flex items-center justify-between">
               <span className="text-xs font-semibold text-slate-600 dark:text-slate-400">
                 Mode Tampilan
