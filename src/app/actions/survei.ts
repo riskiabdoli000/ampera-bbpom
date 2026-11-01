@@ -159,6 +159,7 @@ export async function submitSurveiAction(
     });
 
     try {
+      revalidatePath("/");
       revalidatePath("/admin");
       revalidatePath("/admin/data-ampera");
       revalidatePath(`/survei`);
