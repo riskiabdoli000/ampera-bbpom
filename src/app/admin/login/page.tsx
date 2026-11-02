@@ -14,18 +14,24 @@ import {
   ShieldAlert,
   Home,
   Sparkles,
+  CheckCircle2,
 } from "lucide-react";
 import { loginAdminAction } from "@/app/actions/admin-auth";
+import { AdminForgotPasswordModal } from "./AdminForgotPasswordModal";
 
 export default function AdminLoginPage() {
   const router = useRouter();
   const [showPassword, setShowPassword] = useState(false);
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
+  const [successMsg, setSuccessMsg] = useState<string | null>(null);
+  const [usernameValue, setUsernameValue] = useState("");
+  const [isForgotOpen, setIsForgotOpen] = useState(false);
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setError(null);
+    setSuccessMsg(null);
     const formData = new FormData(e.currentTarget);
 
     startTransition(async () => {
@@ -143,6 +149,13 @@ export default function AdminLoginPage() {
             <div className="bg-white rounded-2xl shadow-xl shadow-blue-900/5 border border-gray-100 p-6 sm:p-8 mb-4">
               <h3 className="text-xl font-bold text-[#0e3a8c] mb-5">Login</h3>
 
+              {successMsg && (
+                <div className="mb-5 p-3.5 rounded-xl bg-emerald-50 border border-emerald-200 text-xs sm:text-sm text-emerald-700 flex items-start gap-2.5">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+                  <p>{successMsg}</p>
+                </div>
+              )}
+
               {error && (
                 <div className="mb-5 p-3.5 rounded-xl bg-red-50 border border-red-100 text-xs sm:text-sm text-red-600 flex items-start gap-2.5">
                   <div className="w-1.5 h-1.5 rounded-full bg-red-600 mt-1.5 shrink-0"></div>
@@ -163,6 +176,8 @@ export default function AdminLoginPage() {
                     <input
                       type="text"
                       name="username"
+                      value={usernameValue}
+                      onChange={(e) => setUsernameValue(e.target.value)}
                       className="block w-full pl-11 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-gray-800 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
                       placeholder="Username petugas"
                       autoComplete="username"
@@ -173,9 +188,18 @@ export default function AdminLoginPage() {
 
                 {/* Password Input */}
                 <div>
-                  <label className="block text-xs font-semibold text-gray-700 mb-1.5">
-                    Password
-                  </label>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label className="block text-xs font-semibold text-gray-700">
+                      Password
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => setIsForgotOpen(true)}
+                      className="text-xs font-semibold text-[#0e3a8c] hover:text-blue-700 transition-colors"
+                    >
+                      Lupa kata sandi?
+                    </button>
+                  </div>
                   <div className="relative">
                     <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
                       <Lock className="h-5 w-5 text-gray-400" />
@@ -212,6 +236,20 @@ export default function AdminLoginPage() {
                   <ArrowRight className="w-4 h-4" />
                 </button>
               </form>
+
+              {/* Modal Lupa Kata Sandi via OTP WA */}
+              <AdminForgotPasswordModal
+                isOpen={isForgotOpen}
+                initialUsername={usernameValue}
+                onClose={() => setIsForgotOpen(false)}
+                onSuccess={(newUsername) => {
+                  if (newUsername) {
+                    setUsernameValue(newUsername);
+                  }
+                  setSuccessMsg("Kata sandi berhasil diubah! Silakan masuk dengan kata sandi baru.");
+                  setError(null);
+                }}
+              />
 
               {/* Demo Credentials Box */}
               {/* <div className="mt-5 p-3 rounded-xl bg-blue-50/70 border border-blue-100 text-center">

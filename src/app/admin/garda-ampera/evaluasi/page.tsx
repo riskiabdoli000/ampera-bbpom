@@ -42,6 +42,7 @@ import {
   ToastType,
 } from "@/components/garda-ampera/GardaNotificationModal";
 import { AdminPagination } from "@/components/admin/AdminPagination";
+import { GardaEvaluasiSkeleton } from "@/components/admin/garda-ampera/GardaAmperaLoadingSkeleton";
 
 const MONTHS_LIST = [
   { value: "1", label: "Januari" },
@@ -387,7 +388,11 @@ export default function AdminGardaEvaluasiPage() {
         </div>
       </div>
 
-      {/* 2. Top Summary KPI Cards (5 Kartu) */}
+      {loading ? (
+        <GardaEvaluasiSkeleton />
+      ) : (
+        <>
+          {/* 2. Top Summary KPI Cards (5 Kartu) */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3.5">
         {/* Card 1: Rata-rata Keseluruhan */}
         <div className="bg-gradient-to-br from-amber-500 to-orange-600 rounded-2xl p-4 text-white shadow-lg shadow-orange-500/20 flex flex-col justify-between">
@@ -1077,6 +1082,8 @@ export default function AdminGardaEvaluasiPage() {
         )}
       </div>
       )}
+    </>
+  )}
 
       {/* ===================================================================== */}
       {/* MODAL DETAIL HASIL EVALUASI PESERTA */}

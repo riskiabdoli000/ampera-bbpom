@@ -23,6 +23,8 @@ import {
   User,
   ArrowRight,
   Filter,
+  Smartphone,
+  AlertTriangle,
 } from "lucide-react";
 import {
   AdminAccountItem,
@@ -79,8 +81,9 @@ export function AdminPengaturanAkunClient({
   const [showConfirmPass, setShowConfirmPass] = useState(false);
   const [passLoading, setPassLoading] = useState(false);
 
-  // Form State: Ubah Nama Profil
+  // Form State: Ubah Nama & Profil
   const [profileName, setProfileName] = useState(currentAdmin.nama);
+  const [profilePhone, setProfilePhone] = useState(currentAdmin.telepon || "");
   const [profileLoading, setProfileLoading] = useState(false);
 
   // Toggling status state
@@ -162,7 +165,7 @@ export function AdminPengaturanAkunClient({
     }
   };
 
-  // Handler: Ubah Nama Profil
+  // Handler: Ubah Profil (Nama & WhatsApp)
   const handleUpdateProfile = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!profileName.trim()) {
@@ -172,18 +175,29 @@ export function AdminPengaturanAkunClient({
 
     setProfileLoading(true);
     try {
-      const res = await updateMyProfileAction({ nama: profileName });
-      if (res.success) {
-        showFeedback("success", res.message || "Nama profil berhasil diperbarui.");
-        setCurrentAdmin((prev) => ({ ...prev, nama: profileName.trim() }));
+      const res = await updateMyProfileAction({
+        nama: profileName,
+        telepon: profilePhone,
+      });
+      if (res.success && res.data) {
+        showFeedback("success", res.message || "Profil berhasil diperbarui.");
+        setCurrentAdmin((prev) => ({
+          ...prev,
+          nama: profileName.trim(),
+          telepon: res.data?.telepon || null,
+        }));
         setAccounts((prev) =>
-          prev.map((a) => (a.id === currentAdmin.id ? { ...a, nama: profileName.trim() } : a))
+          prev.map((a) =>
+            a.id === currentAdmin.id
+              ? { ...a, nama: profileName.trim(), telepon: res.data?.telepon || null }
+              : a
+          )
         );
       } else {
-        showFeedback("error", res.error || "Gagal memperbarui nama profil.");
+        showFeedback("error", res.error || "Gagal memperbarui profil.");
       }
     } catch {
-      showFeedback("error", "Gagal memperbarui nama.");
+      showFeedback("error", "Gagal memperbarui data profil.");
     } finally {
       setProfileLoading(false);
     }
@@ -256,13 +270,51 @@ export function AdminPengaturanAkunClient({
               >
                 {currentAdmin.role}
               </span>
+              {isSuperadmin && (!currentAdmin.telepon || currentAdmin.telepon.trim().length < 8) && (
+                <span className="inline-flex items-center gap-1 rounded-md bg-amber-100 px-1.5 py-0.5 text-[9px] font-bold text-amber-700 dark:bg-amber-950/60 dark:text-amber-300 border border-amber-200/60">
+                  <AlertTriangle className="h-2.5 w-2.5 text-amber-600" />
+                  Belum Ada No. WA
+                </span>
+              )}
             </div>
             <p className="text-[11px] text-[#7b8aa8] dark:text-slate-400">
-              @{currentAdmin.username} • Login Aktif
+              @{currentAdmin.username} {currentAdmin.telepon ? `• 📱 ${currentAdmin.telepon}` : "• Login Aktif"}
             </p>
           </div>
         </div>
       </div>
+
+      {/* Banner Peringatan Tambah Nomor Telepon (Khusus Superadmin jika nomor belum ditambahkan) */}
+      {isSuperadmin && (!currentAdmin.telepon || currentAdmin.telepon.trim().length < 8) && (
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 rounded-2xl border border-amber-200 bg-gradient-to-r from-amber-50 to-orange-50/50 p-4 shadow-sm dark:border-amber-900/60 dark:from-amber-950/40 dark:to-orange-950/20 animate-fade-in">
+          <div className="flex items-start sm:items-center gap-3">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-amber-500 text-white shadow-md shadow-amber-500/20">
+              <Smartphone className="h-5 w-5" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-bold text-amber-900 dark:text-amber-200">
+                  Nomor WhatsApp Admin Belum Ditambahkan
+                </span>
+                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-amber-200/90 text-amber-900 dark:bg-amber-900 dark:text-amber-200 animate-pulse">
+                  PENTING
+                </span>
+              </div>
+              <p className="mt-0.5 text-[11px] text-amber-800/80 dark:text-amber-300/80 leading-relaxed">
+                Segera tambahkan nomor telepon WhatsApp Anda pada pengaturan profil agar fitur reset kata sandi mandiri via kode OTP WhatsApp dapat digunakan jika lupa sandi.
+              </p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => setActiveTab("GANTI_PASSWORD")}
+            className="self-start sm:self-auto shrink-0 inline-flex items-center gap-1.5 rounded-xl bg-amber-600 px-3.5 py-2 text-xs font-bold text-white shadow-sm transition hover:bg-amber-700 active:scale-95"
+          >
+            <span>Lengkapi Sekarang</span>
+            <ArrowRight className="h-3.5 w-3.5" />
+          </button>
+        </div>
+      )}
 
       {/* Global Feedback Alert */}
       {feedback && (
@@ -637,27 +689,70 @@ export function AdminPengaturanAkunClient({
                 </div>
               </div>
 
-              {/* Form Update Nama Tampilan */}
-              <form onSubmit={handleUpdateProfile} className="mt-6 border-t border-slate-100 pt-5 dark:border-slate-800">
-                <label className="mb-1.5 block text-xs font-semibold text-[#0f2257] dark:text-slate-200">
-                  Perbarui Nama Lengkap
-                </label>
-                <div className="flex gap-2">
+              {/* Form Update Profil (Nama & Nomor WhatsApp) */}
+              <form onSubmit={handleUpdateProfile} className="mt-6 space-y-3.5 border-t border-slate-100 pt-5 dark:border-slate-800">
+                <div>
+                  <label className="mb-1 block text-xs font-semibold text-[#0f2257] dark:text-slate-200">
+                    Nama Lengkap
+                  </label>
                   <input
                     type="text"
                     required
                     value={profileName}
                     onChange={(e) => setProfileName(e.target.value)}
-                    className="flex-1 rounded-xl border border-[#e3ecfa] bg-slate-50/60 px-3 py-2 text-xs font-medium text-[#0f2257] focus:border-[#1664e8] focus:bg-white focus:outline-none dark:border-slate-800 dark:bg-slate-800 dark:text-white"
+                    placeholder="Nama lengkap admin"
+                    className="w-full rounded-xl border border-[#e3ecfa] bg-slate-50/60 px-3 py-2 text-xs font-medium text-[#0f2257] focus:border-[#1664e8] focus:bg-white focus:outline-none dark:border-slate-800 dark:bg-slate-800 dark:text-white"
                   />
-                  <button
-                    type="submit"
-                    disabled={profileLoading || profileName === currentAdmin.nama}
-                    className="rounded-xl bg-slate-100 px-3 py-2 text-xs font-bold text-slate-700 hover:bg-slate-200 disabled:opacity-50 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
-                  >
-                    {profileLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : "Ubah"}
-                  </button>
                 </div>
+
+                <div>
+                  <div className="mb-1 flex items-center justify-between">
+                    <label className="block text-xs font-semibold text-[#0f2257] dark:text-slate-200">
+                      Nomor WhatsApp
+                    </label>
+                    {isSuperadmin && (!currentAdmin.telepon || currentAdmin.telepon.trim().length < 8) && (
+                      <span className="inline-flex items-center gap-1 rounded-md bg-amber-100 px-1.5 py-0.5 text-[9px] font-bold text-amber-700 dark:bg-amber-950/60 dark:text-amber-300">
+                        <AlertTriangle className="h-2.5 w-2.5" />
+                        Segera Isi
+                      </span>
+                    )}
+                  </div>
+                  <div className="relative">
+                    <Smartphone className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-[#7b8aa8]" />
+                    <input
+                      type="tel"
+                      value={profilePhone}
+                      onChange={(e) => setProfilePhone(e.target.value)}
+                      placeholder="Contoh: 08117850008"
+                      className="w-full rounded-xl border border-[#e3ecfa] bg-slate-50/60 py-2 pl-9 pr-3 text-xs font-medium text-[#0f2257] focus:border-[#1664e8] focus:bg-white focus:outline-none dark:border-slate-800 dark:bg-slate-800 dark:text-white"
+                    />
+                  </div>
+                  <p className="mt-1 text-[10px] text-[#7b8aa8]">
+                    Wajib diisi agar dapat menerima kode OTP WhatsApp saat lupa password.
+                  </p>
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={
+                    profileLoading ||
+                    (profileName === currentAdmin.nama &&
+                      profilePhone === (currentAdmin.telepon || ""))
+                  }
+                  className="w-full inline-flex items-center justify-center gap-1.5 rounded-xl bg-[#1664e8] py-2 text-xs font-bold text-white shadow-sm transition hover:bg-[#1253c4] disabled:opacity-50"
+                >
+                  {profileLoading ? (
+                    <>
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      <span>Menyimpan...</span>
+                    </>
+                  ) : (
+                    <>
+                      <CheckCircle2 className="h-3.5 w-3.5" />
+                      <span>Simpan Perubahan Profil</span>
+                    </>
+                  )}
+                </button>
               </form>
             </div>
 

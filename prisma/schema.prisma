@@ -201,16 +201,20 @@ model SurveiLayanan {
 
 // Akun Admin & Operator Petugas BBPOM
 model Admin {
-  id          Int                @id @default(autoincrement())
-  username    String             @unique
-  nama        String
-  password    String             // Hashed password (bcrypt)
-  role        RoleAdmin          @default(OPERATOR)
-  isAktif     Boolean            @default(true)
+  id               Int                @id @default(autoincrement())
+  username         String             @unique
+  nama             String
+  password         String             // Hashed password (bcrypt)
+  role             RoleAdmin          @default(OPERATOR)
+  isAktif          Boolean            @default(true)
+  telepon          String?            // Nomor WhatsApp petugas untuk kontak & verifikasi OTP
+  resetOtp         String?            // Hashed OTP untuk reset kata sandi mandiri
+  resetOtpExpiry   DateTime?          // Batas waktu kedaluwarsa kode OTP
+  resetOtpAttempts Int                @default(0) // Counter percobaan gagal OTP (max 5x)
   
-  verifikasi  PengajuanLayanan[]
-  createdAt   DateTime           @default(now())
-  updatedAt   DateTime           @updatedAt
+  verifikasi       PengajuanLayanan[]
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
 }
 
 // Master Data Petugas Pelayanan BBPOM di Palembang

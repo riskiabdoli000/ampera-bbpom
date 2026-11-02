@@ -12,6 +12,7 @@ import { GardaDashboardFilterCard } from "@/components/admin/garda-ampera/dashbo
 import { GardaTimeTrendChartCard } from "@/components/admin/garda-ampera/dashboard/GardaTimeTrendChartCard";
 import { GardaSecondaryFilterCard } from "@/components/admin/garda-ampera/dashboard/GardaSecondaryFilterCard";
 import { GardaDemographicChartsGrid } from "@/components/admin/garda-ampera/dashboard/GardaDemographicChartsGrid";
+import { GardaDashboardSkeleton } from "@/components/admin/garda-ampera/GardaAmperaLoadingSkeleton";
 
 export default function AdminGardaDashboardPage() {
   const [loading, setLoading] = useState<boolean>(true);
@@ -132,49 +133,55 @@ export default function AdminGardaDashboardPage() {
         </div>
       </div>
 
-      {/* ======================================================== */}
-      {/* 2. CARD FILTER UTAMA (PEKERJAAN, PENDIDIKAN, UMUR, DLL)  */}
-      {/* ======================================================== */}
-      <GardaDashboardFilterCard
-        options={data.options}
-        currentFilter={filter}
-        onApplyFilter={handleApplyMainFilter}
-        isLoading={loading}
-      />
+      {loading && data.totalAllPeserta === 0 ? (
+        <GardaDashboardSkeleton />
+      ) : (
+        <>
+          {/* ======================================================== */}
+          {/* 2. CARD FILTER UTAMA (PEKERJAAN, PENDIDIKAN, UMUR, DLL)  */}
+          {/* ======================================================== */}
+          <GardaDashboardFilterCard
+            options={data.options}
+            currentFilter={filter}
+            onApplyFilter={handleApplyMainFilter}
+            isLoading={loading}
+          />
 
-      {/* ======================================================== */}
-      {/* 3. GRAFIK UTAMA: JUMLAH TAMU PER WAKTU (BATANG / GARIS)  */}
-      {/* ======================================================== */}
-      <GardaTimeTrendChartCard
-        timeSeries={data.timeSeries}
-        totalCount={data.totalFilteredPeserta}
-        periodText={
-          filter.tahun && filter.tahun !== "ALL"
-            ? `Jumlah peserta/tamu berdasarkan periode tahun ${filter.tahun}`
-            : "Jumlah peserta/tamu berdasarkan periode yang dipilih"
-        }
-      />
+          {/* ======================================================== */}
+          {/* 3. GRAFIK UTAMA: JUMLAH TAMU PER WAKTU (BATANG / GARIS)  */}
+          {/* ======================================================== */}
+          <GardaTimeTrendChartCard
+            timeSeries={data.timeSeries}
+            totalCount={data.totalFilteredPeserta}
+            periodText={
+              filter.tahun && filter.tahun !== "ALL"
+                ? `Jumlah peserta/tamu berdasarkan periode tahun ${filter.tahun}`
+                : "Jumlah peserta/tamu berdasarkan periode yang dipilih"
+            }
+          />
 
-      {/* ======================================================== */}
-      {/* 4. FILTER GRAFIK LAINNYA (BULAN, TAHUN, TANGGAL)         */}
-      {/* ======================================================== */}
-      <GardaSecondaryFilterCard
-        years={data.options.tahunList}
-        currentBulan={filter.secondaryBulan}
-        currentTahun={filter.secondaryTahun}
-        currentTanggal={filter.secondaryTanggal}
-        onApply={handleApplySecondaryFilter}
-        isLoading={loading}
-      />
+          {/* ======================================================== */}
+          {/* 4. FILTER GRAFIK LAINNYA (BULAN, TAHUN, TANGGAL)         */}
+          {/* ======================================================== */}
+          <GardaSecondaryFilterCard
+            years={data.options.tahunList}
+            currentBulan={filter.secondaryBulan}
+            currentTahun={filter.secondaryTahun}
+            currentTanggal={filter.secondaryTanggal}
+            onApply={handleApplySecondaryFilter}
+            isLoading={loading}
+          />
 
-      {/* ======================================================== */}
-      {/* 5. GRID 3 GRAFIK DEMOGRAFI (PEKERJAAN, GENDER, PENDIDIKAN) */}
-      {/* ======================================================== */}
-      <GardaDemographicChartsGrid
-        pekerjaanStats={data.pekerjaanStats}
-        genderStats={data.genderStats}
-        pendidikanStats={data.pendidikanStats}
-      />
+          {/* ======================================================== */}
+          {/* 5. GRID 3 GRAFIK DEMOGRAFI (PEKERJAAN, GENDER, PENDIDIKAN) */}
+          {/* ======================================================== */}
+          <GardaDemographicChartsGrid
+            pekerjaanStats={data.pekerjaanStats}
+            genderStats={data.genderStats}
+            pendidikanStats={data.pendidikanStats}
+          />
+        </>
+      )}
     </div>
   );
 }
