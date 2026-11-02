@@ -1,10 +1,9 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import {
   Download,
   Printer,
-  RotateCcw,
   CheckCircle2,
   Calendar,
   Building2,
@@ -13,6 +12,9 @@ import {
 } from "lucide-react";
 import { BiodataGarda } from "./types";
 import { generateGardaCertificatePdf } from "./certificate-generator";
+
+const CERT_BASE_WIDTH = 896;
+const CERT_BASE_HEIGHT = 634; // Rasio A4 Landscape (896 / 1.414)
 
 interface SertifikatViewProps {
   biodata: BiodataGarda;
@@ -27,10 +29,32 @@ export function SertifikatView({
   postTestScore,
   nomorSertifikat,
   tanggalLulus,
-  onResetAll,
 }: SertifikatViewProps) {
   const [isDownloading, setIsDownloading] = useState(false);
   const [downloadSuccess, setDownloadSuccess] = useState(false);
+  const [scale, setScale] = useState(1);
+  const previewWrapperRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const el = previewWrapperRef.current;
+    if (!el) return;
+
+    const updateScale = () => {
+      const availableWidth = el.clientWidth;
+      if (availableWidth > 0) {
+        setScale(Math.min(1, availableWidth / CERT_BASE_WIDTH));
+      }
+    };
+
+    updateScale();
+
+    const observer = new ResizeObserver(() => {
+      updateScale();
+    });
+    observer.observe(el);
+
+    return () => observer.disconnect();
+  }, []);
 
   const handleDownloadPdf = async () => {
     try {
@@ -112,7 +136,7 @@ export function SertifikatView({
       </div>
 
       {/* Visual Live Certificate Preview (Exact Standard Design A4 Landscape) */}
-      <div className="bg-slate-100 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 sm:p-6 shadow-inner">
+      <div className="bg-slate-100 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 rounded-2xl p-3 sm:p-6 shadow-inner">
         <div className="no-print flex items-center justify-between mb-3 px-1">
           <span className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
             Pratinjau E-Sertifikat Resmi Garda Ampera
@@ -122,92 +146,104 @@ export function SertifikatView({
           </span>
         </div>
 
-        {/* Certificate Sheet */}
+        {/* Responsive Scaled Wrapper */}
         <div
-          className="certificate-print-area relative bg-white border border-slate-300 rounded-2xl shadow-2xl overflow-hidden select-none max-w-4xl mx-auto"
-          style={{ aspectRatio: "1.414 / 1" }}
+          ref={previewWrapperRef}
+          className="w-full max-w-4xl mx-auto overflow-hidden rounded-xl sm:rounded-2xl shadow-2xl print:!h-auto print:!overflow-visible"
+          style={{ height: `${Math.round(CERT_BASE_HEIGHT * scale)}px` }}
         >
-          {/* Watermark Logo GARDA AMPERA in the background */}
-          <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-0">
+          {/* Certificate Sheet (Fixed Desktop Canvas 896x634 Scaled Proportionally) */}
+          <div
+            className="certificate-print-area relative bg-white border border-slate-300 rounded-2xl overflow-hidden select-none print:!transform-none"
+            style={{
+              width: `${CERT_BASE_WIDTH}px`,
+              height: `${CERT_BASE_HEIGHT}px`,
+              transform: `scale(${scale})`,
+              transformOrigin: "top left",
+            }}
+          >
+            {/* Watermark Logo GARDA AMPERA in the background */}
+            <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-0">
+              <img
+                src="/sertifikat/assets/garda-ampera-logo.png"
+                alt="Garda Ampera Watermark"
+                className="w-7/12 object-contain opacity-[0.10] transform translate-y-3"
+              />
+            </div>
+
+            {/* Wave Bottom Asset */}
             <img
-              src="/sertifikat/assets/garda-ampera-logo.png"
-              alt="Garda Ampera Watermark"
-              className="w-7/12 object-contain opacity-[0.10] transform translate-y-3"
+              src="/sertifikat/assets/wave-bottom.jpg"
+              alt="Wave Decoration"
+              className="absolute bottom-0 left-0 w-full object-fill pointer-events-none z-0"
+              style={{ height: "24%" }}
             />
-          </div>
 
-          {/* Wave Bottom Asset */}
-          <img
-            src="/sertifikat/assets/wave-bottom.jpg"
-            alt="Wave Decoration"
-            className="absolute bottom-0 left-0 w-full object-fill pointer-events-none z-0"
-            style={{ height: "24%" }}
-          />
-
-          {/* Content Overlay */}
-          <div className="relative z-10 w-full h-full flex flex-col justify-between py-5 px-6 sm:py-7 sm:px-10 md:py-8 md:px-14 text-center">
-            {/* Header: Logo, Title, Nomor */}
-            <div className="space-y-0.5 sm:space-y-1">
-              <div className="flex justify-center pt-0.5 sm:pt-1">
-                <img
-                  src="/sertifikat/assets/logo-bpom.png"
-                  alt="Logo Badan POM"
-                  className="h-12 sm:h-16 md:h-20 object-contain"
-                />
-              </div>
-              <h1 className="font-times text-xl sm:text-3xl md:text-4xl font-bold tracking-wide text-slate-900 uppercase pt-0.5 sm:pt-1">
-                SERTIFIKAT
-              </h1>
-              <p className="font-times text-[10px] sm:text-xs md:text-sm font-normal text-slate-800">
-                Nomor :  {nomorSertifikat}
-              </p>
-            </div>
-
-            {/* Body: Intro, Nama Peserta, Narasi Kelulusan */}
-            <div className="space-y-1 sm:space-y-2 my-auto">
-              <p className="font-times text-[11px] sm:text-sm md:text-base text-slate-700 font-normal">
-                Sertifikat ini menerangkan bahwa:
-              </p>
-              <h2 className="font-times text-xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-slate-900 tracking-normal py-0.5 sm:py-1">
-                {biodata.nama || "Peserta Garda Ampera"}
-              </h2>
-              <p className="font-times text-[10px] sm:text-xs md:text-sm lg:text-[15px] font-bold text-slate-900 max-w-2xl mx-auto leading-snug md:leading-tight">
-                Telah menyelesaikan modul Gerakan Antisipasi Risiko, Deteksi, dan Aksi pada inovasi GARDA AMPERA. Semoga partisipasi ini menjadi langkah nyata bersama dalam mewujudkan keamanan pangan dan pengawasan obat dan makanan yang lebih baik.
-              </p>
-            </div>
-
-            {/* Footer / Signature Block */}
-            <div className="space-y-0.5 mb-1 sm:mb-2">
-              <p className="font-times text-[10px] sm:text-xs md:text-sm text-slate-800">
-                Palembang, {tanggalLulus || "29 Oktober 2026"}
-              </p>
-              <p className="font-trebuchet text-[10px] sm:text-xs md:text-sm text-slate-800">
-                Kepala Balai Besar Pengawas Obat dan Makanan
-              </p>
-              <p className="font-trebuchet text-[10px] sm:text-xs md:text-sm text-slate-800">
-                di Palembang
-              </p>
-
-              {/* Signature + Stamp */}
-              <div className="relative h-14 sm:h-20 md:h-24 flex items-center justify-center my-0.5">
-                {/* Cap BBPOM Palembang */}
-                <img
-                  src="/sertifikat/assets/cap-bpom.png"
-                  alt="Cap BBPOM Palembang"
-                  className="absolute h-20 sm:h-28 md:h-32 object-contain transform -translate-x-12 sm:-translate-x-20 -translate-y-1 md:-translate-y-2 opacity-95 pointer-events-none"
-                />
-                {/* TTE Bu Yani */}
-                <img
-                  src="/sertifikat/assets/tte-bu-yani.png"
-                  alt="TTE Bu Yani"
-                  className="absolute h-14 sm:h-20 md:h-28 object-contain transform translate-x-3 sm:translate-x-2 pointer-events-none"
-                />
+            {/* Content Overlay */}
+            <div className="relative z-10 w-full h-full flex flex-col justify-between py-8 px-14 text-center">
+              {/* Header: Logo, Title, Nomor */}
+              <div className="space-y-1">
+                <div className="flex justify-center pt-1">
+                  <img
+                    src="/sertifikat/assets/logo-bpom.png"
+                    alt="Logo Badan POM"
+                    className="h-20 object-contain"
+                  />
+                </div>
+                <h1 className="font-times text-4xl font-bold tracking-wide text-slate-900 uppercase pt-1">
+                  SERTIFIKAT
+                </h1>
+                <p className="font-times text-sm font-normal text-slate-800">
+                  Nomor :  {nomorSertifikat}
+                </p>
               </div>
 
-              {/* Pejabat: Yani Ardiyanti, SF, Apt.,M.Sc (Tanpa NIP) */}
-              <p className="font-trebuchet text-[11px] sm:text-xs md:text-base font-bold text-slate-900 pt-0.5">
-                Yani Ardiyanti, SF, Apt.,M.Sc
-              </p>
+              {/* Body: Intro, Nama Peserta, Narasi Kelulusan */}
+              <div className="space-y-2 my-auto">
+                <p className="font-times text-base text-slate-700 font-normal">
+                  Sertifikat ini menerangkan bahwa:
+                </p>
+                <h2 className="font-times text-5xl font-bold text-slate-900 tracking-normal py-1">
+                  {biodata.nama || "Peserta Garda Ampera"}
+                </h2>
+                <p className="font-times text-[15px] font-bold text-slate-900 max-w-2xl mx-auto leading-tight">
+                  Telah menyelesaikan modul Gerakan Antisipasi Risiko, Deteksi, dan Aksi pada inovasi GARDA AMPERA. Semoga partisipasi ini menjadi langkah nyata bersama dalam mewujudkan keamanan pangan dan pengawasan obat dan makanan yang lebih baik.
+                </p>
+              </div>
+
+              {/* Footer / Signature Block */}
+              <div className="space-y-0.5 mb-2">
+                <p className="font-times text-sm text-slate-800">
+                  Palembang, {tanggalLulus || "29 Oktober 2026"}
+                </p>
+                <p className="font-trebuchet text-sm text-slate-800">
+                  Kepala Balai Besar Pengawas Obat dan Makanan
+                </p>
+                <p className="font-trebuchet text-sm text-slate-800">
+                  di Palembang
+                </p>
+
+                {/* Signature + Stamp */}
+                <div className="relative h-24 flex items-center justify-center my-0.5">
+                  {/* Cap BBPOM Palembang */}
+                  <img
+                    src="/sertifikat/assets/cap-bpom.png"
+                    alt="Cap BBPOM Palembang"
+                    className="absolute h-32 object-contain transform -translate-x-20 -translate-y-2 opacity-95 pointer-events-none"
+                  />
+                  {/* TTE Bu Yani */}
+                  <img
+                    src="/sertifikat/assets/tte-bu-yani.png"
+                    alt="TTE Bu Yani"
+                    className="absolute h-28 object-contain transform translate-x-2 pointer-events-none"
+                  />
+                </div>
+
+                {/* Pejabat: Yani Ardiyanti, SF, Apt.,M.Sc (Tanpa NIP) */}
+                <p className="font-trebuchet text-base font-bold text-slate-900 pt-0.5">
+                  Yani Ardiyanti, SF, Apt.,M.Sc
+                </p>
+              </div>
             </div>
           </div>
         </div>

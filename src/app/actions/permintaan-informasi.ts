@@ -108,6 +108,34 @@ export async function submitPermintaanInformasiAction(
     };
   }
 
+  if (!cleanTelepon) {
+    return {
+      success: false,
+      message: "Nomor WhatsApp/telepon pemohon wajib diisi.",
+      kodePengajuan: "",
+      data: {
+        ...formData,
+        tanggalPengajuan: new Date().toISOString(),
+        estimasiPenyelesaian: "1 - 3 Hari Kerja",
+        status: "MENUNGGU_VERIFIKASI",
+      },
+    };
+  }
+
+  if (cleanTelepon.replace(/\D/g, "").length < 8) {
+    return {
+      success: false,
+      message: "Nomor WhatsApp/telepon minimal 8 digit angka.",
+      kodePengajuan: "",
+      data: {
+        ...formData,
+        tanggalPengajuan: new Date().toISOString(),
+        estimasiPenyelesaian: "1 - 3 Hari Kerja",
+        status: "MENUNGGU_VERIFIKASI",
+      },
+    };
+  }
+
   if (!cleanAlamatInstansi) {
     return {
       success: false,

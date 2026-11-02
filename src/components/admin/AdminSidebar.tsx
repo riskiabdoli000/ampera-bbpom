@@ -241,8 +241,12 @@ export function AdminSidebar({
 
         <div className="mx-6 border-t border-white/10" />
 
-        {/* Navigation with Animated Sliding Indicator */}
-        <nav ref={navRef} className="relative z-10 flex-1 space-y-6 overflow-y-auto pl-4 pr-0 pt-5 pb-24">
+        {/* Navigation with Animated Sliding Indicator (Scrollbar disembunyikan agar tampilan bersih dan seamless) */}
+        <nav
+          ref={navRef}
+          style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
+          className="relative z-10 flex-1 space-y-6 overflow-y-auto no-scrollbar [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden pl-4 pr-0 pt-5 pb-24"
+        >
           {/* Sliding active tab indicator with organic inverted curves */}
           <div
             className="pointer-events-none absolute right-0 z-0 will-change-transform"

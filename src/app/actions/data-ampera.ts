@@ -118,7 +118,10 @@ export interface PenggunaItem {
     kodePengajuan: string;
     status: StatusPengajuan;
     layananNama: string;
+    layananKode?: string;
     createdAt: Date;
+    ringkasan?: string | null;
+    catatanPetugas?: string | null;
   }>;
 }
 
@@ -173,18 +176,32 @@ export async function getDataAmperaOverview(): Promise<DataAmperaOverviewRespons
         kodePengajuan: string;
         status: StatusPengajuan;
         layananNama: string;
+        layananKode?: string;
         createdAt: Date;
+        ringkasan?: string | null;
+        catatanPetugas?: string | null;
       }>
     >();
 
     const pengajuanList: PengajuanItem[] = rawPengajuan.map((p) => {
+      const ringkasan =
+        p.informasiDibutuhkan ||
+        p.produkDicurigai ||
+        p.rincianProduk ||
+        p.isiPengaduan ||
+        p.rincianInformasiKip ||
+        null;
+
       const tamuHistory = pengajuanByTamuId.get(p.tamu.id) || [];
       tamuHistory.push({
         id: p.id,
         kodePengajuan: p.kodePengajuan,
         status: p.status as StatusPengajuan,
         layananNama: p.layanan.nama,
+        layananKode: p.layanan.kode,
         createdAt: p.createdAt,
+        ringkasan,
+        catatanPetugas: p.catatanPetugas,
       });
       pengajuanByTamuId.set(p.tamu.id, tamuHistory);
 
@@ -815,12 +832,23 @@ export async function getServiceLaporanData(
       }
       const existing = tamuMap.get(p.tamu.id)!;
       existing.totalPengajuan++;
+      const ringkasan =
+        p.informasiDibutuhkan ||
+        p.produkDicurigai ||
+        p.rincianProduk ||
+        p.isiPengaduan ||
+        p.rincianInformasiKip ||
+        null;
+
       existing.pengajuan.push({
         id: p.id,
         kodePengajuan: p.kodePengajuan,
         status: p.status as StatusPengajuan,
         layananNama: p.layanan.nama,
+        layananKode: p.layanan.kode,
         createdAt: p.createdAt,
+        ringkasan,
+        catatanPetugas: p.catatanPetugas,
       });
     }
 

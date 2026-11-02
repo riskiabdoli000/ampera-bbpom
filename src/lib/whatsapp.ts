@@ -160,8 +160,7 @@ Terima kasih telah mengajukan *Layanan Pengujian Cepat Sampel (AMPERA)* pada Bal
 • *Produk Dicurigai:* ${pengajuan.produkDicurigai || "-"}
 • *Rincian Lokasi:* ${pengajuan.rincianProduk || "-"}
 
-📍 *PETUNJUK SELANJUTNYA:*
-Silakan serahkan sampel fisik produk tersebut kepada petugas penguji di Laboratorium Pengujian / Mobil Laboratorium Keliling BBPOM Palembang dengan menunjukkan *Nomor Tiket* di atas.
+Terima kasih atas permohonan Anda.
 
 ${footer}`;
   }
@@ -180,7 +179,7 @@ Terima kasih atas permohonan Anda. Permohonan *Layanan Permintaan Informasi Obat
 • *Hal yang Dibutuhkan:* ${pengajuan.informasiDibutuhkan || "-"}
 • *Waktu Registrasi:* ${waktuPengajuan}
 
-Petugas pelayanan informasi BBPOM Palembang akan segera menelaah dan menyiapkan informasi yang Anda butuhkan sesuai ketentuan standar pelayanan publik.
+Petugas pelayanan informasi BBPOM Palembang akan segera menyiapkan informasi yang Anda butuhkan sesuai ketentuan standar pelayanan publik.
 
 ${footer}`;
   }
@@ -191,7 +190,7 @@ ${footer}`;
 ────────────────────────────
 Yth. Bapak/Ibu *${namaTamu}*,
 
-Laporan Pengaduan Konsumen Anda telah kami terima dan tercatat dengan aman dalam basis data BBPOM di Palembang:
+Laporan Pengaduan Konsumen Anda telah kami terima:
 
 📋 *RINCIAN PENGADUAN:*
 • *Nomor Pengaduan:* \`${kodePengajuan}\`

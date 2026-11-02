@@ -41,6 +41,7 @@ import {
   ConfirmDialogConfig,
   ToastType,
 } from "@/components/garda-ampera/GardaNotificationModal";
+import { AdminPagination } from "@/components/admin/AdminPagination";
 
 const MONTHS_LIST = [
   { value: "1", label: "Januari" },
@@ -87,6 +88,10 @@ export default function AdminGardaEvaluasiPage() {
   const [filterBulan, setFilterBulan] = useState<string>("all");
   const [filterTanggal, setFilterTanggal] = useState<string>("all");
   const [viewMode, setViewMode] = useState<"card" | "table">("card");
+
+  // Pagination State (Maksimal 10 baris per halaman)
+  const itemsPerPage = 10;
+  const [currentPage, setCurrentPage] = useState(1);
 
   // Popover Date Picker
   const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
@@ -223,6 +228,26 @@ export default function AdminGardaEvaluasiPage() {
     });
   }, [evaluasiList, searchTerm, filterRating, filterTahun, filterBulan, filterTanggal]);
 
+  // Perhitungan Pagination
+  const totalPages = Math.ceil(filteredList.length / itemsPerPage) || 1;
+
+  // Reset pagination saat filter/search berubah
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, filterRating, filterTahun, filterBulan, filterTanggal]);
+
+  // Jaga agar currentPage tidak melebihi totalPages saat data terfilter atau dihapus
+  useEffect(() => {
+    if (currentPage > totalPages) {
+      setCurrentPage(totalPages);
+    }
+  }, [totalPages, currentPage]);
+
+  const paginatedList = useMemo(() => {
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    return filteredList.slice(startIndex, startIndex + itemsPerPage);
+  }, [filteredList, currentPage, itemsPerPage]);
+
   const isFilterActive =
     searchTerm.trim() !== "" ||
     filterRating !== "all" ||
@@ -237,6 +262,7 @@ export default function AdminGardaEvaluasiPage() {
     setFilterBulan("all");
     setFilterTanggal("all");
     setIsDatePickerOpen(false);
+    setCurrentPage(1);
   };
 
   // Export handlers
@@ -844,96 +870,111 @@ export default function AdminGardaEvaluasiPage() {
         /* ===================================================================== */
         /* VIEW 1: FEED KARTU TESTIMONI & ULASAN PESERTA */
         /* ===================================================================== */
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-          {filteredList.map((item) => (
-            <div
-              key={item.id}
-              className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-xs hover:shadow-md transition-all flex flex-col justify-between group"
-            >
-              <div>
-                {/* Header Card: User Info & Overall Rating */}
-                <div className="flex items-start justify-between gap-3 pb-3 border-b border-slate-100 dark:border-slate-800">
-                  <div className="min-w-0">
-                    <p className="font-extrabold text-sm text-navy-900 dark:text-white truncate">
-                      {item.nama}
-                    </p>
-                    <p className="text-[11px] text-slate-500 font-medium truncate mt-0.5">
-                      {item.instansi}
-                    </p>
-                    <p className="text-[10px] text-slate-400">
-                      {new Date(item.tanggalTes || item.createdAt).toLocaleDateString("id-ID", {
-                        day: "numeric",
-                        month: "short",
-                        year: "numeric",
-                      })}
-                    </p>
-                  </div>
+        <div className="space-y-5">
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+            {paginatedList.map((item) => (
+              <div
+                key={item.id}
+                className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-xs hover:shadow-md transition-all flex flex-col justify-between group"
+              >
+                <div>
+                  {/* Header Card: User Info & Overall Rating */}
+                  <div className="flex items-start justify-between gap-3 pb-3 border-b border-slate-100 dark:border-slate-800">
+                    <div className="min-w-0">
+                      <p className="font-extrabold text-sm text-navy-900 dark:text-white truncate">
+                        {item.nama}
+                      </p>
+                      <p className="text-[11px] text-slate-500 font-medium truncate mt-0.5">
+                        {item.instansi}
+                      </p>
+                      <p className="text-[10px] text-slate-400">
+                        {new Date(item.tanggalTes || item.createdAt).toLocaleDateString("id-ID", {
+                          day: "numeric",
+                          month: "short",
+                          year: "numeric",
+                        })}
+                      </p>
+                    </div>
 
-                  <div className="text-right shrink-0">
-                    <div className="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl bg-amber-50 dark:bg-amber-950/60 border border-amber-200 dark:border-amber-900/40 text-amber-600 dark:text-amber-400 font-black text-xs">
-                      <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-500" />
-                      <span>{item.rataRata}</span>
-                      <span className="text-[10px] font-normal text-slate-400">/5</span>
+                    <div className="text-right shrink-0">
+                      <div className="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl bg-amber-50 dark:bg-amber-950/60 border border-amber-200 dark:border-amber-900/40 text-amber-600 dark:text-amber-400 font-black text-xs">
+                        <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-500" />
+                        <span>{item.rataRata}</span>
+                        <span className="text-[10px] font-normal text-slate-400">/5</span>
+                      </div>
                     </div>
                   </div>
+
+                  {/* 4 Pilar Badges */}
+                  <div className="grid grid-cols-2 gap-1.5 py-3 text-[10px]">
+                    <div className="px-2 py-1 rounded-lg bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-300 flex items-center justify-between">
+                      <span className="truncate">Kemudahan:</span>
+                      <strong className="text-navy-900 dark:text-white font-mono">{item.ratingKemudahan}★</strong>
+                    </div>
+                    <div className="px-2 py-1 rounded-lg bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-300 flex items-center justify-between">
+                      <span className="truncate">Materi Slide:</span>
+                      <strong className="text-navy-900 dark:text-white font-mono">{item.ratingMateri}★</strong>
+                    </div>
+                    <div className="px-2 py-1 rounded-lg bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-300 flex items-center justify-between">
+                      <span className="truncate">Bobot Soal:</span>
+                      <strong className="text-navy-900 dark:text-white font-mono">{item.ratingSoal}★</strong>
+                    </div>
+                    <div className="px-2 py-1 rounded-lg bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-300 flex items-center justify-between">
+                      <span className="truncate">Manfaat:</span>
+                      <strong className="text-navy-900 dark:text-white font-mono">{item.ratingManfaat}★</strong>
+                    </div>
+                  </div>
+
+                  {/* Kritik & Saran Quote Box */}
+                  <div className="p-3.5 rounded-xl bg-amber-50/40 dark:bg-amber-950/20 border border-amber-200/60 dark:border-amber-900/30 relative">
+                    <Quote className="w-4 h-4 text-amber-400/60 absolute top-2 right-2" />
+                    <p className="text-xs text-slate-700 dark:text-slate-200 italic leading-relaxed line-clamp-4 pr-4">
+                      &ldquo;{item.kritikSaran || "Tidak ada kritik atau saran tambahan yang dituliskan."}&rdquo;
+                    </p>
+                  </div>
                 </div>
 
-                {/* 4 Pilar Badges */}
-                <div className="grid grid-cols-2 gap-1.5 py-3 text-[10px]">
-                  <div className="px-2 py-1 rounded-lg bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-300 flex items-center justify-between">
-                    <span className="truncate">Kemudahan:</span>
-                    <strong className="text-navy-900 dark:text-white font-mono">{item.ratingKemudahan}★</strong>
-                  </div>
-                  <div className="px-2 py-1 rounded-lg bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-300 flex items-center justify-between">
-                    <span className="truncate">Materi Slide:</span>
-                    <strong className="text-navy-900 dark:text-white font-mono">{item.ratingMateri}★</strong>
-                  </div>
-                  <div className="px-2 py-1 rounded-lg bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-300 flex items-center justify-between">
-                    <span className="truncate">Bobot Soal:</span>
-                    <strong className="text-navy-900 dark:text-white font-mono">{item.ratingSoal}★</strong>
-                  </div>
-                  <div className="px-2 py-1 rounded-lg bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-300 flex items-center justify-between">
-                    <span className="truncate">Manfaat:</span>
-                    <strong className="text-navy-900 dark:text-white font-mono">{item.ratingManfaat}★</strong>
-                  </div>
-                </div>
+                {/* Card Footer Actions */}
+                <div className="flex items-center justify-between pt-3 mt-4 border-t border-slate-100 dark:border-slate-800 text-xs">
+                  <span className="text-[11px] font-mono text-slate-400">
+                    NIK: {item.nik.slice(0, 6)}******{item.nik.slice(-4)}
+                  </span>
 
-                {/* Kritik & Saran Quote Box */}
-                <div className="p-3.5 rounded-xl bg-amber-50/40 dark:bg-amber-950/20 border border-amber-200/60 dark:border-amber-900/30 relative">
-                  <Quote className="w-4 h-4 text-amber-400/60 absolute top-2 right-2" />
-                  <p className="text-xs text-slate-700 dark:text-slate-200 italic leading-relaxed line-clamp-4 pr-4">
-                    &ldquo;{item.kritikSaran || "Tidak ada kritik atau saran tambahan yang dituliskan."}&rdquo;
-                  </p>
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => setSelectedItem(item)}
+                      className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-[11px] font-semibold text-blue-600 dark:text-blue-400 transition-colors cursor-pointer"
+                    >
+                      <Eye className="w-3.5 h-3.5" />
+                      <span>Detail</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleDeletePeserta(item)}
+                      className="p-1.5 rounded-lg border border-rose-200 dark:border-rose-900/50 hover:bg-rose-50 dark:hover:bg-rose-950/40 text-rose-600 dark:text-rose-400 transition-colors cursor-pointer"
+                      title="Hapus Data"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
                 </div>
               </div>
+            ))}
+          </div>
 
-              {/* Card Footer Actions */}
-              <div className="flex items-center justify-between pt-3 mt-4 border-t border-slate-100 dark:border-slate-800 text-xs">
-                <span className="text-[11px] font-mono text-slate-400">
-                  NIK: {item.nik.slice(0, 6)}******{item.nik.slice(-4)}
-                </span>
-
-                <div className="flex items-center gap-1.5">
-                  <button
-                    type="button"
-                    onClick={() => setSelectedItem(item)}
-                    className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-[11px] font-semibold text-blue-600 dark:text-blue-400 transition-colors cursor-pointer"
-                  >
-                    <Eye className="w-3.5 h-3.5" />
-                    <span>Detail</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleDeletePeserta(item)}
-                    className="p-1.5 rounded-lg border border-rose-200 dark:border-rose-900/50 hover:bg-rose-50 dark:hover:bg-rose-950/40 text-rose-600 dark:text-rose-400 transition-colors cursor-pointer"
-                    title="Hapus Data"
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
-                  </button>
-                </div>
-              </div>
+          {/* Footer Pagination Card View */}
+          {filteredList.length > 0 && (
+            <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden shadow-xs">
+              <AdminPagination
+                currentPage={currentPage}
+                totalPages={totalPages}
+                totalItems={filteredList.length}
+                itemsPerPage={itemsPerPage}
+                onPageChange={setCurrentPage}
+              />
             </div>
-          ))}
+          )}
         </div>
       ) : (
         /* ===================================================================== */
@@ -957,12 +998,14 @@ export default function AdminGardaEvaluasiPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                {filteredList.map((item, idx) => (
-                  <tr
-                    key={item.id}
-                    className="hover:bg-slate-50/70 dark:hover:bg-slate-800/40 transition-colors"
-                  >
-                    <td className="py-3.5 px-4 font-bold text-slate-400">{idx + 1}</td>
+                {paginatedList.map((item, idx) => {
+                  const nomorUrut = (currentPage - 1) * itemsPerPage + idx + 1;
+                  return (
+                    <tr
+                      key={item.id}
+                      className="hover:bg-slate-50/70 dark:hover:bg-slate-800/40 transition-colors"
+                    >
+                      <td className="py-3.5 px-4 font-bold text-slate-400">{nomorUrut}</td>
                     <td className="py-3.5 px-4">
                       <p className="font-bold text-navy-900 dark:text-white">{item.nama}</p>
                       <p className="text-[11px] text-slate-500">{item.instansi}</p>
@@ -1016,11 +1059,23 @@ export default function AdminGardaEvaluasiPage() {
                       </div>
                     </td>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                );
+              })}
+            </tbody>
+          </table>
         </div>
+
+        {/* Footer Pagination Table View */}
+        {filteredList.length > 0 && (
+          <AdminPagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            totalItems={filteredList.length}
+            itemsPerPage={itemsPerPage}
+            onPageChange={setCurrentPage}
+          />
+        )}
+      </div>
       )}
 
       {/* ===================================================================== */}

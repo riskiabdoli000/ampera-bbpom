@@ -201,7 +201,7 @@ export function AdminLayananClient({ initialData }: AdminLayananClientProps) {
         </div>
 
         {/* Action Button: Tambah Layanan */}
-        <div className="shrink-0">
+        {/* <div className="shrink-0">
           <button
             type="button"
             onClick={handleOpenAdd}
@@ -210,7 +210,7 @@ export function AdminLayananClient({ initialData }: AdminLayananClientProps) {
             <Plus className="h-4 w-4 stroke-[2.5]" />
             <span>Tambah Layanan Baru</span>
           </button>
-        </div>
+        </div> */}
       </div>
 
       {/* Feedback Toast Banner */}

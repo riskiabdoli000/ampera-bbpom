@@ -130,10 +130,10 @@ export function Navbar() {
             </div>
             <div className="flex flex-col leading-none">
               <span className="font-brand font-extrabold text-xl sm:text-2xl tracking-tight text-navy-900 dark:text-white">
-                BBPOM
+                AMPERA
               </span>
               <span className="font-brand font-medium text-[11px] sm:text-xs text-brand-orange dark:text-orange-400 tracking-wide mt-0.5">
-                Palembang • Portal AMPERA
+                Amankan Produk, Edukasi Masyarakat
               </span>
             </div>
           </Link>
@@ -227,18 +227,6 @@ export function Navbar() {
                 );
               })}
             </nav>
-
-            <Link
-              href="/garda-ampera"
-              onClick={() => {
-                setActiveSection("");
-                setMobileMenuOpen(false);
-              }}
-              className={`${ctaClass} w-full justify-center mt-4`}
-            >
-              <span>Garda Ampera</span>
-              <ArrowRight className="w-4 h-4" />
-            </Link>
 
             <div className="mt-4 border-t border-slate-100 dark:border-slate-800 pt-4 flex items-center justify-between">
               <span className="text-xs font-semibold text-slate-600 dark:text-slate-400">
