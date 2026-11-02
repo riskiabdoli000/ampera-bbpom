@@ -81,8 +81,8 @@ export function AdminLayananClient({ initialData }: AdminLayananClientProps) {
         statusFilter === "ALL"
           ? true
           : statusFilter === "ACTIVE"
-          ? item.isAktif
-          : !item.isAktif;
+            ? item.isAktif
+            : !item.isAktif;
 
       return matchSearch && matchStatus;
     });
@@ -151,9 +151,8 @@ export function AdminLayananClient({ initialData }: AdminLayananClientProps) {
         );
         setFeedback({
           type: "success",
-          message: `Status layanan "${nama}" diubah menjadi ${
-            res.data.isAktif ? "Aktif" : "Nonaktif"
-          }.`,
+          message: `Status layanan "${nama}" diubah menjadi ${res.data.isAktif ? "Aktif" : "Nonaktif"
+            }.`,
         });
       } else {
         setFeedback({
@@ -216,11 +215,10 @@ export function AdminLayananClient({ initialData }: AdminLayananClientProps) {
       {/* Feedback Toast Banner */}
       {feedback && (
         <div
-          className={`flex items-center justify-between p-4 rounded-2xl border text-xs sm:text-sm font-medium animate-fade-in ${
-            feedback.type === "success"
-              ? "bg-emerald-50 border-emerald-200 text-emerald-800 dark:bg-emerald-950/40 dark:border-emerald-800 dark:text-emerald-300"
-              : "bg-red-50 border-red-200 text-red-800 dark:bg-red-950/40 dark:border-red-800 dark:text-red-300"
-          }`}
+          className={`flex items-center justify-between p-4 rounded-2xl border text-xs sm:text-sm font-medium animate-fade-in ${feedback.type === "success"
+            ? "bg-emerald-50 border-emerald-200 text-emerald-800 dark:bg-emerald-950/40 dark:border-emerald-800 dark:text-emerald-300"
+            : "bg-red-50 border-red-200 text-red-800 dark:bg-red-950/40 dark:border-red-800 dark:text-red-300"
+            }`}
         >
           <div className="flex items-center gap-2.5">
             {feedback.type === "success" ? (
@@ -346,33 +344,30 @@ export function AdminLayananClient({ initialData }: AdminLayananClientProps) {
           <button
             type="button"
             onClick={() => setStatusFilter("ALL")}
-            className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer ${
-              statusFilter === "ALL"
-                ? "bg-white dark:bg-slate-700 text-navy-900 dark:text-white shadow-2xs font-bold"
-                : "text-slate-500 hover:text-navy-900 dark:hover:text-white"
-            }`}
+            className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer ${statusFilter === "ALL"
+              ? "bg-white dark:bg-slate-700 text-navy-900 dark:text-white shadow-2xs font-bold"
+              : "text-slate-500 hover:text-navy-900 dark:hover:text-white"
+              }`}
           >
             Semua ({stats.total})
           </button>
           <button
             type="button"
             onClick={() => setStatusFilter("ACTIVE")}
-            className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer ${
-              statusFilter === "ACTIVE"
-                ? "bg-white dark:bg-slate-700 text-emerald-600 dark:text-emerald-400 shadow-2xs font-bold"
-                : "text-slate-500 hover:text-navy-900 dark:hover:text-white"
-            }`}
+            className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer ${statusFilter === "ACTIVE"
+              ? "bg-white dark:bg-slate-700 text-emerald-600 dark:text-emerald-400 shadow-2xs font-bold"
+              : "text-slate-500 hover:text-navy-900 dark:hover:text-white"
+              }`}
           >
             Aktif ({stats.active})
           </button>
           <button
             type="button"
             onClick={() => setStatusFilter("INACTIVE")}
-            className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer ${
-              statusFilter === "INACTIVE"
-                ? "bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-200 shadow-2xs font-bold"
-                : "text-slate-500 hover:text-navy-900 dark:hover:text-white"
-            }`}
+            className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer ${statusFilter === "INACTIVE"
+              ? "bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-200 shadow-2xs font-bold"
+              : "text-slate-500 hover:text-navy-900 dark:hover:text-white"
+              }`}
           >
             Nonaktif ({stats.inactive})
           </button>
@@ -452,11 +447,10 @@ export function AdminLayananClient({ initialData }: AdminLayananClientProps) {
                           onClick={() =>
                             handleQuickToggle(layanan.id, layanan.isAktif, layanan.nama)
                           }
-                          className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none disabled:opacity-50 ${
-                            layanan.isAktif
-                              ? "bg-emerald-500"
-                              : "bg-slate-300 dark:bg-slate-700"
-                          }`}
+                          className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none disabled:opacity-50 ${layanan.isAktif
+                            ? "bg-emerald-500"
+                            : "bg-slate-300 dark:bg-slate-700"
+                            }`}
                           title={
                             layanan.isAktif
                               ? "Layanan aktif (Klik untuk menonaktifkan)"
@@ -464,17 +458,15 @@ export function AdminLayananClient({ initialData }: AdminLayananClientProps) {
                           }
                         >
                           <span
-                            className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-md ring-0 transition duration-200 ease-in-out ${
-                              layanan.isAktif ? "translate-x-5" : "translate-x-0"
-                            }`}
+                            className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-md ring-0 transition duration-200 ease-in-out ${layanan.isAktif ? "translate-x-5" : "translate-x-0"
+                              }`}
                           />
                         </button>
                         <span
-                          className={`text-xs font-bold ${
-                            layanan.isAktif
-                              ? "text-emerald-600 dark:text-emerald-400"
-                              : "text-slate-400"
-                          }`}
+                          className={`text-xs font-bold ${layanan.isAktif
+                            ? "text-emerald-600 dark:text-emerald-400"
+                            : "text-slate-400"
+                            }`}
                         >
                           {layanan.isAktif ? "Aktif" : "Nonaktif"}
                         </span>

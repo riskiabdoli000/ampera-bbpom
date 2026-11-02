@@ -2,7 +2,8 @@
 
 import React, { useState } from "react";
 import Image from "next/image";
-import { BookOpen, GraduationCap, Lightbulb, Video, ArrowRight } from "lucide-react";
+import Link from "next/link";
+import { BookOpen, GraduationCap, Lightbulb, Video, ArrowRight, ShieldCheck } from "lucide-react";
 import { EducationPdfModal } from "./EducationPdfModal";
 
 interface EducationCard {
@@ -20,6 +21,7 @@ interface EducationCard {
 }
 
 const EDUCATION_CARDS: EducationCard[] = [
+  /*
   {
     id: "artikel",
     title: "Ketersediaan Farmasi",
@@ -33,11 +35,20 @@ const EDUCATION_CARDS: EducationCard[] = [
     pdfUrl: "/documents/materi-edukasi-bbpom.pdf",
     pdfFilename: "Materi-Edukasi-Farmasi-BBPOM.pdf",
   },
+  */
+  {
+    id: "garda-ampera",
+    title: "Garda Ampera",
+    description: "Portal edukasi sadar obat & pangan aman, pelajari modul, ikuti kuis, dan raih sertifikat resmi.",
+    icon: GraduationCap,
+    actionText: "Akses Garda Ampera",
+    href: "/garda-ampera",
+  },
   {
     id: "panduan",
     title: "Keamanan Pangan",
     description: "Pelajari panduan praktis cara Cek KLIK, izin edar, dan higienitas.",
-    icon: GraduationCap,
+    icon: ShieldCheck,
     actionText: "Baca Artikel",
     href: "#edukasi",
     isPdf: true,
@@ -116,9 +127,19 @@ export function EducationSection() {
             return (
               <div
                 key={card.id}
-                onClick={isPdfCard ? () => setSelectedPdfCard(card) : undefined}
+                onClick={
+                  isPdfCard
+                    ? () => setSelectedPdfCard(card)
+                    : () => {
+                        if (card.href.startsWith("http")) {
+                          window.open(card.href, "_blank", "noopener,noreferrer");
+                        } else if (card.href.startsWith("/")) {
+                          window.location.href = card.href;
+                        }
+                      }
+                }
                 className={`group rounded-3xl bg-white dark:bg-slate-900/90 border border-slate-100 dark:border-slate-800 p-7 sm:p-8 flex flex-col items-center text-center shadow-[0_10px_35px_-15px_rgb(11_42_107/0.07)] hover:shadow-card hover:-translate-y-2 transition-all duration-300 ${
-                  isPdfCard ? "cursor-pointer" : ""
+                  "cursor-pointer"
                 }`}
               >
                 {/* Ikon Besar Berbingkai Lembut */}
@@ -149,20 +170,31 @@ export function EducationSection() {
                         setSelectedPdfCard(card);
                       }}
                       className="inline-flex items-center gap-1.5 text-xs sm:text-sm font-bold text-brand-orange hover:text-brand-orange-600 transition-colors group/link cursor-pointer"
+
                     >
                       <span>{card.actionText}</span>
                       <ArrowRight className="w-4 h-4 transition-transform duration-200 group-hover/link:translate-x-1" />
                     </button>
-                  ) : (
+                  ) : card.href.startsWith("http") ? (
                     <a
                       href={card.href}
                       target={card.href.startsWith("http") ? "_blank" : undefined}
                       rel={card.href.startsWith("http") ? "noopener noreferrer" : undefined}
+                      onClick={(e) => e.stopPropagation()}
                       className="inline-flex items-center gap-1.5 text-xs sm:text-sm font-bold text-brand-orange hover:text-brand-orange-600 transition-colors group/link"
                     >
                       <span>{card.actionText}</span>
                       <ArrowRight className="w-4 h-4 transition-transform duration-200 group-hover/link:translate-x-1" />
                     </a>
+                  ) : (
+                    <Link
+                      href={card.href}
+                      onClick={(e) => e.stopPropagation()}
+                      className="inline-flex items-center gap-1.5 text-xs sm:text-sm font-bold text-brand-orange hover:text-brand-orange-600 transition-colors group/link cursor-pointer"
+                    >
+                      <span>{card.actionText}</span>
+                      <ArrowRight className="w-4 h-4 transition-transform duration-200 group-hover/link:translate-x-1" />
+                    </Link>
                   )}
                 </div>
               </div>

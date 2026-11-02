@@ -169,7 +169,7 @@ export function Navbar() {
             <button
               type="button"
               onClick={toggleTheme}
-              className="w-11 h-11 rounded-full bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-700 text-navy-900 dark:text-white flex items-center justify-center shadow-xs hover:border-brand-orange hover:scale-105 active:scale-95 transition-all duration-200 cursor-pointer focus-visible:outline-2 focus-visible:outline-brand-orange"
+              className="w-11 h-11 rounded-full bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-700 text-navy-900 dark:text-white flex items-center justify-center shadow-xs hover:scale-105 active:scale-95 transition-all duration-200 cursor-pointer focus-visible:outline-2 focus-visible:outline-brand-orange"
               aria-label={isDark ? "Beralih ke mode terang" : "Beralih ke mode gelap"}
               title={isDark ? "Beralih ke mode terang" : "Beralih ke mode gelap"}
             >

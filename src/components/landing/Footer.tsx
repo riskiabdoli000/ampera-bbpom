@@ -206,15 +206,17 @@ export function Footer({ contactData }: FooterProps) {
                 </span>
               </div>
 
-              <div className="flex items-center gap-2.5">
-                <Mail className="w-4 h-4 text-brand-orange shrink-0" />
-                <a
-                  href={`mailto:${contactData?.email1 || "bpom_palembang@pom.go.id"}`}
-                  className="text-slate-300 hover:text-white transition-colors truncate"
-                >
-                  {contactData?.email1 || "bpom_palembang@pom.go.id"}
-                </a>
-              </div>
+              {(contactData?.email1?.trim() || contactData?.email2?.trim()) && (
+                <div className="flex items-center gap-2.5">
+                  <Mail className="w-4 h-4 text-brand-orange shrink-0" />
+                  <a
+                    href={`mailto:${contactData.email1?.trim() || contactData.email2?.trim()}`}
+                    className="text-slate-300 hover:text-white transition-colors truncate"
+                  >
+                    {contactData.email1?.trim() || contactData.email2?.trim()}
+                  </a>
+                </div>
+              )}
             </div>
 
             {/* Deretan Ikon Sosial Media (Hanya tampil jika Master Toggle Aktif & ada akun aktif) */}

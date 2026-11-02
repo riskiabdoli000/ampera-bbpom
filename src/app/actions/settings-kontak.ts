@@ -13,11 +13,24 @@ const kontakSettingsSchema = z.object({
   labelSosmed: z.string().min(2, "Label media sosial minimal 2 karakter"),
 
   alamat: z.string().min(5, "Alamat kantor minimal 5 karakter"),
-  email1: z.string().email("Format Email Utama tidak valid"),
+  email1: z
+    .string()
+    .optional()
+    .nullable()
+    .transform((val) => (val?.trim() ? val.trim() : ""))
+    .refine(
+      (val) => !val || z.string().email().safeParse(val).success,
+      "Format Email Utama tidak valid"
+    ),
   email2: z
     .string()
-    .transform((val) => (val?.trim() === "" ? null : val))
-    .pipe(z.string().email("Format Email Kedua tidak valid").nullable()),
+    .optional()
+    .nullable()
+    .transform((val) => (val?.trim() ? val.trim() : null))
+    .refine(
+      (val) => !val || z.string().email().safeParse(val).success,
+      "Format Email Kedua tidak valid"
+    ),
   telepon: z.string().min(5, "Nomor telepon kantor minimal 5 karakter"),
   whatsapp: z.string().min(8, "Nomor WhatsApp minimal 8 karakter"),
   whatsappPesan: z.string().default("Halo Admin BBPOM Palembang, saya ingin berkonsultasi."),

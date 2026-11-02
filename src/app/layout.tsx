@@ -27,13 +27,30 @@ export const metadata: Metadata = {
   title: "AMPERA BBPOM - Portal Layanan & Pendampingan Regulasi BBPOM Palembang",
   description:
     "Portal resmi pelayanan publik, pendaftaran sertifikasi CPPOB, CDOB, pengujian laboratorium, dan pendampingan UMKM BBPOM di Palembang.",
+  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3001"),
   icons: {
     icon: [
-      { url: "/icon.png" },
-      { url: "/assets-landingpage/garda_ampera_logo.png" },
+      { url: "/assets-landingpage/ampera-new.png", type: "image/png" },
     ],
-    shortcut: "/favicon.ico",
-    apple: "/apple-icon.png",
+    shortcut: "/assets-landingpage/ampera-new.png",
+    apple: "/assets-landingpage/ampera-new.png",
+  },
+  openGraph: {
+    title: "AMPERA BBPOM - Portal Layanan & Pendampingan Regulasi BBPOM Palembang",
+    description:
+      "Portal resmi pelayanan publik, pendaftaran sertifikasi CPPOB, CDOB, pengujian laboratorium, dan pendampingan UMKM BBPOM di Palembang.",
+    type: "website",
+    locale: "id_ID",
+    images: [
+      {
+        url: "/assets-landingpage/ampera-new.png",
+        alt: "Logo AMPERA BBPOM",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary",
+    images: ["/assets-landingpage/ampera-new.png"],
   },
 };
 

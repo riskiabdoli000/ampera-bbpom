@@ -110,7 +110,7 @@ export function KontakSettingsForm({ initialData }: KontakSettingsFormProps) {
 
   // 2. Kontak Info
   const [alamat, setAlamat] = useState(initialData.alamat);
-  const [email1, setEmail1] = useState(initialData.email1);
+  const [email1, setEmail1] = useState(initialData.email1 || "");
   const [email2, setEmail2] = useState(initialData.email2 || "");
   const [telepon, setTelepon] = useState(initialData.telepon);
   const [whatsapp, setWhatsapp] = useState(initialData.whatsapp);
@@ -498,15 +498,18 @@ export function KontakSettingsForm({ initialData }: KontakSettingsFormProps) {
               <div>
                 <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5 flex items-center gap-1.5">
                   <Mail className="w-3.5 h-3.5 text-brand-orange" />
-                  <span>Email 1: Utama BBPOM</span>
+                  <span>Email 1: Utama BBPOM (Opsional)</span>
                 </label>
                 <input
                   type="email"
                   value={email1}
                   onChange={(e) => setEmail1(e.target.value)}
-                  placeholder="bpom_palembang@pom.go.id"
+                  placeholder="Kosongkan jika tidak ingin ditampilkan"
                   className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-xs sm:text-sm font-semibold text-slate-900 focus:border-brand-orange focus:bg-white focus:outline-none dark:border-slate-700 dark:bg-slate-800 dark:text-white"
                 />
+                <p className="text-[11px] text-slate-400 dark:text-slate-500 mt-1">
+                  Kosongkan kolom ini jika tidak ingin menampilkan email di halaman utama.
+                </p>
               </div>
 
               <div>
