@@ -12,17 +12,19 @@ import { getLandingHeroData } from "@/app/actions/settings-hero";
 import { getLandingServicesData } from "@/app/actions/admin-layanan";
 import { getKontakSettings } from "@/app/actions/settings-kontak";
 import { getLandingPenilaianData } from "@/app/actions/landing-penilaian";
+import { getLandingEdukasiList } from "@/app/actions/settings-edukasi";
 
 // ISR Caching 60 detik (Otomatis di-revalidate secara instan saat Admin memperbarui pengaturan melalui revalidatePath("/"))
 export const revalidate = 60;
 
 export default async function Home() {
-  const [heroData, servicesData, contactData, penilaianData] =
+  const [heroData, servicesData, contactData, penilaianData, edukasiData] =
     await Promise.all([
       getLandingHeroData(),
       getLandingServicesData(),
       getKontakSettings(),
       getLandingPenilaianData(),
+      getLandingEdukasiList(),
     ]);
 
   // Gunakan data video yang sudah diambil di dalam getLandingHeroData() untuk menghindari query database ganda
@@ -49,7 +51,7 @@ export default async function Home() {
       <PenilaianSection initialData={penilaianData} />
 
       {/* Section Edukasi & Literasi Konsumen */}
-      <EducationSection />
+      <EducationSection initialData={edukasiData} />
 
       {/* Section Video Profil & Dokumentasi Resmi BBPOM Palembang */}
       <VideoSection initialData={videoData} />

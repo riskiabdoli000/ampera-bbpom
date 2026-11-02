@@ -315,7 +315,8 @@ export function KeterbukaanInformasiForm() {
     return Object.keys(errs).length === 0;
   };
 
-  const handleNext = () => {
+  const handleNext = (e?: React.MouseEvent) => {
+    e?.preventDefault();
     if (currentStep === 1) {
       if (validateStep1()) {
         setCurrentStep(2);
@@ -350,6 +351,10 @@ export function KeterbukaanInformasiForm() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (currentStep < 3) {
+      handleNext();
+      return;
+    }
     if (!validateStep1() || !validateStep2()) {
       return;
     }
@@ -1543,6 +1548,7 @@ export function KeterbukaanInformasiForm() {
 
                 {currentStep < 3 ? (
                   <button
+                    key="btn-next-step"
                     type="button"
                     onClick={handleNext}
                     className="inline-flex items-center justify-center gap-2 rounded-full bg-gradient-to-r from-[#ff8a1f] to-[#f26a0f] px-7 sm:px-8 py-3 text-xs sm:text-sm font-bold text-white shadow-cta hover:shadow-[0_14px_28px_-8px_rgb(255_122_26/0.65)] hover:-translate-y-0.5 transition-all duration-200 cursor-pointer"
@@ -1552,6 +1558,7 @@ export function KeterbukaanInformasiForm() {
                   </button>
                 ) : (
                   <button
+                    key="btn-submit-form"
                     type="submit"
                     disabled={isSubmitting}
                     className="inline-flex items-center justify-center gap-2 rounded-full bg-gradient-to-r from-[#ff8a1f] to-[#f26a0f] px-8 sm:px-9 py-3 text-xs sm:text-sm font-bold text-white shadow-cta hover:shadow-[0_14px_28px_-8px_rgb(255_122_26/0.65)] hover:-translate-y-0.5 transition-all duration-200 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"

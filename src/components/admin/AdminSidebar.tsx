@@ -24,6 +24,7 @@ import {
   Award,
   MessageSquareHeart,
   UserCog,
+  BookOpen,
 } from "lucide-react";
 
 interface AdminSidebarProps {
@@ -115,6 +116,7 @@ export function AdminSidebar({
 
   const websiteSubItems = [
     { title: "Hero Content", href: "/admin/settings/hero", icon: Sparkles },
+    { title: "Konten Edukasi", href: "/admin/settings/edukasi", icon: BookOpen },
     { title: "Video Profil", href: "/admin/settings/video", icon: Video },
     { title: "Kontak & Lokasi", href: "/admin/settings/kontak", icon: PhoneCall },
   ];
@@ -229,7 +231,7 @@ export function AdminSidebar({
         <div className="flex items-center justify-center px-6 pb-5 pt-6">
           <Link href="/admin" onClick={onClose} className="flex items-center justify-center">
             <Image
-              src="/assets-landingpage/am.png"
+              src="/assets-landingpage/ampera-new.png"
               alt="Logo AMPERA BBPOM"
               width={240}
               height={160}

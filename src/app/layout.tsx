@@ -24,9 +24,9 @@ const jakarta = Plus_Jakarta_Sans({
 });
 
 export const metadata: Metadata = {
-  title: "AMPERA BBPOM - Portal Layanan & Pendampingan Regulasi BBPOM Palembang",
+  title: "AMPERA BBPOM - Amankan Produk, Edukasi MasyaRAkat",
   description:
-    "Portal resmi pelayanan publik, pendaftaran sertifikasi CPPOB, CDOB, pengujian laboratorium, dan pendampingan UMKM BBPOM di Palembang.",
+    "Portal resmi pelayanan publik, pengujian laboratorium, pendampingan UMKM BBPOM di Palembang, Portal edukasi (E-learning) sadar obat & pangan aman, dan sertifikat resmi.",
   metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3001"),
   icons: {
     icon: [
@@ -36,9 +36,9 @@ export const metadata: Metadata = {
     apple: "/assets-landingpage/ampera-new.png",
   },
   openGraph: {
-    title: "AMPERA BBPOM - Portal Layanan & Pendampingan Regulasi BBPOM Palembang",
+    title: "AMPERA BBPOM - Amankan Produk, Edukasi MasyaRAkat",
     description:
-      "Portal resmi pelayanan publik, pendaftaran sertifikasi CPPOB, CDOB, pengujian laboratorium, dan pendampingan UMKM BBPOM di Palembang.",
+      "Portal resmi pelayanan publik, pengujian laboratorium, pendampingan UMKM BBPOM di Palembang, Portal edukasi (E-learning) sadar obat & pangan aman, dan sertifikat resmi.",
     type: "website",
     locale: "id_ID",
     images: [

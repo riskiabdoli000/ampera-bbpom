@@ -269,6 +269,10 @@ export function PermintaanInformasiForm() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (currentStep < 3) {
+      handleNext();
+      return;
+    }
     if (!validateStep1() || !validateStep2()) {
       return;
     }

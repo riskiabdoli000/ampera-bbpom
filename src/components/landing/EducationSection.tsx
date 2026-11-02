@@ -3,8 +3,36 @@
 import React, { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { BookOpen, GraduationCap, Lightbulb, Video, ArrowRight, ShieldCheck } from "lucide-react";
+import {
+  BookOpen,
+  GraduationCap,
+  Lightbulb,
+  Video,
+  ArrowRight,
+  ShieldCheck,
+  FileText,
+  Utensils,
+  FlaskConical,
+  Sparkles,
+  CheckCircle2,
+  HeartHandshake,
+  Award,
+} from "lucide-react";
 import { EducationPdfModal } from "./EducationPdfModal";
+import type { EdukasiItemData } from "@/app/actions/settings-edukasi";
+
+const ICON_MAP: Record<string, React.ElementType> = {
+  ShieldCheck,
+  BookOpen,
+  FileText,
+  Utensils,
+  FlaskConical,
+  Sparkles,
+  Lightbulb,
+  CheckCircle2,
+  HeartHandshake,
+  Award,
+};
 
 interface EducationCard {
   id: string;
@@ -20,63 +48,76 @@ interface EducationCard {
   pdfFilename?: string;
 }
 
-const EDUCATION_CARDS: EducationCard[] = [
-  /*
-  {
-    id: "artikel",
-    title: "Ketersediaan Farmasi",
-    description: "Baca informasi dan wawasan edukatif seputar keamanan obat & pangan.",
-    icon: BookOpen,
-    actionText: "Baca Artikel",
-    href: "#edukasi",
-    isPdf: true,
-    pdfTitle: "Edukasi Ketersediaan Farmasi & Obat Bahan Alam",
-    pdfBadge: "Materi Edukasi Farmasi",
-    pdfUrl: "/documents/materi-edukasi-bbpom.pdf",
-    pdfFilename: "Materi-Edukasi-Farmasi-BBPOM.pdf",
-  },
-  */
-  {
-    id: "garda-ampera",
-    title: "Garda Ampera",
-    description: "Portal edukasi sadar obat & pangan aman, pelajari modul, ikuti kuis, dan raih sertifikat resmi.",
-    icon: GraduationCap,
-    actionText: "Akses Garda Ampera",
-    href: "/garda-ampera",
-  },
-  {
-    id: "panduan",
-    title: "Keamanan Pangan",
-    description: "Pelajari panduan praktis cara Cek KLIK, izin edar, dan higienitas.",
-    icon: ShieldCheck,
-    actionText: "Baca Artikel",
-    href: "#edukasi",
-    isPdf: true,
-    pdfTitle: "Panduan Praktis Keamanan Pangan & Cek KLIK",
-    pdfBadge: "Panduan Keamanan Pangan",
-    pdfUrl: "/documents/materi-edukasi-bbpom.pdf",
-    pdfFilename: "Panduan-Keamanan-Pangan-BBPOM.pdf",
-  },
-  {
-    id: "tips",
-    title: "Cek BPOM",
-    description: "Temukan tips cerdas memilih produk yang aman dan teruji bermutu.",
-    icon: Lightbulb,
-    actionText: "Pelajari Tips",
-    href: "https://cekbpom.pom.go.id",
-  },
-  {
-    id: "video",
-    title: "Informasi Umum",
-    description: "Dapatkan informasi terbaru dan siaran pers dari Badan POM RI",
-    icon: Video,
-    actionText: "Lihat Informasi",
-    href: "https://www.pom.go.id/siaran-pers",
-  },
-];
+interface EducationSectionProps {
+  initialData?: EdukasiItemData[];
+}
 
-export function EducationSection() {
+export function EducationSection({ initialData }: EducationSectionProps) {
   const [selectedPdfCard, setSelectedPdfCard] = useState<EducationCard | null>(null);
+
+  // Konversi daftar kartu edukasi yang dikelola Admin menjadi EducationCard
+  const dynamicPdfCards: EducationCard[] =
+    initialData && initialData.length > 0
+      ? initialData.map((item) => ({
+          id: `edukasi-${item.id}`,
+          title: item.judul,
+          description: item.deskripsi,
+          icon: (item.icon && ICON_MAP[item.icon]) || ShieldCheck,
+          actionText: "Baca Artikel",
+          href: "#edukasi",
+          isPdf: true,
+          pdfTitle: item.judul,
+          pdfBadge: `Materi Edukasi • ${item.judul}`,
+          pdfUrl: item.pdfUrl || "/documents/materi-edukasi-bbpom.pdf",
+          pdfFilename: item.pdfFilename || "Panduan-Keamanan-Pangan-BBPOM.pdf",
+        }))
+      : [
+          {
+            id: "panduan",
+            title: "Keamanan Pangan",
+            description:
+              "Pelajari panduan praktis cara Cek KLIK, izin edar, dan higienitas.",
+            icon: ShieldCheck,
+            actionText: "Baca Artikel",
+            href: "#edukasi",
+            isPdf: true,
+            pdfTitle: "Panduan Praktis Keamanan Pangan & Cek KLIK",
+            pdfBadge: "Panduan Keamanan Pangan",
+            pdfUrl: "/documents/materi-edukasi-bbpom.pdf",
+            pdfFilename: "Panduan-Keamanan-Pangan-BBPOM.pdf",
+          },
+        ];
+
+  const educationCards: EducationCard[] = [
+    {
+      id: "garda-ampera",
+      title: "Garda Ampera",
+      description:
+        "Portal edukasi (E-learning) sadar obat & pangan aman, pelajari modul, ikuti kuis, dan raih sertifikat resmi.",
+      icon: GraduationCap,
+      actionText: "Akses Garda Ampera",
+      href: "/garda-ampera",
+    },
+    ...dynamicPdfCards,
+    {
+      id: "tips",
+      title: "Cek BPOM",
+      description:
+        "Temukan tips cerdas memilih produk yang aman dan teruji bermutu.",
+      icon: Lightbulb,
+      actionText: "Pelajari Tips",
+      href: "https://cekbpom.pom.go.id",
+    },
+    {
+      id: "video",
+      title: "Informasi Umum",
+      description:
+        "Dapatkan informasi terbaru dan siaran pers dari Badan POM RI",
+      icon: Video,
+      actionText: "Lihat Informasi",
+      href: "https://www.pom.go.id/siaran-pers",
+    },
+  ];
 
   return (
     <section
@@ -117,10 +158,10 @@ export function EducationSection() {
         </div>
 
         {/* ========================================================= */}
-        {/* 4 KARTU KATEGORI EDUKASI (Menempel & Overlap ke Gambar)   */}
+        {/* KARTU KATEGORI EDUKASI (Menempel & Overlap ke Gambar)     */}
         {/* ========================================================= */}
-        <div className="relative z-20 -mt-20 sm:-mt-24 lg:-mt-28 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-          {EDUCATION_CARDS.map((card) => {
+        <div className="relative z-20 -mt-20 sm:-mt-24 lg:-mt-28 grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6">
+          {educationCards.map((card) => {
             const IconComponent = card.icon;
             const isPdfCard = !!card.isPdf;
 
@@ -138,30 +179,30 @@ export function EducationSection() {
                         }
                       }
                 }
-                className={`group rounded-3xl bg-white dark:bg-slate-900/90 border border-slate-100 dark:border-slate-800 p-7 sm:p-8 flex flex-col items-center text-center shadow-[0_10px_35px_-15px_rgb(11_42_107/0.07)] hover:shadow-card hover:-translate-y-2 transition-all duration-300 ${
+                className={`group rounded-2xl sm:rounded-3xl bg-white dark:bg-slate-900/90 border border-slate-100 dark:border-slate-800 p-4 sm:p-8 flex flex-col items-center text-center shadow-[0_10px_35px_-15px_rgb(11_42_107/0.07)] hover:shadow-card hover:-translate-y-2 transition-all duration-300 ${
                   "cursor-pointer"
                 }`}
               >
                 {/* Ikon Besar Berbingkai Lembut */}
-                <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-orange-50 dark:bg-orange-500/15 border border-orange-100/70 dark:border-orange-500/20 text-brand-orange dark:text-orange-400 flex items-center justify-center group-hover:bg-brand-orange group-hover:text-white group-hover:scale-110 transition-all duration-300 shadow-xs">
-                  <IconComponent className="w-7 h-7 stroke-[1.9]" />
+                <div className="w-11 h-11 sm:w-16 sm:h-16 rounded-xl sm:rounded-2xl bg-orange-50 dark:bg-orange-500/15 border border-orange-100/70 dark:border-orange-500/20 text-brand-orange dark:text-orange-400 flex items-center justify-center shrink-0 group-hover:bg-brand-orange group-hover:text-white group-hover:scale-110 transition-all duration-300 shadow-xs">
+                  <IconComponent className="w-5 h-5 sm:w-7 sm:h-7 stroke-[1.9]" />
                 </div>
 
                 {/* Judul Kartu */}
-                <h3 className="font-brand font-bold text-lg sm:text-xl text-navy-900 dark:text-white mt-5 group-hover:text-brand-orange transition-colors">
+                <h3 className="font-brand font-bold text-sm sm:text-xl leading-snug text-navy-900 dark:text-white mt-3 sm:mt-5 group-hover:text-brand-orange transition-colors">
                   {card.title}
                 </h3>
 
                 {/* Garis Aksen Pembatas Oranye */}
-                <div className="w-10 h-0.5 rounded-full bg-brand-orange/40 my-3.5 group-hover:w-14 group-hover:bg-brand-orange transition-all duration-300" />
+                <div className="w-8 sm:w-10 h-0.5 rounded-full bg-brand-orange/40 my-2 sm:my-3.5 group-hover:w-14 group-hover:bg-brand-orange transition-all duration-300" />
 
                 {/* Deskripsi Singkat */}
-                <p className="text-xs sm:text-[13px] text-ink-soft dark:text-slate-400 leading-relaxed max-w-[220px]">
+                <p className="text-[11px] sm:text-[13px] text-ink-soft dark:text-slate-400 leading-relaxed max-w-[220px] line-clamp-4 sm:line-clamp-none">
                   {card.description}
                 </p>
 
                 {/* Link Aksi dengan Panah Interaktif */}
-                <div className="mt-6">
+                <div className="mt-auto pt-3 sm:pt-6 [&_a]:text-[11px] [&_button]:text-[11px] sm:[&_a]:text-sm sm:[&_button]:text-sm [&_svg]:w-3.5 [&_svg]:h-3.5 sm:[&_svg]:w-4 sm:[&_svg]:h-4">
                   {isPdfCard ? (
                     <button
                       type="button"
@@ -170,7 +211,6 @@ export function EducationSection() {
                         setSelectedPdfCard(card);
                       }}
                       className="inline-flex items-center gap-1.5 text-xs sm:text-sm font-bold text-brand-orange hover:text-brand-orange-600 transition-colors group/link cursor-pointer"
-
                     >
                       <span>{card.actionText}</span>
                       <ArrowRight className="w-4 h-4 transition-transform duration-200 group-hover/link:translate-x-1" />
