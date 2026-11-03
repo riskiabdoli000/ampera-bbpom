@@ -1,11 +1,11 @@
 import React from "react";
-import { getVideoSettings } from "@/app/actions/settings-video";
+import { getVideoSettingsList } from "@/app/actions/settings-video";
 import { VideoSettingsForm } from "./VideoSettingsForm";
 
 export const dynamic = "force-dynamic";
 
 export default async function AdminVideoSettingsPage() {
-  const video = await getVideoSettings();
+  const videoList = await getVideoSettingsList();
 
-  return <VideoSettingsForm initialData={video} />;
+  return <VideoSettingsForm initialList={videoList} />;
 }

@@ -17,9 +17,9 @@ const NAV_ITEMS: NavItem[] = [
   { label: "Beranda", href: "#beranda" },
   { label: "Layanan", href: "#layanan" },
   { label: "Edukasi", href: "#edukasi" },
-  { label: "Panduan", href: "/panduan", dropdown: true },
   { label: "Video", href: "#video" },
   { label: "Kontak", href: "#kontak" },
+  { label: "Panduan", href: "/panduan", dropdown: true },
 ];
 
 export function Navbar() {

@@ -269,13 +269,18 @@ model HeroSlide {
 
 // 2. Video Profil BBPOM
 model VideoProfil {
-  id         Int      @id @default(1)
+  id         Int      @id @default(autoincrement())
   eyebrow    String   @default("VIDEO PROFIL")
   judul      String   @db.Text
   deskripsi  String   @db.Text
   youtubeUrl String   @db.Text // URL asli dari YouTube
   youtubeId  String   // ID hasil ekstraksi untuk embed
+  urutan     Int      @default(0)
+  isActive   Boolean  @default(true)
+  createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
+
+  @@index([urutan])
 }
 
 // 3. Kontak & Lokasi Kantor (sesuai ContactSection)

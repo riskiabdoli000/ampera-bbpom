@@ -54,9 +54,9 @@ export function SubpageNavbar({ activePage = "layanan", activePanduanSlug }: Sub
     { label: "Beranda", href: "/#beranda", key: "beranda" },
     { label: "Layanan", href: "/#layanan", key: "layanan" },
     { label: "Edukasi", href: "/#edukasi", key: "edukasi" },
-    { label: "Panduan", href: "/panduan", key: "panduan" },
     { label: "Video", href: "/#video", key: "video" },
     { label: "Kontak", href: "/#kontak", key: "kontak" },
+    { label: "Panduan", href: "/panduan", key: "panduan" },
   ];
 
   return (

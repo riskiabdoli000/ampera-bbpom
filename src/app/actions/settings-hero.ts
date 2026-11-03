@@ -82,7 +82,10 @@ export async function getLandingHeroData(): Promise<LandingHeroData> {
       where: { isActive: true },
       orderBy: [{ urutan: "asc" }, { id: "asc" }],
     }),
-    prisma.videoProfil.findUnique({ where: { id: 1 } }),
+    prisma.videoProfil.findFirst({
+      where: { isActive: true },
+      orderBy: [{ urutan: "asc" }, { id: "asc" }],
+    }),
   ]);
 
   return {
