@@ -4,12 +4,15 @@ import React, { useState, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { Sun, Moon, Menu, X, HelpCircle } from "lucide-react";
+import { PanduanDropdown, PanduanMobileMenu } from "@/components/common/PanduanMenu";
 
 interface SubpageNavbarProps {
-  activePage?: "beranda" | "layanan" | "edukasi" | "video" | "kontak";
+  activePage?: "beranda" | "layanan" | "edukasi" | "panduan" | "video" | "kontak";
+  /** Slug panduan yang sedang dibuka (khusus halaman /panduan) */
+  activePanduanSlug?: string;
 }
 
-export function SubpageNavbar({ activePage = "layanan" }: SubpageNavbarProps) {
+export function SubpageNavbar({ activePage = "layanan", activePanduanSlug }: SubpageNavbarProps) {
   const [isScrolled, setIsScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [isDark, setIsDark] = useState(false);
@@ -51,6 +54,7 @@ export function SubpageNavbar({ activePage = "layanan" }: SubpageNavbarProps) {
     { label: "Beranda", href: "/#beranda", key: "beranda" },
     { label: "Layanan", href: "/#layanan", key: "layanan" },
     { label: "Edukasi", href: "/#edukasi", key: "edukasi" },
+    { label: "Panduan", href: "/panduan", key: "panduan" },
     { label: "Video", href: "/#video", key: "video" },
     { label: "Kontak", href: "/#kontak", key: "kontak" },
   ];
@@ -83,10 +87,10 @@ export function SubpageNavbar({ activePage = "layanan" }: SubpageNavbarProps) {
             </div>
             <div className="flex flex-col leading-none">
               <span className="font-brand font-extrabold text-xl sm:text-2xl tracking-tight text-navy-900 dark:text-white">
-                BBPOM
+                AMPERA
               </span>
               <span className="font-brand font-medium text-[11px] sm:text-xs text-brand-orange dark:text-orange-400 tracking-wide mt-0.5">
-                Balai Besar POM di Palembang
+                Amankan Produk Edukasi Masyarakat
               </span>
             </div>
           </Link>
@@ -98,11 +102,20 @@ export function SubpageNavbar({ activePage = "layanan" }: SubpageNavbarProps) {
           >
             {navItems.map((item) => {
               const isActive = activePage === item.key;
+              if (item.key === "panduan") {
+                return (
+                  <PanduanDropdown
+                    key={item.label}
+                    isActive={isActive}
+                    activeSlug={activePanduanSlug}
+                  />
+                );
+              }
               return (
                 <Link
                   key={item.label}
                   href={item.href}
-                  className={`font-brand rounded-full px-5 py-2 text-[13px] transition-all duration-200 focus-visible:outline-2 focus-visible:outline-brand-orange ${
+                  className={`font-brand rounded-full px-4 xl:px-5 py-2 text-[13px] transition-all duration-200 focus-visible:outline-2 focus-visible:outline-brand-orange ${
                     isActive
                       ? "bg-[#fff0e5] text-[#f26a0f] font-bold dark:bg-orange-500/20 dark:text-orange-300 shadow-xs"
                       : "text-navy-900 dark:text-slate-200 font-semibold hover:text-brand-orange hover:bg-slate-50 dark:hover:bg-slate-800/50"
@@ -145,6 +158,16 @@ export function SubpageNavbar({ activePage = "layanan" }: SubpageNavbarProps) {
             <nav className="flex flex-col gap-1.5" aria-label="Navigasi mobile">
               {navItems.map((item) => {
                 const isActive = activePage === item.key;
+                if (item.key === "panduan") {
+                  return (
+                    <PanduanMobileMenu
+                      key={item.label}
+                      isActive={isActive}
+                      activeSlug={activePanduanSlug}
+                      onNavigate={() => setMobileMenuOpen(false)}
+                    />
+                  );
+                }
                 return (
                   <Link
                     key={item.label}
