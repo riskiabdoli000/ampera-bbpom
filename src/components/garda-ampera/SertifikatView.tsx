@@ -11,7 +11,7 @@ import {
   Award,
 } from "lucide-react";
 import { BiodataGarda } from "./types";
-import { generateGardaCertificatePdf } from "./certificate-generator";
+import { generateGardaCertificatePdf, printGardaCertificatePdf } from "./certificate-generator";
 
 const CERT_BASE_WIDTH = 896;
 const CERT_BASE_HEIGHT = 634; // Rasio A4 Landscape (896 / 1.414)
@@ -31,6 +31,7 @@ export function SertifikatView({
   tanggalLulus,
 }: SertifikatViewProps) {
   const [isDownloading, setIsDownloading] = useState(false);
+  const [isPrinting, setIsPrinting] = useState(false);
   const [downloadSuccess, setDownloadSuccess] = useState(false);
   const [scale, setScale] = useState(1);
   const previewWrapperRef = useRef<HTMLDivElement>(null);
@@ -74,8 +75,21 @@ export function SertifikatView({
     }
   };
 
-  const handlePrint = () => {
-    window.print();
+  const handlePrint = async () => {
+    try {
+      setIsPrinting(true);
+      await printGardaCertificatePdf({
+        biodata,
+        postTestScore,
+        nomorSertifikat,
+        tanggalLulus,
+      });
+    } catch (err) {
+      console.error("Gagal mencetak sertifikat:", err);
+      window.print();
+    } finally {
+      setIsPrinting(false);
+    }
   };
 
   const predikat =
@@ -116,14 +130,16 @@ export function SertifikatView({
               {isDownloading ? "Memproses PDF..." : "Unduh Sertifikat (PDF)"}
             </button>
 
-            <button
+            {/* <button
               type="button"
               onClick={handlePrint}
-              className="inline-flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-white/10 hover:bg-white/20 text-white font-bold text-sm border border-white/20 transition-all cursor-pointer"
+              disabled={isPrinting || isDownloading}
+              className="inline-flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-white/10 hover:bg-white/20 text-white font-bold text-sm border border-white/20 transition-all cursor-pointer disabled:opacity-50"
+              title="Cetak Lembar E-Sertifikat Resmi"
             >
               <Printer className="w-4 h-4" />
-              Cetak
-            </button>
+              {isPrinting ? "Menyiapkan Cetak..." : "Cetak"}
+            </button> */}
           </div>
         </div>
 
@@ -136,7 +152,7 @@ export function SertifikatView({
       </div>
 
       {/* Visual Live Certificate Preview (Exact Standard Design A4 Landscape) */}
-      <div className="bg-slate-100 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 rounded-2xl p-3 sm:p-6 shadow-inner">
+      <div className="bg-slate-100 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 rounded-2xl p-3 sm:p-6 shadow-inner print:!bg-transparent print:!border-none print:!p-0 print:!shadow-none">
         <div className="no-print flex items-center justify-between mb-3 px-1">
           <span className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
             Pratinjau E-Sertifikat Resmi Garda Ampera
@@ -149,12 +165,12 @@ export function SertifikatView({
         {/* Responsive Scaled Wrapper */}
         <div
           ref={previewWrapperRef}
-          className="w-full max-w-4xl mx-auto overflow-hidden rounded-xl sm:rounded-2xl shadow-2xl print:!h-auto print:!overflow-visible"
+          className="w-full max-w-4xl mx-auto overflow-hidden rounded-xl sm:rounded-2xl shadow-2xl print:!h-auto print:!overflow-visible print:!shadow-none print:!rounded-none print:!max-w-none"
           style={{ height: `${Math.round(CERT_BASE_HEIGHT * scale)}px` }}
         >
           {/* Certificate Sheet (Fixed Desktop Canvas 896x634 Scaled Proportionally) */}
           <div
-            className="certificate-print-area relative bg-white border border-slate-300 rounded-2xl overflow-hidden select-none print:!transform-none"
+            className="certificate-print-area relative bg-white border border-slate-300 rounded-2xl overflow-hidden select-none print:!transform-none print:!border-none print:!rounded-none"
             style={{
               width: `${CERT_BASE_WIDTH}px`,
               height: `${CERT_BASE_HEIGHT}px`,

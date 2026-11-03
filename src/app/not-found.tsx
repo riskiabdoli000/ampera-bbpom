@@ -73,10 +73,10 @@ export default function NotFound() {
             </div>
             <div className="flex flex-col leading-tight">
               <span className="text-sm sm:text-base font-extrabold tracking-tight text-navy-900 dark:text-white font-brand">
-                AMPERA BBPOM
+                AMPERA
               </span>
               <span className="text-[10px] sm:text-[11px] font-semibold text-slate-500 dark:text-slate-400">
-                Balai Besar POM di Palembang
+                Amankan Produk Edukasi Masyarakat
               </span>
             </div>
           </Link>

@@ -26,11 +26,11 @@ async function fetchAssetBuffer(path: string): Promise<ArrayBuffer> {
  * - Gelombang Toska bawah (wave-bottom.jpg)
  * - Penandatangan: Yani Ardiyanti, SF, Apt.,M.Sc (TTE & Cap Basah BBPOM Palembang)
  */
-export async function generateGardaCertificatePdf({
+export async function createGardaCertificatePdfBlob({
   biodata,
   nomorSertifikat,
   tanggalLulus,
-}: GenerateCertificateOptions): Promise<void> {
+}: GenerateCertificateOptions): Promise<Blob> {
   const { PDFDocument, rgb, StandardFonts } = await import("pdf-lib");
   const pdfDoc = await PDFDocument.create();
 
@@ -251,16 +251,79 @@ export async function generateGardaCertificatePdf({
     color: rgb(0.05, 0.05, 0.05),
   });
 
-  // 12. Simpan & Picu Download Otomatis di Browser
+  // 12. Simpan & Kembalikan Blob PDF Resmi
   const pdfBytes = await pdfDoc.save();
-  const blob = new Blob([pdfBytes as any], { type: "application/pdf" });
+  return new Blob([pdfBytes as any], { type: "application/pdf" });
+}
+
+/**
+ * Unduh berkas PDF E-Sertifikat ke perangkat pengguna
+ */
+export async function generateGardaCertificatePdf(
+  options: GenerateCertificateOptions
+): Promise<void> {
+  const blob = await createGardaCertificatePdfBlob(options);
   const downloadUrl = URL.createObjectURL(blob);
   const link = document.createElement("a");
   link.href = downloadUrl;
-  const safeName = (biodata.nama || "Peserta").replace(/[^a-zA-Z0-9]/g, "_");
+  const safeName = (options.biodata.nama || "Peserta").replace(/[^a-zA-Z0-9]/g, "_");
   link.download = `Sertifikat-Garda-Ampera-${safeName}.pdf`;
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);
-  URL.revokeObjectURL(downloadUrl);
+  setTimeout(() => URL.revokeObjectURL(downloadUrl), 10000);
+}
+
+/**
+ * Cetak E-Sertifikat Resmi Garda Ampera (hanya lembar sertifikat PDF)
+ */
+export async function printGardaCertificatePdf(
+  options: GenerateCertificateOptions
+): Promise<void> {
+  const blob = await createGardaCertificatePdfBlob(options);
+  const blobUrl = URL.createObjectURL(blob);
+
+  // Buat iframe tersembunyi untuk memicu dialog print native PDF
+  const iframe = document.createElement("iframe");
+  iframe.style.position = "fixed";
+  iframe.style.right = "0";
+  iframe.style.bottom = "0";
+  iframe.style.width = "0";
+  iframe.style.height = "0";
+  iframe.style.border = "0";
+  iframe.style.visibility = "hidden";
+  iframe.src = blobUrl;
+
+  document.body.appendChild(iframe);
+
+  let hasPrinted = false;
+  const triggerPrint = () => {
+    if (hasPrinted) return;
+    hasPrinted = true;
+    try {
+      iframe.contentWindow?.focus();
+      iframe.contentWindow?.print();
+    } catch {
+      // Fallback jika browser membatasi iframe print PDF (misal pada browser mobile)
+      const printWindow = window.open(blobUrl, "_blank");
+      if (printWindow) {
+        printWindow.focus();
+      }
+    }
+  };
+
+  iframe.onload = () => {
+    setTimeout(triggerPrint, 300);
+  };
+
+  setTimeout(triggerPrint, 1200);
+
+  setTimeout(() => {
+    try {
+      if (document.body.contains(iframe)) {
+        document.body.removeChild(iframe);
+      }
+    } catch {}
+    URL.revokeObjectURL(blobUrl);
+  }, 120000);
 }
