@@ -208,15 +208,17 @@ export function MateriEdukasiView({ initialItems }: MateriEdukasiViewProps) {
       <div className="max-w-[1440px] mx-auto px-4 sm:px-10 lg:px-14">
         <div className="relative w-full rounded-3xl overflow-hidden bg-gradient-to-r from-[#eef5ff] via-[#f7faff] to-[#f0f6ff] dark:from-slate-900 dark:via-slate-900/90 dark:to-slate-950 border border-slate-200/80 dark:border-slate-800 p-6 sm:p-10 lg:p-12 shadow-xs">
           {/* Foto Panorama Jembatan Ampera di Kanan Menyatu Lembut */}
-          <div className="absolute right-0 top-0 w-full sm:w-[55%] lg:w-[48%] h-full z-0 select-none opacity-40 sm:opacity-90">
+          <div className="absolute right-0 top-0 w-full sm:w-[55%] lg:w-[48%] h-full z-0 select-none">
             <Image
               src="/assets-landingpage/ilustrasi-materi-edukasi.png"
               alt="Jembatan Ampera Palembang"
               fill
               sizes="(max-width: 640px) 100vw, 48vw"
-              className="object-cover object-[70%_center]"
+              className="object-cover object-[70%_center] opacity-60 sm:opacity-90"
               priority
             />
+            {/* Gradasi putih khusus tampilan mobile agar elemen teks terlihat jelas & kontras */}
+            <div className="absolute inset-0 bg-gradient-to-r from-white via-white/85 to-white/30 dark:from-slate-900 dark:via-slate-900/85 dark:to-slate-900/30 sm:hidden pointer-events-none" />
           </div>
 
           {/* Konten Teks Hero di Kiri */}
