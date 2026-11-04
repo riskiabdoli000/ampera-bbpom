@@ -25,6 +25,8 @@ import {
   MessageSquareHeart,
   UserCog,
   BookOpen,
+  Database,
+  Building2,
 } from "lucide-react";
 
 interface AdminSidebarProps {
@@ -57,10 +59,14 @@ export function AdminSidebar({
   const isLaporanPath = pathname.startsWith("/admin/laporan");
   const isPengaturanAkunActive = pathname.startsWith("/admin/pengaturan-akun");
 
+  const isMasterPath = isLayananActive || isPetugasActive || isPenilaianActive;
+
   // Website Settings submenu collapse state
   const [settingsOpen, setSettingsOpen] = useState(pathname.startsWith("/admin/settings"));
   // Data Laporan Pengguna submenu collapse state (buka otomatis jika sedang berada di menu laporan)
   const [laporanOpen, setLaporanOpen] = useState(pathname.startsWith("/admin/laporan"));
+  // Data Master submenu collapse state (buka otomatis jika sedang berada di menu data master)
+  const [masterOpen, setMasterOpen] = useState(isMasterPath);
   // Garda Ampera submenu collapse state (buka otomatis jika sedang berada di menu garda-ampera)
   const [gardaOpen, setGardaOpen] = useState(pathname.startsWith("/admin/garda-ampera"));
 
@@ -99,11 +105,14 @@ export function AdminSidebar({
   const isAnyLaporanSubActive = laporanSubItems.some((item) => pathname === item.href);
   const isLaporanParentActive = isLaporanPath && (!laporanOpen || !isAnyLaporanSubActive);
 
-  const masterItems = [
+  const masterSubItems = [
     { title: "Data Layanan", href: "/admin/layanan", icon: ClipboardList, active: isLayananActive },
     { title: "Data Petugas", href: "/admin/petugas", icon: Users, active: isPetugasActive },
     { title: "Data Penilaian", href: "/admin/penilaian", icon: Star, active: isPenilaianActive },
   ];
+
+  const isAnyMasterSubActive = masterSubItems.some((item) => item.active);
+  const isMasterParentActive = isMasterPath && (!masterOpen || !isAnyMasterSubActive);
 
   const gardaSubItems = [
     { title: "Dashboard Garda Ampera", href: "/admin/garda-ampera/dashboard", icon: LayoutDashboard },
@@ -119,6 +128,7 @@ export function AdminSidebar({
     { title: "Konten Edukasi", href: "/admin/settings/edukasi", icon: BookOpen },
     { title: "Video Profil", href: "/admin/settings/video", icon: Video },
     { title: "Kontak & Lokasi", href: "/admin/settings/kontak", icon: PhoneCall },
+    { title: "Tautan BBPOM", href: "/admin/settings/bbpom", icon: Building2 },
   ];
 
   const isAnySubActive = websiteSubItems.some((item) => pathname === item.href);
@@ -161,7 +171,7 @@ export function AdminSidebar({
       window.removeEventListener("resize", updateIndicator);
       clearTimeout(timer);
     };
-  }, [pathname, settingsOpen, laporanOpen, gardaOpen]);
+  }, [pathname, settingsOpen, laporanOpen, masterOpen, gardaOpen]);
 
   const handleLinkClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
     if (navRef.current) {
@@ -182,6 +192,10 @@ export function AdminSidebar({
 
   const handleLaporanToggle = () => {
     setLaporanOpen((prev) => !prev);
+  };
+
+  const handleMasterToggle = () => {
+    setMasterOpen((prev) => !prev);
   };
 
   const handleGardaToggle = () => {
@@ -387,7 +401,81 @@ export function AdminSidebar({
                 )}
               </div>
 
-              {masterItems.map(renderLink)}
+              {/* Data Master (Collapsible Navlink with 3 Sub-items: Layanan, Petugas, Penilaian) */}
+              <div>
+                <button
+                  type="button"
+                  onClick={handleMasterToggle}
+                  data-active={isMasterParentActive ? "true" : "false"}
+                  className={`group relative z-10 flex w-full items-center justify-between py-3 pl-4 pr-5 text-sm transition-colors duration-200 cursor-pointer ${
+                    isMasterParentActive
+                      ? "font-bold text-[#0b2a6b] dark:text-blue-400"
+                      : isMasterPath
+                      ? "mr-4 rounded-xl font-semibold text-white hover:bg-white/15"
+                      : "mr-4 rounded-xl font-medium text-white hover:bg-white/15"
+                  }`}
+                >
+                  <div className="flex items-center gap-3">
+                    <Database
+                      className={`h-[19px] w-[19px] shrink-0 transition-colors duration-200 ${
+                        isMasterParentActive
+                          ? "text-[#0b2a6b] dark:text-blue-400"
+                          : "text-white/90 group-hover:text-white"
+                      }`}
+                    />
+                    <span>Data Master</span>
+                  </div>
+                  {masterOpen ? (
+                    <ChevronDown
+                      className={`h-4 w-4 transition-colors ${
+                        isMasterParentActive
+                          ? "text-[#0b2a6b] dark:text-blue-400"
+                          : "text-white/80 group-hover:text-white"
+                      }`}
+                    />
+                  ) : (
+                    <ChevronRight
+                      className={`h-4 w-4 transition-colors ${
+                        isMasterParentActive
+                          ? "text-[#0b2a6b] dark:text-blue-400"
+                          : "text-white/80 group-hover:text-white"
+                      }`}
+                    />
+                  )}
+                </button>
+
+                {/* 3 Sub-items: Data Layanan, Data Petugas, Data Penilaian */}
+                {masterOpen && (
+                  <div className="mt-1 space-y-1 pl-3">
+                    {masterSubItems.map((sub) => {
+                      const SubIcon = sub.icon;
+                      const active = sub.active;
+                      return (
+                        <Link
+                          key={sub.href}
+                          href={sub.href}
+                          onClick={handleLinkClick}
+                          data-active={active ? "true" : "false"}
+                          className={`group relative z-10 flex items-center gap-2.5 py-2.5 pl-5 pr-5 text-[13px] transition-colors duration-200 ${
+                            active
+                              ? "font-bold text-[#0b2a6b] dark:text-blue-400"
+                              : "mr-4 rounded-xl font-medium text-white hover:bg-white/15"
+                          }`}
+                        >
+                          <SubIcon
+                            className={`h-4 w-4 shrink-0 transition-colors duration-200 ${
+                              active
+                                ? "text-[#0b2a6b] dark:text-blue-400"
+                                : "text-white/90 group-hover:text-white"
+                            }`}
+                          />
+                          <span className="truncate">{sub.title}</span>
+                        </Link>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
 
               {/* Garda Ampera (Collapsible Navlink with 3 Sub-items) */}
               <div>

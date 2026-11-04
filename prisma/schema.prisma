@@ -327,6 +327,22 @@ model Edukasi {
   @@index([urutan])
 }
 
+// 5. Tautan Portal Eksternal BBPOM (Navbar Dropdown)
+model BbpomTautan {
+  id          Int      @id @default(autoincrement())
+  judul       String   // Misal: "Badan POM RI (Pusat)"
+  deskripsi   String   @db.Text // Misal: "Portal Resmi Badan Pengawas Obat dan Makanan RI"
+  url         String   @db.Text // Misal: "https://www.pom.go.id"
+  ikon        String   @default("globe") // "globe" | "landmark" | "building" | "link"
+  badge       String?  @default("") // Misal: "Pusat", "Sumsel"
+  urutan      Int      @default(0)
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([urutan])
+}
+
 // ==========================================
 // 5. FITUR GARDA AMPERA (PRE-TEST, MATERI & POST-TEST)
 // ==========================================

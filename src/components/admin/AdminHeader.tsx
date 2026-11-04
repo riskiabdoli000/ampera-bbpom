@@ -113,7 +113,7 @@ export function AdminHeader({
               AMPERA BBPOM
             </span>
             <span className="text-[11px] font-medium text-[#7b8aa8] dark:text-slate-400 sm:text-xs">
-              Balai Besar POM Palembang
+              AMankan Produk Edukasi MasyaRakat
             </span>
           </div>
         </div>
@@ -249,7 +249,7 @@ export function AdminHeader({
       {/* Pop-up Modal Konfirmasi Logout */}
       {logoutModalOpen && (
         <div
-          className="fixed inset-0 z-[100] flex items-center justify-center bg-[#06132f]/60 p-4 backdrop-blur-sm animate-fade-in"
+          className="fixed inset-0 z-[9999] flex items-center justify-center bg-[#06132f]/60 p-4 backdrop-blur-sm animate-fade-in"
           onClick={() => {
             if (!isLoggingOut) setLogoutModalOpen(false);
           }}

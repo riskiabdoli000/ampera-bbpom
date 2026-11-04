@@ -5,6 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { Sun, Moon, Menu, X, HelpCircle, ArrowRight } from "lucide-react";
 import { PanduanDropdown, PanduanMobileMenu } from "@/components/common/PanduanMenu";
+import { BbpomDropdown, BbpomMobileMenu } from "@/components/common/BbpomMenu";
 
 interface SubpageNavbarProps {
   activePage?: "beranda" | "layanan" | "edukasi" | "panduan" | "video" | "kontak";
@@ -57,6 +58,7 @@ export function SubpageNavbar({ activePage = "layanan", activePanduanSlug }: Sub
     { label: "Video", href: "/#video", key: "video" },
     { label: "Kontak", href: "/#kontak", key: "kontak" },
     { label: "Panduan", href: "/panduan", key: "panduan" },
+    { label: "BBPOM", href: "#bbpom", key: "bbpom" },
   ];
 
   return (
@@ -110,6 +112,9 @@ export function SubpageNavbar({ activePage = "layanan", activePanduanSlug }: Sub
                     activeSlug={activePanduanSlug}
                   />
                 );
+              }
+              if (item.key === "bbpom") {
+                return <BbpomDropdown key={item.label} />;
               }
               return (
                 <Link
@@ -173,6 +178,14 @@ export function SubpageNavbar({ activePage = "layanan", activePanduanSlug }: Sub
                       key={item.label}
                       isActive={isActive}
                       activeSlug={activePanduanSlug}
+                      onNavigate={() => setMobileMenuOpen(false)}
+                    />
+                  );
+                }
+                if (item.key === "bbpom") {
+                  return (
+                    <BbpomMobileMenu
+                      key={item.label}
                       onNavigate={() => setMobileMenuOpen(false)}
                     />
                   );

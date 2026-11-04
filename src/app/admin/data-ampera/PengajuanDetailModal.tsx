@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useTransition, useRef, useEffect } from "react";
+import { createPortal } from "react-dom";
 import Image from "next/image";
 import {
   X,
@@ -92,6 +93,7 @@ export function PengajuanDetailModal({
   onDeleted,
   onNotify,
 }: PengajuanDetailModalProps) {
+  const [mounted, setMounted] = useState(false);
   const [selectedStatus, setSelectedStatus] = useState<StatusPengajuan>(
     pengajuan?.status || "MENUNGGU_VERIFIKASI"
   );
@@ -117,6 +119,10 @@ export function PengajuanDetailModal({
     if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`;
     return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
   };
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   // Sync state saat modal dibuka dengan pengajuan baru
   useEffect(() => {
@@ -324,9 +330,11 @@ export function PengajuanDetailModal({
       )}`
     : null;
 
-  return (
+  if (!mounted) return null;
+
+  return createPortal(
     <>
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5">
+      <div className="fixed inset-0 z-[9999] flex items-center justify-center p-3 sm:p-5">
         {/* Backdrop */}
         <div
           className="fixed inset-0 bg-[#06132f]/60 backdrop-blur-xs transition-opacity"
@@ -1289,7 +1297,7 @@ export function PengajuanDetailModal({
       {/* Lightbox Preview Gambar */}
       {previewImage && (
         <div
-          className="fixed inset-0 z-60 flex items-center justify-center bg-black/85 p-4"
+          className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/85 p-4"
           onClick={() => setPreviewImage(null)}
         >
           <div className="relative max-h-[85vh] max-w-[85vw] overflow-hidden rounded-3xl bg-white shadow-2xl">
@@ -1309,6 +1317,7 @@ export function PengajuanDetailModal({
           </div>
         </div>
       )}
-    </>
+    </>,
+    document.body
   );
 }
