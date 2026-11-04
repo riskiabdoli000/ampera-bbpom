@@ -4,7 +4,7 @@ import React from "react";
 import Image from "next/image";
 import { ArrowRight, BookOpen, Sparkles } from "lucide-react";
 
-export type KomoditasType = "Pangan" | "Kosmetik" | "Obat" | "Obat Tradisional";
+export type KomoditasType = string;
 
 export interface MateriEdukasiItem {
   id: string | number;
@@ -22,7 +22,7 @@ interface MateriEdukasiCardProps {
 }
 
 const KOMODITAS_BADGE_STYLE: Record<
-  KomoditasType,
+  string,
   { label: string; badgeClass: string }
 > = {
   Pangan: {
@@ -47,11 +47,15 @@ const KOMODITAS_BADGE_STYLE: Record<
   },
 };
 
+const CUSTOM_BADGE_STYLE = {
+  badgeClass:
+    "bg-purple-50 text-purple-700 dark:bg-purple-950/70 dark:text-purple-300 border-purple-200/80 dark:border-purple-800",
+};
+
 export function MateriEdukasiCard({ item, onSelect }: MateriEdukasiCardProps) {
   const badgeInfo = KOMODITAS_BADGE_STYLE[item.komoditas] || {
     label: item.komoditas,
-    badgeClass:
-      "bg-slate-50 text-slate-700 dark:bg-slate-800 dark:text-slate-300 border-slate-200 dark:border-slate-700",
+    badgeClass: CUSTOM_BADGE_STYLE.badgeClass,
   };
 
   return (

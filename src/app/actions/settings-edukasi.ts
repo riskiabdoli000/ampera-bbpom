@@ -8,7 +8,7 @@ import fs from "fs/promises";
 import path from "path";
 import { compressPdfBuffer } from "@/lib/garda-parser";
 
-export type KomoditasType = "Pangan" | "Kosmetik" | "Obat" | "Obat Tradisional";
+export type KomoditasType = string;
 
 export interface MateriEdukasiItemData {
   id: number;
@@ -171,17 +171,21 @@ const DEFAULT_MATERI_EDUKASI = [
   },
 ];
 
-const VALID_KOMODITAS: KomoditasType[] = [
+const DEFAULT_KOMODITAS = [
   "Pangan",
   "Kosmetik",
   "Obat",
   "Obat Tradisional",
-];
+] as const;
 
 const materiSchema = z.object({
-  judul: z.string().min(2, "Judul materi edukasi minimal 2 karakter"),
-  komoditas: z.enum(["Pangan", "Kosmetik", "Obat", "Obat Tradisional"]),
-  deskripsi: z.string().min(5, "Deskripsi materi minimal 5 karakter"),
+  judul: z.string().trim().min(2, "Judul materi edukasi minimal 2 karakter"),
+  komoditas: z
+    .string()
+    .trim()
+    .min(2, "Kategori komoditas minimal 2 karakter")
+    .max(50, "Kategori komoditas maksimal 50 karakter"),
+  deskripsi: z.string().trim().min(5, "Deskripsi materi minimal 5 karakter"),
 });
 
 /**
@@ -303,9 +307,7 @@ export async function getMateriEdukasiAdminListAction(): Promise<MateriEdukasiIt
     return records.map((r) => ({
       id: r.id,
       judul: r.judul,
-      komoditas: (VALID_KOMODITAS.includes(r.komoditas as KomoditasType)
-        ? r.komoditas
-        : "Pangan") as KomoditasType,
+      komoditas: r.komoditas?.trim() || "Pangan",
       deskripsi: r.deskripsi,
       imageUrl: sanitizeImageUrl(r.imageUrl),
       imagePath: r.imagePath,
@@ -359,9 +361,7 @@ export async function getPublicMateriEdukasiListAction(): Promise<MateriEdukasiI
     return records.map((r) => ({
       id: r.id,
       judul: r.judul,
-      komoditas: (VALID_KOMODITAS.includes(r.komoditas as KomoditasType)
-        ? r.komoditas
-        : "Pangan") as KomoditasType,
+      komoditas: r.komoditas?.trim() || "Pangan",
       deskripsi: r.deskripsi,
       imageUrl: sanitizeImageUrl(r.imageUrl),
       imagePath: r.imagePath,

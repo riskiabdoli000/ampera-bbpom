@@ -41,35 +41,29 @@ interface EdukasiSettingsFormProps {
   initialItems: MateriEdukasiItemData[];
 }
 
-const KOMODITAS_OPTIONS: {
-  key: KomoditasType;
-  label: string;
-  badgeClass: string;
-}[] = [
-  {
-    key: "Pangan",
-    label: "Pangan",
-    badgeClass:
-      "bg-emerald-50 text-emerald-700 border-emerald-200/80 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800/60",
-  },
-  {
-    key: "Kosmetik",
-    label: "Kosmetik",
-    badgeClass:
-      "bg-pink-50 text-pink-700 border-pink-200/80 dark:bg-pink-950/40 dark:text-pink-300 dark:border-pink-800/60",
-  },
-  {
-    key: "Obat",
-    label: "Obat",
-    badgeClass:
-      "bg-blue-50 text-blue-700 border-blue-200/80 dark:bg-blue-950/40 dark:text-blue-300 dark:border-blue-800/60",
-  },
-  {
-    key: "Obat Tradisional",
-    label: "Obat Tradisional",
-    badgeClass:
-      "bg-amber-50 text-amber-800 border-amber-200/80 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-800/60",
-  },
+const DEFAULT_KOMODITAS_STYLES: Record<string, string> = {
+  Pangan:
+    "bg-emerald-50 text-emerald-700 border-emerald-200/80 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800/60",
+  Kosmetik:
+    "bg-pink-50 text-pink-700 border-pink-200/80 dark:bg-pink-950/40 dark:text-pink-300 dark:border-pink-800/60",
+  Obat:
+    "bg-blue-50 text-blue-700 border-blue-200/80 dark:bg-blue-950/40 dark:text-blue-300 dark:border-blue-800/60",
+  "Obat Tradisional":
+    "bg-amber-50 text-amber-800 border-amber-200/80 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-800/60",
+};
+
+const CUSTOM_KOMODITAS_STYLE =
+  "bg-purple-50 text-purple-700 border-purple-200/80 dark:bg-purple-950/40 dark:text-purple-300 dark:border-purple-800/60";
+
+export function getKomoditasBadgeClass(komoditas: string): string {
+  return DEFAULT_KOMODITAS_STYLES[komoditas] || CUSTOM_KOMODITAS_STYLE;
+}
+
+const BASE_KOMODITAS = [
+  "Pangan",
+  "Kosmetik",
+  "Obat",
+  "Obat Tradisional",
 ];
 
 export function EdukasiSettingsForm({ initialItems }: EdukasiSettingsFormProps) {
@@ -95,6 +89,16 @@ export function EdukasiSettingsForm({ initialItems }: EdukasiSettingsFormProps) 
   const [formDeskripsi, setFormDeskripsi] = useState("");
   const [formUrutan, setFormUrutan] = useState(1);
   const [formIsPublished, setFormIsPublished] = useState(true);
+
+  // Kategori Dinamis
+  const [customCategories, setCustomCategories] = useState<string[]>([]);
+  const [isAddingCategory, setIsAddingCategory] = useState(false);
+  const [newCategoryInput, setNewCategoryInput] = useState("");
+
+  const allCategories = useMemo(() => {
+    const fromItems = items.map((i) => i.komoditas?.trim()).filter(Boolean);
+    return Array.from(new Set([...BASE_KOMODITAS, ...fromItems, ...customCategories]));
+  }, [items, customCategories]);
 
   // File Uploads & Live Previews
   const [selectedPdfFile, setSelectedPdfFile] = useState<File | null>(null);
@@ -132,10 +136,16 @@ export function EdukasiSettingsForm({ initialItems }: EdukasiSettingsFormProps) 
   const stats = useMemo(() => {
     return {
       total: items.length,
-      pangan: items.filter((i) => i.komoditas === "Pangan").length,
-      kosmetik: items.filter((i) => i.komoditas === "Kosmetik").length,
-      obat: items.filter((i) => i.komoditas === "Obat").length,
-      tradisional: items.filter((i) => i.komoditas === "Obat Tradisional").length,
+      pangan: items.filter((i) => i.komoditas?.toLowerCase() === "pangan").length,
+      kosmetik: items.filter((i) => i.komoditas?.toLowerCase() === "kosmetik").length,
+      obat: items.filter((i) => i.komoditas?.toLowerCase() === "obat").length,
+      tradisional: items.filter((i) => i.komoditas?.toLowerCase() === "obat tradisional").length,
+      lainnya: items.filter(
+        (i) =>
+          !["pangan", "kosmetik", "obat", "obat tradisional"].includes(
+            (i.komoditas || "").toLowerCase()
+          )
+      ).length,
     };
   }, [items]);
 
@@ -143,7 +153,10 @@ export function EdukasiSettingsForm({ initialItems }: EdukasiSettingsFormProps) 
   const filteredItems = useMemo(() => {
     return items.filter((item) => {
       // 1. Filter Komoditas
-      if (filterKomoditas !== "semua" && item.komoditas !== filterKomoditas) {
+      if (
+        filterKomoditas !== "semua" &&
+        item.komoditas?.toLowerCase() !== filterKomoditas.toLowerCase()
+      ) {
         return false;
       }
       // 2. Filter Status Publikasi
@@ -163,6 +176,29 @@ export function EdukasiSettingsForm({ initialItems }: EdukasiSettingsFormProps) 
     });
   }, [items, filterKomoditas, filterStatus, searchQuery]);
 
+  // Handler Tambah Kategori Baru Dinamis
+  const handleAddNewCategory = () => {
+    const trimmed = newCategoryInput.trim();
+    if (!trimmed) return;
+    if (trimmed.length < 2) {
+      showFeedback("error", "Nama kategori minimal 2 karakter.");
+      return;
+    }
+    const formatted = trimmed.charAt(0).toUpperCase() + trimmed.slice(1);
+    const existing = allCategories.find(
+      (c) => c.toLowerCase() === formatted.toLowerCase()
+    );
+    const categoryToSelect = existing || formatted;
+
+    if (!existing) {
+      setCustomCategories((prev) => [...prev, formatted]);
+    }
+
+    setFormKomoditas(categoryToSelect);
+    setIsAddingCategory(false);
+    setNewCategoryInput("");
+  };
+
   // Handler Buka Modal Tambah
   const handleOpenAddModal = () => {
     setEditingItem(null);
@@ -176,6 +212,8 @@ export function EdukasiSettingsForm({ initialItems }: EdukasiSettingsFormProps) 
     setGeneratedCoverBlob(null);
     setPreviewCoverUrl("/assets-landingpage/layanan/1.jpg");
     setCoverSource("existing");
+    setIsAddingCategory(false);
+    setNewCategoryInput("");
     if (pdfInputRef.current) pdfInputRef.current.value = "";
     if (imageInputRef.current) imageInputRef.current.value = "";
     setIsModalOpen(true);
@@ -194,6 +232,8 @@ export function EdukasiSettingsForm({ initialItems }: EdukasiSettingsFormProps) 
     setGeneratedCoverBlob(null);
     setPreviewCoverUrl(item.imageUrl || "/assets-landingpage/layanan/1.jpg");
     setCoverSource("existing");
+    setIsAddingCategory(false);
+    setNewCategoryInput("");
     if (pdfInputRef.current) pdfInputRef.current.value = "";
     if (imageInputRef.current) imageInputRef.current.value = "";
     setIsModalOpen(true);
@@ -559,21 +599,25 @@ export function EdukasiSettingsForm({ initialItems }: EdukasiSettingsFormProps) 
             Semua Komoditas ({items.length})
           </button>
 
-          {KOMODITAS_OPTIONS.map((kom) => {
-            const count = items.filter((i) => i.komoditas === kom.key).length;
-            const isSelected = filterKomoditas === kom.key;
+          {allCategories.map((komName) => {
+            const count = items.filter(
+              (i) => i.komoditas?.toLowerCase() === komName.toLowerCase()
+            ).length;
+            const isSelected =
+              filterKomoditas.toLowerCase() === komName.toLowerCase();
+            const badgeClass = getKomoditasBadgeClass(komName);
             return (
               <button
-                key={kom.key}
+                key={komName}
                 type="button"
-                onClick={() => setFilterKomoditas(kom.key)}
+                onClick={() => setFilterKomoditas(komName)}
                 className={`px-3.5 py-1.5 rounded-full text-xs font-bold border transition shrink-0 cursor-pointer ${
                   isSelected
                     ? "bg-[#0f2257] dark:bg-blue-600 text-white border-transparent shadow-2xs"
-                    : `${kom.badgeClass} hover:opacity-90`
+                    : `${badgeClass} hover:opacity-90`
                 }`}
               >
-                {kom.label} ({count})
+                {komName} ({count})
               </button>
             );
           })}
@@ -597,9 +641,7 @@ export function EdukasiSettingsForm({ initialItems }: EdukasiSettingsFormProps) 
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {filteredItems.map((item) => {
-              const badgeOpt =
-                KOMODITAS_OPTIONS.find((k) => k.key === item.komoditas) ||
-                KOMODITAS_OPTIONS[0];
+              const badgeClass = getKomoditasBadgeClass(item.komoditas);
 
               return (
                 <div
@@ -611,7 +653,7 @@ export function EdukasiSettingsForm({ initialItems }: EdukasiSettingsFormProps) 
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2 mb-2">
                         <span
-                          className={`px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider border ${badgeOpt.badgeClass}`}
+                          className={`px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider border ${badgeClass}`}
                         >
                           {item.komoditas}
                         </span>
@@ -780,24 +822,82 @@ export function EdukasiSettingsForm({ initialItems }: EdukasiSettingsFormProps) 
 
               {/* Pilihan Komoditas */}
               <div>
-                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-200 mb-1.5">
-                  Kategori Komoditas <span className="text-rose-500">*</span>
-                </label>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                  {KOMODITAS_OPTIONS.map((kom) => {
-                    const isSelected = formKomoditas === kom.key;
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-200">
+                    Kategori Komoditas <span className="text-rose-500">*</span>
+                  </label>
+                  {!isAddingCategory && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsAddingCategory(true);
+                        setNewCategoryInput("");
+                      }}
+                      className="inline-flex items-center gap-1 text-[11px] font-bold text-brand-orange hover:text-brand-orange-600 dark:hover:text-orange-400 cursor-pointer"
+                    >
+                      <Plus className="w-3.5 h-3.5" />
+                      <span>Tambah Kategori Baru</span>
+                    </button>
+                  )}
+                </div>
+
+                {/* Input Tambah Kategori Baru (Inline) */}
+                {isAddingCategory && (
+                  <div className="mb-3 p-2.5 rounded-2xl bg-orange-50/90 dark:bg-orange-950/40 border border-brand-orange/40 flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+                    <input
+                      type="text"
+                      autoFocus
+                      value={newCategoryInput}
+                      onChange={(e) => setNewCategoryInput(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          e.preventDefault();
+                          handleAddNewCategory();
+                        }
+                      }}
+                      placeholder="Nama kategori baru (cth: Suplemen Kesehatan)..."
+                      className="flex-1 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-1.5 text-xs font-semibold text-slate-800 dark:text-white focus:outline-hidden focus:border-brand-orange"
+                    />
+                    <div className="flex items-center gap-1.5 justify-end">
+                      <button
+                        type="button"
+                        onClick={handleAddNewCategory}
+                        disabled={!newCategoryInput.trim()}
+                        className="px-3 py-1.5 rounded-xl bg-brand-orange hover:bg-brand-orange-600 disabled:opacity-50 text-white text-xs font-bold transition shadow-xs cursor-pointer flex items-center gap-1"
+                      >
+                        <Check className="w-3.5 h-3.5" />
+                        <span>Pilih &amp; Gunakan</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsAddingCategory(false);
+                          setNewCategoryInput("");
+                        }}
+                        className="px-2.5 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 text-xs font-bold transition cursor-pointer"
+                      >
+                        Batal
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Pill Buttons Kategori */}
+                <div className="flex flex-wrap gap-2">
+                  {allCategories.map((komName) => {
+                    const isSelected = formKomoditas.toLowerCase() === komName.toLowerCase();
                     return (
                       <button
-                        key={kom.key}
+                        key={komName}
                         type="button"
-                        onClick={() => setFormKomoditas(kom.key)}
-                        className={`p-2.5 rounded-xl border text-center text-xs font-bold transition cursor-pointer ${
+                        onClick={() => setFormKomoditas(komName)}
+                        className={`px-3.5 py-2 rounded-xl border text-xs font-bold transition cursor-pointer flex items-center gap-1.5 ${
                           isSelected
-                            ? "border-brand-orange bg-orange-50 text-brand-orange-700 dark:bg-orange-500/20 dark:text-orange-300 shadow-2xs"
+                            ? "border-brand-orange bg-orange-50 text-brand-orange-700 dark:bg-orange-500/20 dark:text-orange-300 shadow-2xs ring-1 ring-brand-orange"
                             : "border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300"
                         }`}
                       >
-                        {kom.label}
+                        <span>{komName}</span>
                       </button>
                     );
                   })}

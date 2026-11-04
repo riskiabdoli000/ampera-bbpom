@@ -19,12 +19,11 @@ import {
 } from "./MateriEdukasiCard";
 import { EducationPdfModal } from "@/components/landing/EducationPdfModal";
 
-const KOMODITAS_LIST: { key: string; label: string }[] = [
-  { key: "semua", label: "Semua" },
-  { key: "pangan", label: "Pangan" },
-  { key: "kosmetik", label: "Kosmetik" },
-  { key: "obat", label: "Obat" },
-  { key: "obat-tradisional", label: "Obat Tradisional" },
+const BASE_KOMODITAS_LIST = [
+  "Pangan",
+  "Kosmetik",
+  "Obat",
+  "Obat Tradisional",
 ];
 
 // Data awal tampilan kartu materi edukasi per komoditas
@@ -161,6 +160,19 @@ export function MateriEdukasiView({ initialItems }: MateriEdukasiViewProps) {
   const [selectedKomoditas, setSelectedKomoditas] = useState("semua");
   const [selectedPdfItem, setSelectedPdfItem] = useState<MateriEdukasiItem | null>(null);
 
+  // List dinamis seluruh komoditas (kategori) yang tersedia dari data materi
+  const komoditasList = useMemo(() => {
+    const fromItems = allItems.map((i) => i.komoditas?.trim()).filter(Boolean);
+    const uniqueNames = Array.from(new Set([...BASE_KOMODITAS_LIST, ...fromItems]));
+    return [
+      { key: "semua", label: "Semua" },
+      ...uniqueNames.map((name) => ({
+        key: name.toLowerCase().replace(/\s+/g, "-"),
+        label: name,
+      })),
+    ];
+  }, [allItems]);
+
   // Filter materi berdasarkan input pencarian dan komoditas
   const filteredMateri = useMemo(() => {
     return allItems.filter((item) => {
@@ -272,7 +284,7 @@ export function MateriEdukasiView({ initialItems }: MateriEdukasiViewProps) {
 
           {/* Filter Pills Komoditas */}
           <div className="flex items-center gap-2 overflow-x-auto py-1 scrollbar-none [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
-            {KOMODITAS_LIST.map((kom) => {
+            {komoditasList.map((kom) => {
               const isActive = selectedKomoditas === kom.key;
               return (
                 <button
@@ -301,7 +313,7 @@ export function MateriEdukasiView({ initialItems }: MateriEdukasiViewProps) {
                 {" "}
                 pada komoditas{" "}
                 <strong className="text-brand-orange capitalize">
-                  {KOMODITAS_LIST.find((k) => k.key === selectedKomoditas)?.label}
+                  {komoditasList.find((k) => k.key === selectedKomoditas)?.label}
                 </strong>
               </>
             )}
