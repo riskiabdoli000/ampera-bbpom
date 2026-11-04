@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { Sun, Moon, Menu, X, HelpCircle } from "lucide-react";
+import { Sun, Moon, Menu, X, HelpCircle, ArrowRight } from "lucide-react";
 import { PanduanDropdown, PanduanMobileMenu } from "@/components/common/PanduanMenu";
 
 interface SubpageNavbarProps {
@@ -138,6 +138,15 @@ export function SubpageNavbar({ activePage = "layanan", activePanduanSlug }: Sub
             >
               {isDark ? <Sun className="w-5 h-5 text-amber-400" /> : <Moon className="w-5 h-5 text-slate-700 dark:text-slate-200" />}
             </button>
+
+            {/* Tombol CTA Garda Ampera (Desktop) */}
+            <Link
+              href="/garda-ampera"
+              className="hidden lg:inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-[#ff8a1f] to-[#f26a0f] px-4 xl:px-5 py-2 text-xs font-bold text-white shadow-cta hover:shadow-orange-500/25 hover:scale-105 active:scale-95 transition-all duration-200 cursor-pointer"
+            >
+              <span>Garda Ampera</span>
+              <ArrowRight className="w-3.5 h-3.5 transition-transform duration-200 hover:translate-x-0.5" />
+            </Link>
 
             {/* Mobile Menu Button */}
             <button

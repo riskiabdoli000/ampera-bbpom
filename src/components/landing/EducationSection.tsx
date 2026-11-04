@@ -98,7 +98,15 @@ export function EducationSection({ initialData }: EducationSectionProps) {
       actionText: "Akses Garda Ampera",
       href: "/garda-ampera",
     },
-    ...dynamicPdfCards,
+    {
+      id: "materi-edukasi",
+      title: "Materi Edukasi",
+      description:
+        "Kumpulan panduan, infografis, dan tips praktis keamanan pangan, kosmetik, obat, serta obat tradisional.",
+      icon: BookOpen,
+      actionText: "Lihat Materi Edukasi",
+      href: "/edukasi",
+    },
     {
       id: "tips",
       title: "Cek BPOM",
