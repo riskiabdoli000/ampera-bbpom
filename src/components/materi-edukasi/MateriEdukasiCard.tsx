@@ -83,11 +83,16 @@ export function MateriEdukasiCard({ item, onSelect }: MateriEdukasiCardProps) {
         {/* Thumbnail Kanan (Bingkai Lengkung Artistik Sesuai Mockup) */}
         <div className="relative w-full sm:w-36 md:w-40 h-40 sm:h-32 rounded-2xl sm:rounded-r-2xl sm:rounded-tl-[44px] sm:rounded-bl-md overflow-hidden shrink-0 bg-slate-100 dark:bg-slate-800/80 border border-slate-100 dark:border-slate-700/60 shadow-2xs group-hover:scale-102 transition-transform duration-300">
           <Image
-            src={item.imageUrl}
+            src={
+              item.imageUrl && !item.imageUrl.toLowerCase().endsWith(".pdf")
+                ? item.imageUrl
+                : "/assets-landingpage/layanan/1.jpg"
+            }
             alt={item.judul}
             fill
             sizes="(max-width: 640px) 100vw, 160px"
             className="object-cover object-center"
+            unoptimized={item.imageUrl?.startsWith("/uploads/")}
           />
         </div>
       </div>

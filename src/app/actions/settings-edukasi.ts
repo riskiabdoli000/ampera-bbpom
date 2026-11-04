@@ -253,11 +253,39 @@ async function saveUploadedCoverImage(fileOrBlob: File | Blob, ext = "webp"): Pr
 }
 
 /**
+ * Memastikan nilai imageUrl valid dan bukan dokumen PDF
+ * Mencegah error 400 Bad Request pada Next.js Image Optimizer
+ */
+function sanitizeImageUrl(url: string | null | undefined): string {
+  if (!url || typeof url !== "string") {
+    return "/assets-landingpage/layanan/1.jpg";
+  }
+  const clean = url.trim();
+  if (!clean || clean.toLowerCase().endsWith(".pdf")) {
+    return "/assets-landingpage/layanan/1.jpg";
+  }
+  return clean;
+}
+
+/**
  * Mengambil daftar seluruh Materi Edukasi untuk Halaman Admin
  * Jika tabel masih kosong sama sekali, otomatis inisialisasi 12 materi default
  */
 export async function getMateriEdukasiAdminListAction(): Promise<MateriEdukasiItemData[]> {
   try {
+    // Auto-update data lama jika pernah ada record yang imageUrl-nya tersimpan sebagai berkas PDF
+    await prisma.edukasi.updateMany({
+      where: {
+        imageUrl: {
+          endsWith: ".pdf",
+          mode: "insensitive",
+        },
+      },
+      data: {
+        imageUrl: "/assets-landingpage/layanan/1.jpg",
+      },
+    }).catch(() => {});
+
     let records = await prisma.edukasi.findMany({
       orderBy: [{ urutan: "asc" }, { id: "asc" }],
     });
@@ -279,7 +307,7 @@ export async function getMateriEdukasiAdminListAction(): Promise<MateriEdukasiIt
         ? r.komoditas
         : "Pangan") as KomoditasType,
       deskripsi: r.deskripsi,
-      imageUrl: r.imageUrl || "/assets-landingpage/layanan/1.jpg",
+      imageUrl: sanitizeImageUrl(r.imageUrl),
       imagePath: r.imagePath,
       pdfUrl: r.pdfUrl,
       pdfFilename: r.pdfFilename,
@@ -335,7 +363,7 @@ export async function getPublicMateriEdukasiListAction(): Promise<MateriEdukasiI
         ? r.komoditas
         : "Pangan") as KomoditasType,
       deskripsi: r.deskripsi,
-      imageUrl: r.imageUrl || "/assets-landingpage/layanan/1.jpg",
+      imageUrl: sanitizeImageUrl(r.imageUrl),
       imagePath: r.imagePath,
       pdfUrl: r.pdfUrl,
       pdfFilename: r.pdfFilename,
@@ -426,7 +454,7 @@ export async function createMateriEdukasiAction(
         judul: validated.data.judul,
         komoditas: validated.data.komoditas,
         deskripsi: validated.data.deskripsi,
-        imageUrl: finalImageUrl,
+        imageUrl: sanitizeImageUrl(finalImageUrl),
         imagePath: finalImageUrl.startsWith("/uploads/") ? finalImageUrl : null,
         pdfUrl: finalPdfUrl,
         pdfFilename: finalPdfFilename,
@@ -539,7 +567,7 @@ export async function updateMateriEdukasiAction(
         judul: validated.data.judul,
         komoditas: validated.data.komoditas,
         deskripsi: validated.data.deskripsi,
-        imageUrl: finalImageUrl,
+        imageUrl: sanitizeImageUrl(finalImageUrl),
         imagePath: finalImageUrl?.startsWith("/uploads/") ? finalImageUrl : existing.imagePath,
         pdfUrl: finalPdfUrl,
         pdfFilename: finalPdfFilename,

@@ -632,11 +632,16 @@ export function EdukasiSettingsForm({ initialItems }: EdukasiSettingsFormProps) 
                     {/* Sisi Kanan: Thumbnail Cover Gambar */}
                     <div className="relative w-24 h-24 sm:w-28 sm:h-28 rounded-xl sm:rounded-tl-3xl overflow-hidden shrink-0 bg-slate-100 dark:bg-slate-800 border border-slate-100 dark:border-slate-700">
                       <Image
-                        src={item.imageUrl || "/assets-landingpage/layanan/1.jpg"}
+                        src={
+                          item.imageUrl && !item.imageUrl.toLowerCase().endsWith(".pdf")
+                            ? item.imageUrl
+                            : "/assets-landingpage/layanan/1.jpg"
+                        }
                         alt={item.judul}
                         fill
                         sizes="(max-width: 640px) 96px, 112px"
                         className="object-cover object-center"
+                        unoptimized={item.imageUrl?.startsWith("/uploads/")}
                       />
                     </div>
                   </div>
@@ -871,10 +876,19 @@ export function EdukasiSettingsForm({ initialItems }: EdukasiSettingsFormProps) 
                   <div className="relative w-28 h-28 rounded-xl sm:rounded-tl-3xl overflow-hidden shrink-0 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 shadow-2xs">
                     {previewCoverUrl ? (
                       <Image
-                        src={previewCoverUrl}
+                        src={
+                          previewCoverUrl && !previewCoverUrl.toLowerCase().endsWith(".pdf")
+                            ? previewCoverUrl
+                            : "/assets-landingpage/layanan/1.jpg"
+                        }
                         alt="Preview Cover"
                         fill
                         className="object-cover object-center"
+                        unoptimized={
+                          previewCoverUrl?.startsWith("data:") ||
+                          previewCoverUrl?.startsWith("blob:") ||
+                          previewCoverUrl?.startsWith("/uploads/")
+                        }
                       />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center text-slate-400">
