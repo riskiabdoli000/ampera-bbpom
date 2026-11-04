@@ -13,7 +13,7 @@ import {
   createLayananAction,
   updateLayananAction,
 } from "@/app/actions/admin-layanan";
-import { ServiceSavingOverlay } from "@/components/common/ServiceSavingOverlay";
+import { AdminLoadingOverlay } from "@/components/admin/AdminLoadingOverlay";
 
 export interface LayananItem {
   id: number;
@@ -291,12 +291,11 @@ export function LayananModal({
       </div>
 
       {/* Overlay Loading saat Menyimpan Data Layanan */}
-      <ServiceSavingOverlay
+      <AdminLoadingOverlay
         isOpen={isPending}
-        serviceName="Manajemen Layanan AMPERA"
+        actionType="save"
         title={isEditing ? "Menyimpan Perubahan Layanan..." : "Menyimpan Layanan Baru..."}
-        description="Sistem sedang memperbarui konfigurasi layanan publik pada database BBPOM di Palembang."
-        hasFileUpload={false}
+        description="Sistem sedang memperbarui konfigurasi data layanan publik pada database BBPOM di Palembang."
       />
     </div>,
     document.body

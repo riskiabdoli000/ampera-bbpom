@@ -41,6 +41,7 @@ import {
   resendPengajuanWaNotificationAction,
   sendManualPengajuanWaNotificationAction,
 } from "@/app/actions/data-ampera";
+import { AdminLoadingOverlay } from "@/components/admin/AdminLoadingOverlay";
 
 interface PengajuanDetailModalProps {
   pengajuan: PengajuanItem | null;
@@ -1317,6 +1318,19 @@ export function PengajuanDetailModal({
           </div>
         </div>
       )}
+
+      <AdminLoadingOverlay
+        isOpen={isPending || isDeleting}
+        actionType={isDeleting ? "delete" : newFiles.length > 0 ? "upload" : "process"}
+        title={isDeleting ? "Menghapus Pengajuan..." : "Menyimpan Status Pengajuan..."}
+        description={
+          isDeleting
+            ? `Sedang menghapus berkas pengajuan #${pengajuan.kodePengajuan} dari database BBPOM...`
+            : newFiles.length > 0
+            ? "Sedang mengunggah berkas lampiran hasil dan memperbarui status layanan..."
+            : `Sedang memperbarui status layanan #${pengajuan.kodePengajuan} ke ${selectedStatus}...`
+        }
+      />
     </>,
     document.body
   );

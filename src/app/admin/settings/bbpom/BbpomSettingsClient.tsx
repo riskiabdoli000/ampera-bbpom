@@ -27,6 +27,7 @@ import {
   toggleBbpomTautanStatusAction,
   resetToDefaultBbpomTautanAction,
 } from "@/app/actions/settings-bbpom";
+import { useAdminLoading } from "@/context/AdminLoadingContext";
 
 interface BbpomSettingsClientProps {
   initialList: BbpomTautanItem[];
@@ -56,6 +57,7 @@ function getIconComponent(iconName: string) {
 export function BbpomSettingsClient({ initialList }: BbpomSettingsClientProps) {
   const [mounted, setMounted] = useState(false);
   const [list, setList] = useState<BbpomTautanItem[]>(initialList);
+  const { showLoading, hideLoading } = useAdminLoading();
 
   useEffect(() => {
     setMounted(true);
@@ -130,6 +132,12 @@ export function BbpomSettingsClient({ initialList }: BbpomSettingsClientProps) {
     }
 
     setIsFormSubmitting(true);
+    showLoading({
+      actionType: "save",
+      title: editingItem ? "Menyimpan Perubahan Tautan..." : "Menambahkan Tautan Baru...",
+      description: "Sedang memvalidasi dan menyimpan tautan website ke database BBPOM...",
+    });
+
     try {
       if (editingItem) {
         // Edit existing
@@ -176,11 +184,17 @@ export function BbpomSettingsClient({ initialList }: BbpomSettingsClientProps) {
       showFeedback("error", "Terjadi gangguan saat menyimpan ke server.");
     } finally {
       setIsFormSubmitting(false);
+      hideLoading();
     }
   };
 
   const handleToggleStatus = (item: BbpomTautanItem) => {
     setTogglingId(item.id);
+    showLoading({
+      actionType: "process",
+      title: "Mengubah Status Tautan...",
+      description: `Sedang memperbarui status aktif tautan "${item.judul}"...`,
+    });
     startTransition(async () => {
       try {
         const res = await toggleBbpomTautanStatusAction(item.id);
@@ -200,6 +214,7 @@ export function BbpomSettingsClient({ initialList }: BbpomSettingsClientProps) {
         showFeedback("error", "Gagal memperbarui status.");
       } finally {
         setTogglingId(null);
+        hideLoading();
       }
     });
   };
@@ -207,6 +222,11 @@ export function BbpomSettingsClient({ initialList }: BbpomSettingsClientProps) {
   const handleDelete = async () => {
     if (!deletingItem) return;
     setIsDeleting(true);
+    showLoading({
+      actionType: "delete",
+      title: "Menghapus Tautan Website...",
+      description: `Sedang menghapus tautan "${deletingItem.judul}" dari sistem BBPOM...`,
+    });
     try {
       const res = await deleteBbpomTautanAction(deletingItem.id);
       if (res.success) {
@@ -220,11 +240,17 @@ export function BbpomSettingsClient({ initialList }: BbpomSettingsClientProps) {
       showFeedback("error", "Terjadi kesalahan saat menghapus tautan.");
     } finally {
       setIsDeleting(false);
+      hideLoading();
     }
   };
 
   const handleResetToDefault = async () => {
     setIsResetting(true);
+    showLoading({
+      actionType: "reset",
+      title: "Mereset Tautan Website...",
+      description: "Sedang mengembalikan daftar tautan ke setelan bawaan sistem...",
+    });
     try {
       const res = await resetToDefaultBbpomTautanAction();
       if (res.success && res.data) {
@@ -238,6 +264,7 @@ export function BbpomSettingsClient({ initialList }: BbpomSettingsClientProps) {
       showFeedback("error", "Gagal melakukan reset tautan.");
     } finally {
       setIsResetting(false);
+      hideLoading();
     }
   };
 

@@ -33,6 +33,7 @@ import {
 } from "@/app/actions/settings-hero";
 import { AddSlideModal } from "./AddSlideModal";
 import { DeleteSlideModal } from "./DeleteSlideModal";
+import { useAdminLoading } from "@/context/AdminLoadingContext";
 
 interface HeroSlideData {
   id: number;
@@ -89,6 +90,7 @@ export function HeroSettingsForm({
 
   const [isSavingKonten, startSaveKonten] = useTransition();
   const [isSlideActionPending, startSlideAction] = useTransition();
+  const { showLoading, hideLoading } = useAdminLoading();
 
   // Modal Tambah Slide State (komponen terpisah)
   const [showAddModal, setShowAddModal] = useState(false);
@@ -106,24 +108,34 @@ export function HeroSettingsForm({
     if (e) e.preventDefault();
     setFeedback(null);
 
-    startSaveKonten(async () => {
-      const res = await saveHeroKontenAction({
-        judul,
-        subjudul,
-        ctaUtamaLabel,
-      });
+    showLoading({
+      actionType: "save",
+      title: "Menyimpan Teks Hero Banner...",
+      description: "Sedang memperbarui teks judul dan subjudul beranda ke database BBPOM...",
+    });
 
-      if (res.success) {
-        setFeedback({
-          type: "success",
-          message: "Perubahan teks Hero Banner berhasil disimpan ke database!",
+    startSaveKonten(async () => {
+      try {
+        const res = await saveHeroKontenAction({
+          judul,
+          subjudul,
+          ctaUtamaLabel,
         });
-        setTimeout(() => setFeedback(null), 4000);
-      } else {
-        setFeedback({
-          type: "error",
-          message: res.error || "Gagal menyimpan teks hero.",
-        });
+
+        if (res.success) {
+          setFeedback({
+            type: "success",
+            message: "Perubahan teks Hero Banner berhasil disimpan ke database!",
+          });
+          setTimeout(() => setFeedback(null), 4000);
+        } else {
+          setFeedback({
+            type: "error",
+            message: res.error || "Gagal menyimpan teks hero.",
+          });
+        }
+      } finally {
+        hideLoading();
       }
     });
   };
@@ -133,28 +145,38 @@ export function HeroSettingsForm({
     setFeedback(null);
     const newStatus = !slide.isActive;
 
+    showLoading({
+      actionType: "process",
+      title: "Mengubah Status Slide...",
+      description: `Sedang mengubah status tayang slide "${slide.title}"...`,
+    });
+
     // Optimistic UI update
     setSlides((prev) =>
       prev.map((s) => (s.id === slide.id ? { ...s, isActive: newStatus } : s))
     );
 
     startSlideAction(async () => {
-      const res = await updateHeroSlideAction(slide.id, { isActive: newStatus });
-      if (!res.success) {
-        // Rollback
-        setSlides((prev) =>
-          prev.map((s) => (s.id === slide.id ? { ...s, isActive: slide.isActive } : s))
-        );
-        setFeedback({
-          type: "error",
-          message: res.error || "Gagal mengubah status slide.",
-        });
-      } else {
-        setFeedback({
-          type: "success",
-          message: `Slide "${slide.title}" sekarang ${newStatus ? "Aktif" : "Nonaktif"}.`,
-        });
-        setTimeout(() => setFeedback(null), 3000);
+      try {
+        const res = await updateHeroSlideAction(slide.id, { isActive: newStatus });
+        if (!res.success) {
+          // Rollback
+          setSlides((prev) =>
+            prev.map((s) => (s.id === slide.id ? { ...s, isActive: slide.isActive } : s))
+          );
+          setFeedback({
+            type: "error",
+            message: res.error || "Gagal mengubah status slide.",
+          });
+        } else {
+          setFeedback({
+            type: "success",
+            message: `Slide "${slide.title}" sekarang ${newStatus ? "Aktif" : "Nonaktif"}.`,
+          });
+          setTimeout(() => setFeedback(null), 3000);
+        }
+      } finally {
+        hideLoading();
       }
     });
   };
@@ -175,25 +197,35 @@ export function HeroSettingsForm({
     const formData = new FormData();
     formData.append("imageFile", file);
 
+    showLoading({
+      actionType: "upload",
+      title: "Mengganti Gambar Slide...",
+      description: "Sedang mengompres gambar baru ke WebP dan memperbarui ke database BBPOM...",
+    });
+
     startSlideAction(async () => {
-      const res = await replaceHeroSlideImageAction(slideId, formData);
-      if (res.success && res.data) {
-        setSlides((prev) =>
-          prev.map((s) => (s.id === slideId ? (res.data as HeroSlideData) : s))
-        );
-        setFeedback({
-          type: "success",
-          message: res.message || "Gambar slide berhasil diperbarui dan dikompresi ke ~200KB!",
-        });
-        setTimeout(() => setFeedback(null), 5000);
-      } else {
-        setFeedback({
-          type: "error",
-          message: res.error || "Gagal mengganti foto slide.",
-        });
+      try {
+        const res = await replaceHeroSlideImageAction(slideId, formData);
+        if (res.success && res.data) {
+          setSlides((prev) =>
+            prev.map((s) => (s.id === slideId ? (res.data as HeroSlideData) : s))
+          );
+          setFeedback({
+            type: "success",
+            message: res.message || "Gambar slide berhasil diperbarui dan dikompresi ke ~200KB!",
+          });
+          setTimeout(() => setFeedback(null), 5000);
+        } else {
+          setFeedback({
+            type: "error",
+            message: res.error || "Gagal mengganti foto slide.",
+          });
+        }
+      } finally {
+        hideLoading();
+        setTargetSlideIdForReplace(null);
+        if (replaceFileInputRef.current) replaceFileInputRef.current.value = "";
       }
-      setTargetSlideIdForReplace(null);
-      if (replaceFileInputRef.current) replaceFileInputRef.current.value = "";
     });
   };
 

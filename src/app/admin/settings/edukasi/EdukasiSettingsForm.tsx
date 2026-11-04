@@ -36,6 +36,7 @@ import {
 } from "@/app/actions/settings-edukasi";
 import { renderFirstPagePdfToBlob } from "@/lib/pdf-thumbnail";
 import { EducationPdfModal } from "@/components/landing/EducationPdfModal";
+import { useAdminLoading } from "@/context/AdminLoadingContext";
 
 interface EdukasiSettingsFormProps {
   initialItems: MateriEdukasiItemData[];
@@ -124,6 +125,7 @@ export function EdukasiSettingsForm({ initialItems }: EdukasiSettingsFormProps) 
   );
 
   const [, startTransition] = useTransition();
+  const { showLoading, hideLoading } = useAdminLoading();
 
   const showFeedback = (type: "success" | "error", message: string) => {
     setFeedback({ type, message });
@@ -301,6 +303,13 @@ export function EdukasiSettingsForm({ initialItems }: EdukasiSettingsFormProps) 
     }
 
     setIsSubmitting(true);
+    showLoading({
+      actionType: selectedPdfFile || customCoverFile ? "upload" : "save",
+      title: editingItem ? "Menyimpan Perubahan Materi..." : "Menyimpan Materi Baru...",
+      description: selectedPdfFile
+        ? "Sedang memproses dan mengunggah berkas PDF materi ke server BBPOM..."
+        : "Sedang memvalidasi dan menyimpan data materi edukasi...",
+    });
     try {
       const formData = new FormData();
       if (editingItem) {
@@ -351,6 +360,7 @@ export function EdukasiSettingsForm({ initialItems }: EdukasiSettingsFormProps) 
       showFeedback("error", "Terjadi kesalahan saat menyimpan data materi.");
     } finally {
       setIsSubmitting(false);
+      hideLoading();
     }
   };
 
@@ -358,6 +368,11 @@ export function EdukasiSettingsForm({ initialItems }: EdukasiSettingsFormProps) 
   const handleDelete = async () => {
     if (!deletingItem) return;
     setIsDeleting(true);
+    showLoading({
+      actionType: "delete",
+      title: "Menghapus Materi Edukasi...",
+      description: `Sedang menghapus materi "${deletingItem.judul}" dari database server...`,
+    });
     try {
       const res = await deleteMateriEdukasiAction(deletingItem.id);
       if (res.success) {
@@ -371,34 +386,51 @@ export function EdukasiSettingsForm({ initialItems }: EdukasiSettingsFormProps) 
       showFeedback("error", "Terjadi kesalahan saat menghapus materi.");
     } finally {
       setIsDeleting(false);
+      hideLoading();
     }
   };
 
   // Handler Toggle Status Publikasi
   const handleToggleStatus = (item: MateriEdukasiItemData) => {
     setTogglingId(item.id);
+    showLoading({
+      actionType: "process",
+      title: "Memperbarui Status Publikasi...",
+      description: `Sedang mengubah status publikasi materi "${item.judul}"...`,
+    });
     startTransition(async () => {
-      const res = await toggleMateriEdukasiStatusAction(item.id);
-      if (res.success && res.data) {
-        setItems((prev) =>
-          prev.map((i) =>
-            i.id === item.id ? { ...i, isPublished: res.data!.isPublished } : i
-          )
-        );
-        showFeedback(
-          "success",
-          `Status publikasi materi "${item.judul}" berhasil diubah.`
-        );
-      } else {
-        showFeedback("error", res.error || "Gagal mengubah status publikasi.");
+      try {
+        const res = await toggleMateriEdukasiStatusAction(item.id);
+        if (res.success && res.data) {
+          setItems((prev) =>
+            prev.map((i) =>
+              i.id === item.id ? { ...i, isPublished: res.data!.isPublished } : i
+            )
+          );
+          showFeedback(
+            "success",
+            `Status publikasi materi "${item.judul}" berhasil diubah.`
+          );
+        } else {
+          showFeedback("error", res.error || "Gagal mengubah status publikasi.");
+        }
+      } catch {
+        showFeedback("error", "Terjadi kesalahan saat mengubah status materi.");
+      } finally {
+        setTogglingId(null);
+        hideLoading();
       }
-      setTogglingId(null);
     });
   };
 
   // Handler Reset ke Data Default
   const handleResetToDefault = async () => {
     setIsResetting(true);
+    showLoading({
+      actionType: "reset",
+      title: "Mereset Materi Edukasi...",
+      description: "Sedang mengembalikan daftar materi ke konten edukasi bawaan sistem...",
+    });
     try {
       const res = await resetToDefaultMateriEdukasiAction();
       if (res.success && res.data) {
@@ -415,6 +447,7 @@ export function EdukasiSettingsForm({ initialItems }: EdukasiSettingsFormProps) 
       showFeedback("error", "Terjadi kesalahan saat mereset materi edukasi.");
     } finally {
       setIsResetting(false);
+      hideLoading();
     }
   };
 

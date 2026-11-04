@@ -4,6 +4,7 @@ import React, { useState, useEffect, useTransition } from "react";
 import { createPortal } from "react-dom";
 import { AlertTriangle, Trash2, X } from "lucide-react";
 import { PenilaianItem, deletePenilaianAction } from "@/app/actions/admin-penilaian";
+import { AdminLoadingOverlay } from "@/components/admin/AdminLoadingOverlay";
 
 interface DeletePenilaianModalProps {
   isOpen: boolean;
@@ -114,6 +115,13 @@ export function DeletePenilaianModal({
           </div>
         </div>
       </div>
+
+      <AdminLoadingOverlay
+        isOpen={isPending}
+        actionType="delete"
+        title="Menghapus Ulasan Penilaian..."
+        description="Sedang menghapus data survei kepuasan pengunjung dari database BBPOM..."
+      />
     </div>,
     document.body
   );

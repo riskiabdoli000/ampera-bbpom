@@ -23,6 +23,7 @@ import {
   PetugasRecord,
   LayananOption,
 } from "@/app/actions/admin-petugas";
+import { AdminLoadingOverlay } from "@/components/admin/AdminLoadingOverlay";
 
 interface PetugasModalProps {
   isOpen: boolean;
@@ -475,6 +476,13 @@ export function PetugasModal({
           </div>
         </form>
       </div>
+
+      <AdminLoadingOverlay
+        isOpen={isPending}
+        actionType={fotoFile ? "upload" : "save"}
+        title={isEditing ? "Menyimpan Perubahan Petugas..." : "Menambahkan Petugas Baru..."}
+        description={fotoFile ? "Sedang mengunggah foto dan menyimpan profil petugas..." : "Sedang menyimpan data profil petugas ke database BBPOM..."}
+      />
     </div>,
     document.body
   );

@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import { BellRing, X, ArrowRight, Clock } from "lucide-react";
 import { AdminSidebar } from "@/components/admin/AdminSidebar";
 import { AdminHeader } from "@/components/admin/AdminHeader";
+import { AdminLoadingProvider } from "@/context/AdminLoadingContext";
 import {
   getAdminNotificationsAction,
   type AdminNotificationItem,
@@ -160,7 +161,8 @@ export default function AdminLayout({
   }
 
   return (
-    <div className="min-h-screen bg-[#f7faff] dark:bg-[#060c1d] text-[#0f2257] dark:text-slate-100 font-brand antialiased transition-colors duration-300">
+    <AdminLoadingProvider>
+      <div className="min-h-screen bg-[#f7faff] dark:bg-[#060c1d] text-[#0f2257] dark:text-slate-100 font-brand antialiased transition-colors duration-300">
       {/* Floating Popup Notifikasi Layanan Baru Terdaftar (Tutup Otomatis dalam 6 Detik) */}
       {activeToasts.length > 0 && (
         <div className="fixed right-4 top-24 z-50 flex flex-col gap-3 w-[calc(100vw-2rem)] sm:w-96 pointer-events-none">
@@ -254,5 +256,6 @@ export default function AdminLayout({
         </footer>
       </div>
     </div>
+    </AdminLoadingProvider>
   );
 }

@@ -13,6 +13,7 @@ import {
   Save,
   ImageIcon,
 } from "lucide-react";
+import { AdminLoadingOverlay } from "@/components/admin/AdminLoadingOverlay";
 
 interface AddSlideModalProps {
   isOpen: boolean;
@@ -317,6 +318,13 @@ export function AddSlideModal({
           </div>
         </form>
       </div>
+
+      <AdminLoadingOverlay
+        isOpen={isPending}
+        actionType="upload"
+        title="Mengunggah Slide Banner..."
+        description="Sedang mengompres gambar slide ke format WebP dan menyimpan ke database BBPOM..."
+      />
     </div>,
     document.body
   );

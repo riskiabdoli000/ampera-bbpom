@@ -12,6 +12,7 @@ import {
   User,
 } from "lucide-react";
 import { deletePetugasAction, PetugasRecord } from "@/app/actions/admin-petugas";
+import { AdminLoadingOverlay } from "@/components/admin/AdminLoadingOverlay";
 
 interface DeletePetugasModalProps {
   isOpen: boolean;
@@ -172,6 +173,13 @@ export function DeletePetugasModal({
           </button>
         </div>
       </div>
+
+      <AdminLoadingOverlay
+        isOpen={isPending}
+        actionType="delete"
+        title="Menghapus Data Petugas..."
+        description={`Sedang menghapus profil petugas "${petugas.nama}" dari database BBPOM...`}
+      />
     </div>,
     document.body
   );

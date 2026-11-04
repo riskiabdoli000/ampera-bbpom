@@ -32,6 +32,7 @@ import {
   type VideoItemData,
 } from "@/app/actions/settings-video";
 import { extractYouTubeId } from "@/lib/youtube";
+import { useAdminLoading } from "@/context/AdminLoadingContext";
 
 function YouTubeIcon({ className }: { className?: string }) {
   return (
@@ -64,6 +65,8 @@ export function VideoSettingsForm({ initialList, initialData }: VideoSettingsFor
     type: "success" | "error";
     message: string;
   } | null>(null);
+
+  const { showLoading, hideLoading } = useAdminLoading();
 
   useEffect(() => {
     if (feedback) {
@@ -150,80 +153,99 @@ export function VideoSettingsForm({ initialList, initialData }: VideoSettingsFor
       return;
     }
 
+    showLoading({
+      actionType: "save",
+      title: editingVideo ? "Menyimpan Perubahan Video..." : "Menambahkan Video Baru...",
+      description: "Sedang memvalidasi dan menyimpan metadata video YouTube ke database BBPOM...",
+    });
+
     startTransition(async () => {
-      if (editingVideo) {
-        // Edit video yang sudah ada
-        const res = await updateVideoAction(editingVideo.id, {
-          eyebrow: formEyebrow,
-          judul: formJudul,
-          deskripsi: formDeskripsi,
-          youtubeUrl: formYoutubeUrl,
-          urutan: formUrutan,
-          isActive: formIsActive,
-        });
+      try {
+        if (editingVideo) {
+          // Edit video yang sudah ada
+          const res = await updateVideoAction(editingVideo.id, {
+            eyebrow: formEyebrow,
+            judul: formJudul,
+            deskripsi: formDeskripsi,
+            youtubeUrl: formYoutubeUrl,
+            urutan: formUrutan,
+            isActive: formIsActive,
+          });
 
-        if (res.success && res.data) {
-          setVideos((prev) =>
-            prev.map((v) => (v.id === editingVideo.id ? (res.data as VideoItemData) : v))
-          );
-          setIsModalOpen(false);
-          setFeedback({
-            type: "success",
-            message: `Video "${res.data.judul}" berhasil diperbarui!`,
-          });
+          if (res.success && res.data) {
+            setVideos((prev) =>
+              prev.map((v) => (v.id === editingVideo.id ? (res.data as VideoItemData) : v))
+            );
+            setIsModalOpen(false);
+            setFeedback({
+              type: "success",
+              message: `Video "${res.data.judul}" berhasil diperbarui!`,
+            });
+          } else {
+            setFeedback({
+              type: "error",
+              message: res.error || "Gagal memperbarui video.",
+            });
+          }
         } else {
-          setFeedback({
-            type: "error",
-            message: res.error || "Gagal memperbarui video.",
+          // Tambah video baru
+          const res = await createVideoAction({
+            eyebrow: formEyebrow,
+            judul: formJudul,
+            deskripsi: formDeskripsi,
+            youtubeUrl: formYoutubeUrl,
+            urutan: formUrutan,
+            isActive: formIsActive,
           });
-        }
-      } else {
-        // Tambah video baru
-        const res = await createVideoAction({
-          eyebrow: formEyebrow,
-          judul: formJudul,
-          deskripsi: formDeskripsi,
-          youtubeUrl: formYoutubeUrl,
-          urutan: formUrutan,
-          isActive: formIsActive,
-        });
 
-        if (res.success && res.data) {
-          setVideos((prev) => [...prev, res.data as VideoItemData]);
-          setIsModalOpen(false);
-          setFeedback({
-            type: "success",
-            message: `Video baru "${res.data.judul}" berhasil ditambahkan!`,
-          });
-        } else {
-          setFeedback({
-            type: "error",
-            message: res.error || "Gagal menambahkan video baru.",
-          });
+          if (res.success && res.data) {
+            setVideos((prev) => [...prev, res.data as VideoItemData]);
+            setIsModalOpen(false);
+            setFeedback({
+              type: "success",
+              message: `Video baru "${res.data.judul}" berhasil ditambahkan!`,
+            });
+          } else {
+            setFeedback({
+              type: "error",
+              message: res.error || "Gagal menambahkan video baru.",
+            });
+          }
         }
+      } finally {
+        hideLoading();
       }
     });
   };
 
   // Toggle Status Aktif / Non-Aktif
   const handleToggleStatus = (video: VideoItemData) => {
+    showLoading({
+      actionType: "process",
+      title: "Mengubah Status Video...",
+      description: `Sedang memperbarui status video "${video.judul}"...`,
+    });
     startTransition(async () => {
-      const res = await toggleVideoStatusAction(video.id);
-      if (res.success) {
-        setVideos((prev) =>
-          prev.map((v) => (v.id === video.id ? { ...v, isActive: !v.isActive } : v))
-        );
-        setFeedback({
-          type: "success",
-          message: `Status video "${video.judul}" diubah menjadi ${
-            !video.isActive ? "Aktif" : "Non-Aktif"
-          }.`,
-        });
-      } else {
-        setFeedback({
-          type: "error",
-          message: res.error || "Gagal mengubah status video.",
-        });
+      try {
+        const res = await toggleVideoStatusAction(video.id);
+        if (res.success) {
+          setVideos((prev) =>
+            prev.map((v) => (v.id === video.id ? { ...v, isActive: !v.isActive } : v))
+          );
+          setFeedback({
+            type: "success",
+            message: `Status video "${video.judul}" diubah menjadi ${
+              !video.isActive ? "Aktif" : "Non-Aktif"
+            }.`,
+          });
+        } else {
+          setFeedback({
+            type: "error",
+            message: res.error || "Gagal mengubah status video.",
+          });
+        }
+      } finally {
+        hideLoading();
       }
     });
   };
@@ -232,23 +254,32 @@ export function VideoSettingsForm({ initialList, initialData }: VideoSettingsFor
   const handleConfirmDelete = () => {
     if (!deleteTarget) return;
 
+    showLoading({
+      actionType: "delete",
+      title: "Menghapus Video...",
+      description: `Sedang menghapus video "${deleteTarget.judul}" dari database BBPOM...`,
+    });
     startTransition(async () => {
-      const res = await deleteVideoAction(deleteTarget.id);
-      if (res.success) {
-        setVideos((prev) => prev.filter((v) => v.id !== deleteTarget.id));
-        setDeleteTarget(null);
-        if (previewIndex >= videos.length - 1) {
-          setPreviewIndex(Math.max(0, videos.length - 2));
+      try {
+        const res = await deleteVideoAction(deleteTarget.id);
+        if (res.success) {
+          setVideos((prev) => prev.filter((v) => v.id !== deleteTarget.id));
+          setDeleteTarget(null);
+          if (previewIndex >= videos.length - 1) {
+            setPreviewIndex(Math.max(0, videos.length - 2));
+          }
+          setFeedback({
+            type: "success",
+            message: `Video "${deleteTarget.judul}" berhasil dihapus.`,
+          });
+        } else {
+          setFeedback({
+            type: "error",
+            message: res.error || "Gagal menghapus video.",
+          });
         }
-        setFeedback({
-          type: "success",
-          message: `Video "${deleteTarget.judul}" berhasil dihapus.`,
-        });
-      } else {
-        setFeedback({
-          type: "error",
-          message: res.error || "Gagal menghapus video.",
-        });
+      } finally {
+        hideLoading();
       }
     });
   };

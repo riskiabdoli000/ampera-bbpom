@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { deleteLayananAction } from "@/app/actions/admin-layanan";
 import { LayananItem } from "./LayananModal";
+import { AdminLoadingOverlay } from "@/components/admin/AdminLoadingOverlay";
 
 interface DeleteLayananModalProps {
   isOpen: boolean;
@@ -165,6 +166,13 @@ export function DeleteLayananModal({
           )}
         </div>
       </div>
+
+      <AdminLoadingOverlay
+        isOpen={isPending}
+        actionType="delete"
+        title="Menghapus Layanan..."
+        description={`Sedang menghapus data layanan "${layanan.nama}" dari sistem BBPOM...`}
+      />
     </div>,
     document.body
   );
