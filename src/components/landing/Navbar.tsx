@@ -21,7 +21,7 @@ const NAV_ITEMS: NavItem[] = [
   { label: "Video", href: "#video" },
   { label: "Kontak", href: "#kontak" },
   { label: "Panduan", href: "/panduan", dropdown: "panduan" },
-  { label: "BBPOM", href: "#bbpom", dropdown: "bbpom" },
+  { label: "Website", href: "#bbpom", dropdown: "bbpom" },
 ];
 
 export function Navbar() {
@@ -154,7 +154,7 @@ export function Navbar() {
                 return <PanduanDropdown key={item.label} />;
               }
               if (item.dropdown === "bbpom") {
-                return <BbpomDropdown key={item.label} />;
+                return <BbpomDropdown key={item.label} label={item.label} />;
               }
               const isActive = activeSection === item.href;
               return (
@@ -230,6 +230,7 @@ export function Navbar() {
                   return (
                     <BbpomMobileMenu
                       key={item.label}
+                      label={item.label}
                       onNavigate={() => setMobileMenuOpen(false)}
                     />
                   );

@@ -89,14 +89,15 @@ async function loadDynamicBbpomLinks(): Promise<BbpomExternalLinkItem[]> {
 }
 
 interface BbpomDropdownProps {
+  label?: string;
   onNavigate?: () => void;
 }
 
 /**
- * Menu dropdown "BBPOM" untuk navigasi desktop.
+ * Menu dropdown portal BBPOM / Website eksternal untuk navigasi desktop.
  * Terbuka saat hover (pointer) atau klik, tertutup saat klik di luar / tombol Escape.
  */
-export function BbpomDropdown({ onNavigate }: BbpomDropdownProps) {
+export function BbpomDropdown({ label = "Website", onNavigate }: BbpomDropdownProps) {
   const [open, setOpen] = useState(false);
   const [links, setLinks] = useState<BbpomExternalLinkItem[]>(
     () => cachedLinks || BBPOM_EXTERNAL_LINKS
@@ -166,7 +167,7 @@ export function BbpomDropdown({ onNavigate }: BbpomDropdownProps) {
             : "text-navy-900 dark:text-slate-200 font-semibold hover:text-brand-orange"
         }`}
       >
-        <span>BBPOM</span>
+        <span>{label}</span>
         <ChevronDown
           className={`w-3.5 h-3.5 stroke-[2.5] transition-transform duration-200 ${
             open ? "rotate-180" : ""
@@ -238,13 +239,14 @@ export function BbpomDropdown({ onNavigate }: BbpomDropdownProps) {
 }
 
 interface BbpomMobileMenuProps {
+  label?: string;
   onNavigate?: () => void;
 }
 
 /**
- * Menu "BBPOM" versi mobile (accordion) untuk drawer navigasi.
+ * Menu portal BBPOM / Website eksternal versi mobile (accordion) untuk drawer navigasi.
  */
-export function BbpomMobileMenu({ onNavigate }: BbpomMobileMenuProps) {
+export function BbpomMobileMenu({ label = "Website", onNavigate }: BbpomMobileMenuProps) {
   const [expanded, setExpanded] = useState(false);
   const [links, setLinks] = useState<BbpomExternalLinkItem[]>(
     () => cachedLinks || BBPOM_EXTERNAL_LINKS
@@ -270,7 +272,7 @@ export function BbpomMobileMenu({ onNavigate }: BbpomMobileMenuProps) {
             : "text-navy-900 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800/60"
         }`}
       >
-        <span>BBPOM</span>
+        <span>{label}</span>
         <ChevronDown
           className={`w-4 h-4 stroke-[2.5] transition-transform duration-200 ${
             expanded ? "rotate-180" : ""

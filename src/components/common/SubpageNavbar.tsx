@@ -58,7 +58,7 @@ export function SubpageNavbar({ activePage = "layanan", activePanduanSlug }: Sub
     { label: "Video", href: "/#video", key: "video" },
     { label: "Kontak", href: "/#kontak", key: "kontak" },
     { label: "Panduan", href: "/panduan", key: "panduan" },
-    { label: "BBPOM", href: "#bbpom", key: "bbpom" },
+    { label: "Website", href: "#bbpom", key: "bbpom" },
   ];
 
   return (
@@ -114,7 +114,7 @@ export function SubpageNavbar({ activePage = "layanan", activePanduanSlug }: Sub
                 );
               }
               if (item.key === "bbpom") {
-                return <BbpomDropdown key={item.label} />;
+                return <BbpomDropdown key={item.label} label={item.label} />;
               }
               return (
                 <Link
@@ -186,6 +186,7 @@ export function SubpageNavbar({ activePage = "layanan", activePanduanSlug }: Sub
                   return (
                     <BbpomMobileMenu
                       key={item.label}
+                      label={item.label}
                       onNavigate={() => setMobileMenuOpen(false)}
                     />
                   );

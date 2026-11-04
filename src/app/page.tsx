@@ -43,11 +43,11 @@ export default async function Home() {
       {/* Badge Kecepatan Layanan (Compact Strip) */}
       <SpeedBadgesSection />
 
-      {/* Section Penilaian & Indeks Kepuasan Masyarakat (IKM) */}
-      <PenilaianSection initialData={penilaianData} />
-
       {/* Section Edukasi & Literasi Konsumen */}
       <EducationSection initialData={edukasiData} />
+
+      {/* Section Penilaian & Indeks Kepuasan Masyarakat (IKM) */}
+      <PenilaianSection initialData={penilaianData} />
 
       {/* Section Video Profil & Dokumentasi Resmi BBPOM Palembang */}
       <VideoSection initialData={videoList} />
