@@ -192,7 +192,7 @@ export function MateriEdukasiView({ initialItems }: MateriEdukasiViewProps) {
       {/* ========================================================= */}
       {/* 1. TOMBOL KEMBALI KE MENU EDUKASI (BREADCRUMB)            */}
       {/* ========================================================= */}
-      <div className="max-w-[1440px] mx-auto px-4 sm:px-10 lg:px-14 pt-4 sm:pt-6 mb-4 sm:mb-6">
+      {/* <div className="max-w-[1440px] mx-auto px-4 sm:px-10 lg:px-14 pt-4 sm:pt-6 mb-4 sm:mb-6">
         <Link
           href="/#edukasi"
           className="inline-flex items-center gap-2 text-xs sm:text-sm font-bold text-slate-600 dark:text-slate-300 hover:text-brand-orange transition-colors group cursor-pointer"
@@ -200,7 +200,7 @@ export function MateriEdukasiView({ initialItems }: MateriEdukasiViewProps) {
           <ArrowLeft className="w-4 h-4 transition-transform duration-200 group-hover:-translate-x-1" />
           <span>Kembali ke Menu Edukasi</span>
         </Link>
-      </div>
+      </div> */}
 
       {/* ========================================================= */}
       {/* 2. HERO HEADER SECTION JEMBATAN AMPERA                    */}
@@ -210,15 +210,13 @@ export function MateriEdukasiView({ initialItems }: MateriEdukasiViewProps) {
           {/* Foto Panorama Jembatan Ampera di Kanan Menyatu Lembut */}
           <div className="absolute right-0 top-0 w-full sm:w-[55%] lg:w-[48%] h-full z-0 select-none opacity-40 sm:opacity-90">
             <Image
-              src="/assets-landingpage/ampera-new.png"
+              src="/assets-landingpage/ilustrasi-materi-edukasi.png"
               alt="Jembatan Ampera Palembang"
               fill
               sizes="(max-width: 640px) 100vw, 48vw"
               className="object-cover object-[70%_center]"
               priority
             />
-            {/* Gradien Fade Halus dari Kiri */}
-            <div className="absolute inset-0 bg-gradient-to-r from-[#eef5ff] via-[#eef5ff]/80 to-transparent dark:from-slate-900 dark:via-slate-900/85 dark:to-transparent pointer-events-none" />
           </div>
 
           {/* Konten Teks Hero di Kiri */}
