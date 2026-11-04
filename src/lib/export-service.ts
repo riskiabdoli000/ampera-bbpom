@@ -207,7 +207,7 @@ export async function exportToExcelProfessional({
 
       const durasiStr =
         p.status === "SELESAI"
-          ? `Selesai dalam ${formatDurasiPenyelesaian(p.createdAt, p.updatedAt)}`
+          ? `Selesai dalam ${formatDurasiPenyelesaian(p.createdAt, p.waktuSelesai || p.updatedAt)}`
           : "-";
 
       const row = worksheet.addRow([
@@ -591,7 +591,7 @@ export async function exportToPdfOfficial({
 
       const statusWithDurasi =
         p.status === "SELESAI"
-          ? `SELESAI\n(${formatDurasiPenyelesaian(p.createdAt, p.updatedAt)})`
+          ? `SELESAI\n(${formatDurasiPenyelesaian(p.createdAt, p.waktuSelesai || p.updatedAt)})`
           : p.status.replace("_", " ");
 
       return [

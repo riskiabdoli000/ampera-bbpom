@@ -120,6 +120,9 @@ model PengajuanLayanan {
   // Survei Kepuasan Masyarakat (IKM)
   survei              SurveiLayanan?
 
+  // Waktu aktual permohonan diselesaikan (bisa otomatis atau dikoreksi admin)
+  waktuSelesai        DateTime?
+
   createdAt           DateTime        @default(now())
   updatedAt           DateTime        @updatedAt
 
@@ -129,6 +132,7 @@ model PengajuanLayanan {
   @@index([status])
   @@index([createdAt])
   @@index([status, createdAt])
+  @@index([waktuSelesai])
 }
 
 // Bukti Lampiran Tindakan Petugas BBPOM (Foto Hasil Uji, Dokumen BAP, Tanggapan Resmi, dsb.)
