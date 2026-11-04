@@ -1,734 +1,991 @@
 "use client";
 
-import React, { useState, useTransition, useEffect, useRef } from "react";
+import React, { useState, useTransition, useEffect, useRef, useMemo } from "react";
 import { createPortal } from "react-dom";
+import Image from "next/image";
 import {
-  ShieldCheck,
   BookOpen,
-  FileText,
-  Utensils,
-  FlaskConical,
-  Sparkles,
-  Lightbulb,
-  CheckCircle2,
-  HeartHandshake,
-  Award,
-  Save,
-  Loader2,
-  Upload,
-  Eye,
-  ArrowRight,
-  Check,
-  XCircle,
-  ExternalLink,
-  Trash2,
-  Info,
   Plus,
-  Pencil,
+  Search,
+  Filter,
+  RotateCcw,
+  Edit2,
+  Trash2,
+  ExternalLink,
+  CheckCircle2,
+  AlertCircle,
+  Loader2,
   X,
-  AlertTriangle,
+  Upload,
+  FileText,
+  Sparkles,
+  Eye,
+  Check,
+  Image as ImageIcon,
+  Shield,
+  Layers,
 } from "lucide-react";
 import {
-  createEdukasiAction,
-  updateEdukasiAction,
-  toggleEdukasiStatusAction,
-  deleteEdukasiAction,
-  type EdukasiItemData,
+  MateriEdukasiItemData,
+  KomoditasType,
+  createMateriEdukasiAction,
+  updateMateriEdukasiAction,
+  deleteMateriEdukasiAction,
+  toggleMateriEdukasiStatusAction,
+  resetToDefaultMateriEdukasiAction,
 } from "@/app/actions/settings-edukasi";
+import { renderFirstPagePdfToBlob } from "@/lib/pdf-thumbnail";
 import { EducationPdfModal } from "@/components/landing/EducationPdfModal";
 
-export const EDUKASI_ICON_OPTIONS: {
-  name: string;
-  label: string;
-  icon: React.ElementType;
-}[] = [
-  { name: "ShieldCheck", label: "Perisai Aman", icon: ShieldCheck },
-  { name: "BookOpen", label: "Buku Artikel", icon: BookOpen },
-  { name: "FileText", label: "Dokumen PDF", icon: FileText },
-  { name: "Utensils", label: "Pangan", icon: Utensils },
-  { name: "FlaskConical", label: "Farmasi / Uji", icon: FlaskConical },
-  { name: "Sparkles", label: "Edukasi Utama", icon: Sparkles },
-  { name: "Lightbulb", label: "Tips Cerdas", icon: Lightbulb },
-  { name: "CheckCircle2", label: "Cek KLIK", icon: CheckCircle2 },
-  { name: "HeartHandshake", label: "Peduli Konsumen", icon: HeartHandshake },
-  { name: "Award", label: "Standar Mutu", icon: Award },
-];
-
-export function getEdukasiIconComponent(iconName?: string): React.ElementType {
-  const found = EDUKASI_ICON_OPTIONS.find((item) => item.name === iconName);
-  return found ? found.icon : ShieldCheck;
-}
-
 interface EdukasiSettingsFormProps {
-  initialItems: EdukasiItemData[];
+  initialItems: MateriEdukasiItemData[];
 }
+
+const KOMODITAS_OPTIONS: {
+  key: KomoditasType;
+  label: string;
+  badgeClass: string;
+}[] = [
+  {
+    key: "Pangan",
+    label: "Pangan",
+    badgeClass:
+      "bg-emerald-50 text-emerald-700 border-emerald-200/80 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800/60",
+  },
+  {
+    key: "Kosmetik",
+    label: "Kosmetik",
+    badgeClass:
+      "bg-pink-50 text-pink-700 border-pink-200/80 dark:bg-pink-950/40 dark:text-pink-300 dark:border-pink-800/60",
+  },
+  {
+    key: "Obat",
+    label: "Obat",
+    badgeClass:
+      "bg-blue-50 text-blue-700 border-blue-200/80 dark:bg-blue-950/40 dark:text-blue-300 dark:border-blue-800/60",
+  },
+  {
+    key: "Obat Tradisional",
+    label: "Obat Tradisional",
+    badgeClass:
+      "bg-amber-50 text-amber-800 border-amber-200/80 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-800/60",
+  },
+];
 
 export function EdukasiSettingsForm({ initialItems }: EdukasiSettingsFormProps) {
   const [mounted, setMounted] = useState(false);
-  const [items, setItems] = useState<EdukasiItemData[]>(initialItems);
+  const [items, setItems] = useState<MateriEdukasiItemData[]>(initialItems);
 
   useEffect(() => {
     setMounted(true);
   }, []);
 
-  // Modal Form State (Tambah Baru / Edit)
-  const [isFormModalOpen, setIsFormModalOpen] = useState(false);
-  const [editingItem, setEditingItem] = useState<EdukasiItemData | null>(null);
+  // Filter & Search State
+  const [searchQuery, setSearchQuery] = useState("");
+  const [filterKomoditas, setFilterKomoditas] = useState<string>("semua");
+  const [filterStatus, setFilterStatus] = useState<"semua" | "aktif" | "nonaktif">("semua");
 
-  const [judul, setJudul] = useState("");
-  const [deskripsi, setDeskripsi] = useState("");
-  const [selectedIcon, setSelectedIcon] = useState("ShieldCheck");
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [previewObjectUrl, setPreviewObjectUrl] = useState<string | null>(null);
-  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  // Modal State
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingItem, setEditingItem] = useState<MateriEdukasiItemData | null>(null);
 
-  // Modal Konfirmasi Hapus
-  const [itemToDelete, setItemToDelete] = useState<EdukasiItemData | null>(null);
+  // Form Input State
+  const [formJudul, setFormJudul] = useState("");
+  const [formKomoditas, setFormKomoditas] = useState<KomoditasType>("Pangan");
+  const [formDeskripsi, setFormDeskripsi] = useState("");
+  const [formUrutan, setFormUrutan] = useState(1);
+  const [formIsPublished, setFormIsPublished] = useState(true);
 
-  // Modal Preview PDF
-  const [previewPdfData, setPreviewPdfData] = useState<{
-    title: string;
-    pdfUrl: string;
-    filename: string;
-  } | null>(null);
+  // File Uploads & Live Previews
+  const [selectedPdfFile, setSelectedPdfFile] = useState<File | null>(null);
+  const [customCoverFile, setCustomCoverFile] = useState<File | null>(null);
+  const [generatedCoverBlob, setGeneratedCoverBlob] = useState<Blob | null>(null);
+  const [previewCoverUrl, setPreviewCoverUrl] = useState<string>("");
+  const [coverSource, setCoverSource] = useState<"existing" | "generated" | "custom">("existing");
+  const [isExtractingPdfCover, setIsExtractingPdfCover] = useState(false);
 
-  // Status & Feedback
-  const [feedback, setFeedback] = useState<{
-    type: "success" | "error";
-    message: string;
-  } | null>(null);
+  const pdfInputRef = useRef<HTMLInputElement | null>(null);
+  const imageInputRef = useRef<HTMLInputElement | null>(null);
 
-  const [isPending, startTransition] = useTransition();
+  // Actions & Feedbacks
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [deletingItem, setDeletingItem] = useState<MateriEdukasiItemData | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [isResetConfirmOpen, setIsResetConfirmOpen] = useState(false);
+  const [isResetting, setIsResetting] = useState(false);
   const [togglingId, setTogglingId] = useState<number | null>(null);
+  const [previewPdfItem, setPreviewPdfItem] = useState<MateriEdukasiItemData | null>(null);
+  const [feedback, setFeedback] = useState<{ type: "success" | "error"; message: string } | null>(
+    null
+  );
 
-  useEffect(() => {
-    if (feedback) {
-      const timer = setTimeout(() => setFeedback(null), 5000);
-      return () => clearTimeout(timer);
-    }
-  }, [feedback]);
+  const [, startTransition] = useTransition();
 
-  useEffect(() => {
-    if (!selectedFile) {
-      setPreviewObjectUrl(null);
-      return;
-    }
-    const objUrl = URL.createObjectURL(selectedFile);
-    setPreviewObjectUrl(objUrl);
-    return () => {
-      URL.revokeObjectURL(objUrl);
+  const showFeedback = (type: "success" | "error", message: string) => {
+    setFeedback({ type, message });
+    setTimeout(() => {
+      setFeedback((prev) => (prev?.message === message ? null : prev));
+    }, 6000);
+  };
+
+  // Statistik Ringkasan Komoditas
+  const stats = useMemo(() => {
+    return {
+      total: items.length,
+      pangan: items.filter((i) => i.komoditas === "Pangan").length,
+      kosmetik: items.filter((i) => i.komoditas === "Kosmetik").length,
+      obat: items.filter((i) => i.komoditas === "Obat").length,
+      tradisional: items.filter((i) => i.komoditas === "Obat Tradisional").length,
     };
-  }, [selectedFile]);
+  }, [items]);
 
-  // Buka Modal Tambah Edukasi Baru
-  const handleOpenCreateModal = () => {
+  // Filtered Items
+  const filteredItems = useMemo(() => {
+    return items.filter((item) => {
+      // 1. Filter Komoditas
+      if (filterKomoditas !== "semua" && item.komoditas !== filterKomoditas) {
+        return false;
+      }
+      // 2. Filter Status Publikasi
+      if (filterStatus === "aktif" && !item.isPublished) return false;
+      if (filterStatus === "nonaktif" && item.isPublished) return false;
+
+      // 3. Filter Search Query
+      if (searchQuery.trim()) {
+        const q = searchQuery.toLowerCase().trim();
+        const matchTitle = item.judul.toLowerCase().includes(q);
+        const matchDesc = item.deskripsi.toLowerCase().includes(q);
+        const matchKomoditas = item.komoditas.toLowerCase().includes(q);
+        if (!matchTitle && !matchDesc && !matchKomoditas) return false;
+      }
+
+      return true;
+    });
+  }, [items, filterKomoditas, filterStatus, searchQuery]);
+
+  // Handler Buka Modal Tambah
+  const handleOpenAddModal = () => {
     setEditingItem(null);
-    setJudul("");
-    setDeskripsi("");
-    setSelectedIcon("BookOpen");
-    setSelectedFile(null);
-    if (fileInputRef.current) fileInputRef.current.value = "";
-    setIsFormModalOpen(true);
+    setFormJudul("");
+    setFormKomoditas("Pangan");
+    setFormDeskripsi("");
+    setFormUrutan(items.length + 1);
+    setFormIsPublished(true);
+    setSelectedPdfFile(null);
+    setCustomCoverFile(null);
+    setGeneratedCoverBlob(null);
+    setPreviewCoverUrl("/assets-landingpage/layanan/1.jpg");
+    setCoverSource("existing");
+    if (pdfInputRef.current) pdfInputRef.current.value = "";
+    if (imageInputRef.current) imageInputRef.current.value = "";
+    setIsModalOpen(true);
   };
 
-  // Buka Modal Edit Edukasi
-  const handleOpenEditModal = (item: EdukasiItemData) => {
+  // Handler Buka Modal Edit
+  const handleOpenEditModal = (item: MateriEdukasiItemData) => {
     setEditingItem(item);
-    setJudul(item.judul);
-    setDeskripsi(item.deskripsi);
-    setSelectedIcon(item.icon || "ShieldCheck");
-    setSelectedFile(null);
-    if (fileInputRef.current) fileInputRef.current.value = "";
-    setIsFormModalOpen(true);
+    setFormJudul(item.judul);
+    setFormKomoditas(item.komoditas);
+    setFormDeskripsi(item.deskripsi);
+    setFormUrutan(item.urutan);
+    setFormIsPublished(item.isPublished);
+    setSelectedPdfFile(null);
+    setCustomCoverFile(null);
+    setGeneratedCoverBlob(null);
+    setPreviewCoverUrl(item.imageUrl || "/assets-landingpage/layanan/1.jpg");
+    setCoverSource("existing");
+    if (pdfInputRef.current) pdfInputRef.current.value = "";
+    if (imageInputRef.current) imageInputRef.current.value = "";
+    setIsModalOpen(true);
   };
 
-  const handleCloseFormModal = () => {
-    if (isPending) return;
-    setIsFormModalOpen(false);
-    setEditingItem(null);
-    setSelectedFile(null);
-  };
-
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0] || null;
+  // Handler Pemilihan File PDF & Ekstraksi Otomatis Halaman 1 ke Gambar
+  const handlePdfChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
     if (!file) return;
 
-    if (
-      !file.name.toLowerCase().endsWith(".pdf") &&
-      file.type !== "application/pdf"
-    ) {
-      setFeedback({
-        type: "error",
-        message: "Hanya berkas berformat PDF (.pdf) yang diperbolehkan.",
-      });
+    if (!file.name.toLowerCase().endsWith(".pdf") && file.type !== "application/pdf") {
+      showFeedback("error", "Berkas materi wajib berformat PDF (.pdf)");
       e.target.value = "";
       return;
     }
 
-    setSelectedFile(file);
+    setSelectedPdfFile(file);
+    setIsExtractingPdfCover(true);
+
+    try {
+      // Ekstraksi Halaman 1 PDF via Canvas
+      const result = await renderFirstPagePdfToBlob(file, 1.4);
+      setGeneratedCoverBlob(result.blob);
+      setPreviewCoverUrl(result.dataUrl);
+      setCoverSource("generated");
+      // Reset custom cover jika ada
+      setCustomCoverFile(null);
+      if (imageInputRef.current) imageInputRef.current.value = "";
+    } catch (err) {
+      console.warn("Gagal mengekstrak halaman 1 PDF secara otomatis:", err);
+      // Fallback tetap mengizinkan file PDF tanpa error fatal
+    } finally {
+      setIsExtractingPdfCover(false);
+    }
   };
 
-  // Submit Tambah Baru atau Edit
-  const handleSaveForm = (e: React.FormEvent) => {
-    e.preventDefault();
-    setFeedback(null);
+  // Handler Upload Gambar Cover Kustom Sendiri
+  const handleCustomImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
 
-    if (!editingItem && !selectedFile) {
-      setFeedback({
-        type: "error",
-        message: "Harap pilih berkas dokumen PDF (.pdf) untuk materi edukasi baru.",
-      });
+    if (!file.type.startsWith("image/")) {
+      showFeedback("error", "Harap pilih berkas gambar yang valid (JPG, PNG, atau WebP)");
+      e.target.value = "";
       return;
     }
 
-    startTransition(async () => {
+    setCustomCoverFile(file);
+    const objectUrl = URL.createObjectURL(file);
+    setPreviewCoverUrl(objectUrl);
+    setCoverSource("custom");
+  };
+
+  // Handler Simpan Data (Tambah atau Update)
+  const handleSaveForm = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!formJudul.trim()) {
+      showFeedback("error", "Judul materi edukasi wajib diisi.");
+      return;
+    }
+    if (!formDeskripsi.trim()) {
+      showFeedback("error", "Deskripsi materi wajib diisi.");
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
       const formData = new FormData();
       if (editingItem) {
         formData.append("id", String(editingItem.id));
       }
-      formData.append("judul", judul);
-      formData.append("deskripsi", deskripsi);
-      formData.append("icon", selectedIcon);
-      if (selectedFile) {
-        formData.append("pdfFile", selectedFile);
+      formData.append("judul", formJudul.trim());
+      formData.append("komoditas", formKomoditas);
+      formData.append("deskripsi", formDeskripsi.trim());
+      formData.append("urutan", String(formUrutan));
+      formData.append("isPublished", String(formIsPublished));
+
+      // Berkas PDF
+      if (selectedPdfFile) {
+        formData.append("pdfFile", selectedPdfFile);
+      }
+
+      // Berkas Cover Gambar (dari kustom upload atau hasil render halaman 1 PDF)
+      if (coverSource === "custom" && customCoverFile) {
+        formData.append("coverImage", customCoverFile);
+      } else if (coverSource === "generated" && generatedCoverBlob) {
+        const coverFile = new File([generatedCoverBlob], "pdf-cover.webp", {
+          type: "image/webp",
+        });
+        formData.append("coverImage", coverFile);
+      } else if (editingItem) {
+        formData.append("defaultCoverUrl", editingItem.imageUrl || "");
       }
 
       const res = editingItem
-        ? await updateEdukasiAction(formData)
-        : await createEdukasiAction(formData);
+        ? await updateMateriEdukasiAction(formData)
+        : await createMateriEdukasiAction(formData);
 
       if (res.success && res.data) {
-        const savedItem = res.data;
         if (editingItem) {
           setItems((prev) =>
-            prev.map((it) => (it.id === savedItem.id ? savedItem : it))
+            prev.map((i) => (i.id === res.data!.id ? res.data! : i))
           );
         } else {
-          setItems((prev) => [...prev, savedItem]);
+          setItems((prev) => [...prev, res.data!]);
         }
-        setIsFormModalOpen(false);
-        setEditingItem(null);
-        setSelectedFile(null);
-        setFeedback({
-          type: "success",
-          message:
-            res.message ||
-            "Data Kartu Edukasi berhasil disimpan dan diperbarui di Landing Page!",
-        });
+        showFeedback("success", res.message || "Materi edukasi berhasil disimpan.");
+        setIsModalOpen(false);
       } else {
-        setFeedback({
-          type: "error",
-          message: res.error || "Gagal menyimpan kartu edukasi.",
-        });
+        showFeedback("error", res.error || "Gagal menyimpan materi edukasi.");
       }
-    });
-  };
-
-  // Toggle Aktif / Nonaktif Kartu Edukasi
-  const handleToggleStatus = async (item: EdukasiItemData) => {
-    const nextStatus = !item.isPublished;
-    setTogglingId(item.id);
-    setItems((prev) =>
-      prev.map((it) =>
-        it.id === item.id ? { ...it, isPublished: nextStatus } : it
-      )
-    );
-
-    const res = await toggleEdukasiStatusAction(item.id, nextStatus);
-    if (res.success) {
-      setFeedback({
-        type: "success",
-        message: `Kartu edukasi "${item.judul}" ${
-          nextStatus ? "ditampilkan" : "disembunyikan"
-        } di Landing Page.`,
-      });
-    } else {
-      // Rollback
-      setItems((prev) =>
-        prev.map((it) =>
-          it.id === item.id ? { ...it, isPublished: item.isPublished } : it
-        )
-      );
-      setFeedback({
-        type: "error",
-        message: res.error || "Gagal mengubah status tampil kartu edukasi.",
-      });
+    } catch (err) {
+      console.error(err);
+      showFeedback("error", "Terjadi kesalahan saat menyimpan data materi.");
+    } finally {
+      setIsSubmitting(false);
     }
-    setTogglingId(null);
   };
 
-  // Konfirmasi Hapus Kartu Edukasi
-  const handleConfirmDelete = () => {
-    if (!itemToDelete) return;
-    const target = itemToDelete;
-
-    startTransition(async () => {
-      const res = await deleteEdukasiAction(target.id);
+  // Handler Hapus Materi
+  const handleDelete = async () => {
+    if (!deletingItem) return;
+    setIsDeleting(true);
+    try {
+      const res = await deleteMateriEdukasiAction(deletingItem.id);
       if (res.success) {
-        setItems((prev) => prev.filter((it) => it.id !== target.id));
-        setItemToDelete(null);
-        setFeedback({
-          type: "success",
-          message:
-            res.message || `Kartu edukasi "${target.judul}" berhasil dihapus.`,
-        });
+        setItems((prev) => prev.filter((i) => i.id !== deletingItem.id));
+        showFeedback("success", res.message || "Materi edukasi berhasil dihapus.");
+        setDeletingItem(null);
       } else {
-        setFeedback({
-          type: "error",
-          message: res.error || "Gagal menghapus kartu edukasi.",
-        });
+        showFeedback("error", res.error || "Gagal menghapus materi edukasi.");
       }
+    } catch {
+      showFeedback("error", "Terjadi kesalahan saat menghapus materi.");
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  // Handler Toggle Status Publikasi
+  const handleToggleStatus = (item: MateriEdukasiItemData) => {
+    setTogglingId(item.id);
+    startTransition(async () => {
+      const res = await toggleMateriEdukasiStatusAction(item.id);
+      if (res.success && res.data) {
+        setItems((prev) =>
+          prev.map((i) =>
+            i.id === item.id ? { ...i, isPublished: res.data!.isPublished } : i
+          )
+        );
+        showFeedback(
+          "success",
+          `Status publikasi materi "${item.judul}" berhasil diubah.`
+        );
+      } else {
+        showFeedback("error", res.error || "Gagal mengubah status publikasi.");
+      }
+      setTogglingId(null);
     });
   };
 
-  const ActiveFormIconComponent = getEdukasiIconComponent(selectedIcon);
-  const modalPreviewPdfUrl =
-    previewObjectUrl ||
-    editingItem?.pdfUrl ||
-    "/documents/materi-edukasi-bbpom.pdf";
-  const modalPreviewPdfFilename = selectedFile
-    ? selectedFile.name
-    : editingItem?.pdfFilename || "Materi-Edukasi-BBPOM.pdf";
+  // Handler Reset ke Data Default
+  const handleResetToDefault = async () => {
+    setIsResetting(true);
+    try {
+      const res = await resetToDefaultMateriEdukasiAction();
+      if (res.success && res.data) {
+        setItems(res.data);
+        showFeedback(
+          "success",
+          res.message || "Materi berhasil dikembalikan ke data bawaan."
+        );
+        setIsResetConfirmOpen(false);
+      } else {
+        showFeedback("error", res.error || "Gagal mereset materi ke default.");
+      }
+    } catch {
+      showFeedback("error", "Terjadi kesalahan saat mereset materi edukasi.");
+    } finally {
+      setIsResetting(false);
+    }
+  };
 
   return (
-    <div className="space-y-6 animate-fade-up">
-      {/* Feedback Toast Banner */}
+    <div className="space-y-6">
+      {/* 1. Header & Tombol Aksi Utama */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <div className="flex items-center gap-2">
+            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-orange-100 text-brand-orange dark:bg-orange-500/20 dark:text-orange-300">
+              <BookOpen className="w-3 h-3" />
+              Konten Edukasi Publik
+            </span>
+          </div>
+          <h1 className="text-xl sm:text-2xl font-extrabold text-[#0f2257] dark:text-white mt-1">
+            Pengelolaan Materi Edukasi
+          </h1>
+          <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-0.5">
+            Kelola panduan materi edukasi obat &amp; makanan yang tampil pada halaman publik{" "}
+            <a
+              href="/edukasi"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-[#1664e8] hover:underline font-bold inline-flex items-center gap-1"
+            >
+              /edukasi
+              <ExternalLink className="w-3 h-3" />
+            </a>
+          </p>
+        </div>
+
+        <div className="flex items-center gap-2.5 shrink-0">
+          <button
+            type="button"
+            onClick={() => setIsResetConfirmOpen(true)}
+            className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3.5 py-2.5 text-xs font-bold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700/60 shadow-2xs transition cursor-pointer"
+            title="Reset ke 12 materi bawaan resmi BPOM"
+          >
+            <RotateCcw className="w-3.5 h-3.5 text-amber-600" />
+            <span className="hidden sm:inline">Reset Default</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={handleOpenAddModal}
+            className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-[#ff8a1f] to-[#f26a0f] px-4 py-2.5 text-xs font-bold text-white shadow-cta hover:opacity-90 transition cursor-pointer"
+          >
+            <Plus className="w-4 h-4 stroke-[2.5]" />
+            <span>Tambah Materi Baru</span>
+          </button>
+        </div>
+      </div>
+
+      {/* Alert Feedback Notifikasi */}
       {feedback && (
         <div
-          className={`flex items-center justify-between p-4 rounded-2xl border text-xs sm:text-sm font-medium animate-fade-in ${
+          className={`flex items-center justify-between gap-3 p-4 rounded-2xl text-xs font-medium border animate-fade-in ${
             feedback.type === "success"
-              ? "bg-emerald-50 border-emerald-200 text-emerald-800 dark:bg-emerald-950/40 dark:border-emerald-800 dark:text-emerald-300"
-              : "bg-red-50 border-red-200 text-red-800 dark:bg-red-950/40 dark:border-red-800 dark:text-red-300"
+              ? "bg-emerald-50 text-emerald-800 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800"
+              : "bg-rose-50 text-rose-800 border-rose-200 dark:bg-rose-950/40 dark:text-rose-300 dark:border-rose-800"
           }`}
         >
           <div className="flex items-center gap-2.5">
             {feedback.type === "success" ? (
-              <Check className="w-4 h-4 shrink-0 text-emerald-600 dark:text-emerald-400" />
+              <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
             ) : (
-              <XCircle className="w-4 h-4 shrink-0 text-red-600 dark:text-red-400" />
+              <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
             )}
             <span>{feedback.message}</span>
           </div>
           <button
             type="button"
             onClick={() => setFeedback(null)}
-            className="text-xs font-bold opacity-60 hover:opacity-100 transition-opacity ml-4 cursor-pointer"
+            className="text-slate-400 hover:text-slate-600"
           >
-            Tutup
+            <X className="w-4 h-4" />
           </button>
         </div>
       )}
 
-      {/* Header Halaman + Tombol Tambah Edukasi Baru */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200/80 pb-5 dark:border-slate-800">
-        <div>
-          <div className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-brand-orange">
-            <BookOpen className="h-3.5 w-3.5" />
-            <span>Website Settings &bull; Konten Edukasi</span>
-          </div>
-          <h1 className="text-2xl font-black text-navy-900 dark:text-white font-brand mt-1">
-            Manajemen Kartu Edukasi (Artikel PDF)
-          </h1>
-          <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-            Tambah, ubah, atau hapus kartu artikel edukasi PDF di Landing Page. Tombol aksi pada kartu ini otomatis menggunakan <strong>&ldquo;Baca Artikel&rdquo;</strong>.
+      {/* 2. Kartu Ringkasan Statistik Komoditas */}
+      <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+        <div className="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 shadow-2xs">
+          <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+            Total Materi
+          </p>
+          <p className="text-xl sm:text-2xl font-black text-navy-900 dark:text-white mt-0.5">
+            {stats.total}
           </p>
         </div>
-
-        <button
-          onClick={handleOpenCreateModal}
-          type="button"
-          className="inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#ff7a1a] to-[#f26a0f] px-5 py-2.5 text-xs sm:text-sm font-bold text-white shadow-cta hover:brightness-110 active:scale-95 transition-all cursor-pointer shrink-0"
-        >
-          <Plus className="h-4 w-4 stroke-[2.5]" />
-          <span>Tambah Edukasi Baru</span>
-        </button>
-      </div>
-
-      {/* Info Banner Penyimpanan Lokal */}
-      {/* <div className="flex items-start gap-3 rounded-2xl bg-sky-50/80 dark:bg-sky-950/30 border border-sky-200/70 dark:border-sky-800/50 p-4 text-xs text-sky-900 dark:text-sky-200">
-        <Info className="h-4 w-4 text-sky-600 dark:text-sky-400 shrink-0 mt-0.5" />
-        <div className="space-y-0.5">
-          <p className="font-bold">
-            Penyimpanan PDF Lokal (<code className="font-mono">public/uploads/edukasi</code>) &bull; Hemat Database
+        <div className="p-4 rounded-2xl bg-emerald-50/50 dark:bg-emerald-950/20 border border-emerald-100 dark:border-emerald-900/40 shadow-2xs">
+          <p className="text-[11px] font-bold text-emerald-700 dark:text-emerald-300 uppercase tracking-wider">
+            Pangan
           </p>
-          <p className="text-[11px] text-sky-800/90 dark:text-sky-300/90 leading-relaxed">
-            Berkas PDF disimpan di folder lokal server dan tidak dimasukkan ke database. Apabila Anda mengedit kartu dan mengganti berkas PDF-nya (atau menghapus kartu), <strong>berkas PDF lama otomatis terhapus</strong> dari folder <code className="font-mono">/uploads/edukasi</code>. Tiga kartu lainnya (<em>Garda Ampera</em>, <em>Cek BPOM</em>, <em>Informasi Umum</em>) tetap tampil permanen (hardcode).
+          <p className="text-xl sm:text-2xl font-black text-emerald-800 dark:text-emerald-200 mt-0.5">
+            {stats.pangan}
           </p>
         </div>
-      </div> */}
-
-      {/* Daftar Kartu Edukasi yang Dikelola Admin */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {items.map((item) => {
-          const IconComp = getEdukasiIconComponent(item.icon);
-
-          return (
-            <div
-              key={item.id}
-              className={`rounded-3xl border bg-white dark:bg-slate-900 p-6 flex flex-col justify-between shadow-sm transition-all ${
-                item.isPublished
-                  ? "border-slate-200/80 dark:border-slate-800"
-                  : "border-slate-200/50 opacity-65 dark:border-slate-800/60"
-              }`}
-            >
-              <div>
-                {/* Baris Atas: Status Toggle & Tombol Edit / Hapus */}
-                <div className="flex items-center justify-between gap-2 pb-4 border-b border-slate-100 dark:border-slate-800">
-                  <div className="flex items-center gap-2">
-                    <button
-                      type="button"
-                      role="switch"
-                      disabled={togglingId === item.id}
-                      aria-checked={item.isPublished}
-                      onClick={() => handleToggleStatus(item)}
-                      className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none disabled:opacity-50 ${
-                        item.isPublished
-                          ? "bg-emerald-500"
-                          : "bg-slate-300 dark:bg-slate-700"
-                      }`}
-                      title={
-                        item.isPublished
-                          ? "Klik untuk menyembunyikan dari Landing Page"
-                          : "Klik untuk menampilkan di Landing Page"
-                      }
-                    >
-                      <span
-                        className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow-sm transition duration-200 ease-in-out ${
-                          item.isPublished ? "translate-x-4" : "translate-x-0"
-                        }`}
-                      />
-                    </button>
-                    <span
-                      className={`text-[11px] font-bold ${
-                        item.isPublished
-                          ? "text-emerald-600 dark:text-emerald-400"
-                          : "text-slate-400"
-                      }`}
-                    >
-                      {item.isPublished ? "Aktif di Beranda" : "Disembunyikan"}
-                    </span>
-                  </div>
-
-                  <div className="flex items-center gap-1.5">
-                    <button
-                      type="button"
-                      onClick={() => handleOpenEditModal(item)}
-                      className="inline-flex items-center gap-1 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-2.5 py-1.5 text-xs font-bold text-slate-700 dark:text-slate-200 hover:border-brand-orange hover:text-brand-orange transition-colors cursor-pointer"
-                      title="Edit Kartu Edukasi"
-                    >
-                      <Pencil className="h-3.5 w-3.5" />
-                      <span>Edit</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setItemToDelete(item)}
-                      className="inline-flex items-center justify-center h-8 w-8 rounded-xl border border-rose-200/80 dark:border-rose-900/50 bg-rose-50/70 dark:bg-rose-950/30 text-rose-600 dark:text-rose-400 hover:bg-rose-100 transition-colors cursor-pointer"
-                      title="Hapus Kartu Edukasi"
-                    >
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </button>
-                  </div>
-                </div>
-
-                {/* Visual Kartu Persis Seperti di Landing Page */}
-                <div
-                  onClick={() =>
-                    setPreviewPdfData({
-                      title: item.judul,
-                      pdfUrl: item.pdfUrl,
-                      filename: item.pdfFilename,
-                    })
-                  }
-                  className="mt-5 group rounded-2xl bg-slate-50/70 dark:bg-slate-800/40 border border-slate-100 dark:border-slate-800 p-6 flex flex-col items-center text-center hover:border-brand-orange/40 transition-all cursor-pointer"
-                >
-                  <div className="w-14 h-14 rounded-2xl bg-orange-50 dark:bg-orange-500/15 border border-orange-100/70 dark:border-orange-500/20 text-brand-orange dark:text-orange-400 flex items-center justify-center group-hover:bg-brand-orange group-hover:text-white transition-all duration-300 shadow-xs">
-                    <IconComp className="w-7 h-7 stroke-[1.9]" />
-                  </div>
-
-                  <h3 className="font-brand font-bold text-lg text-navy-900 dark:text-white mt-4 group-hover:text-brand-orange transition-colors">
-                    {item.judul}
-                  </h3>
-
-                  <div className="w-10 h-0.5 rounded-full bg-brand-orange/40 my-3 group-hover:w-14 group-hover:bg-brand-orange transition-all duration-300" />
-
-                  <p className="text-xs text-ink-soft dark:text-slate-400 leading-relaxed max-w-[220px]">
-                    {item.deskripsi}
-                  </p>
-
-                  <div className="mt-5 inline-flex items-center gap-1.5 text-xs font-bold text-brand-orange">
-                    <span>Baca Artikel</span>
-                    <ArrowRight className="w-3.5 h-3.5" />
-                  </div>
-                </div>
-              </div>
-
-              {/* Footer Info Berkas PDF */}
-              <div className="mt-4 pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between gap-2">
-                <div className="flex items-center gap-2 min-w-0">
-                  <FileText className="h-4 w-4 text-brand-orange shrink-0" />
-                  <span
-                    className="text-[11px] font-semibold text-slate-600 dark:text-slate-300 truncate"
-                    title={item.pdfFilename}
-                  >
-                    {item.pdfFilename}
-                  </span>
-                </div>
-                <button
-                  type="button"
-                  onClick={() =>
-                    setPreviewPdfData({
-                      title: item.judul,
-                      pdfUrl: item.pdfUrl,
-                      filename: item.pdfFilename,
-                    })
-                  }
-                  className="inline-flex items-center gap-1 text-[11px] font-bold text-brand-orange hover:underline shrink-0 cursor-pointer"
-                >
-                  <Eye className="h-3.5 w-3.5" />
-                  <span>Lihat PDF</span>
-                </button>
-              </div>
-            </div>
-          );
-        })}
-
-        {/* Card Shortcut Tambah Edukasi Baru */}
-        <button
-          type="button"
-          onClick={handleOpenCreateModal}
-          className="min-h-[320px] rounded-3xl border-2 border-dashed border-slate-300 dark:border-slate-700 hover:border-brand-orange dark:hover:border-brand-orange bg-slate-50/50 dark:bg-slate-900/40 hover:bg-orange-50/30 dark:hover:bg-orange-950/10 p-6 flex flex-col items-center justify-center text-center gap-3 transition-all group cursor-pointer"
-        >
-          <div className="w-14 h-14 rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-400 group-hover:text-brand-orange group-hover:border-brand-orange/40 flex items-center justify-center shadow-xs transition-all group-hover:scale-110">
-            <Plus className="w-7 h-7" />
-          </div>
-          <div>
-            <p className="text-sm font-bold text-navy-900 dark:text-white group-hover:text-brand-orange transition-colors">
-              + Tambah Kartu Edukasi Baru
-            </p>
-            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 max-w-[220px]">
-              Buat kartu edukasi baru dengan judul, deskripsi, pilihan icon, dan dokumen PDF.
-            </p>
-          </div>
-        </button>
+        <div className="p-4 rounded-2xl bg-pink-50/50 dark:bg-pink-950/20 border border-pink-100 dark:border-pink-900/40 shadow-2xs">
+          <p className="text-[11px] font-bold text-pink-700 dark:text-pink-300 uppercase tracking-wider">
+            Kosmetik
+          </p>
+          <p className="text-xl sm:text-2xl font-black text-pink-800 dark:text-pink-200 mt-0.5">
+            {stats.kosmetik}
+          </p>
+        </div>
+        <div className="p-4 rounded-2xl bg-blue-50/50 dark:bg-blue-950/20 border border-blue-100 dark:border-blue-900/40 shadow-2xs">
+          <p className="text-[11px] font-bold text-blue-700 dark:text-blue-300 uppercase tracking-wider">
+            Obat
+          </p>
+          <p className="text-xl sm:text-2xl font-black text-blue-800 dark:text-blue-200 mt-0.5">
+            {stats.obat}
+          </p>
+        </div>
+        <div className="col-span-2 sm:col-span-1 p-4 rounded-2xl bg-amber-50/50 dark:bg-amber-950/20 border border-amber-100 dark:border-amber-900/40 shadow-2xs">
+          <p className="text-[11px] font-bold text-amber-800 dark:text-amber-300 uppercase tracking-wider">
+            Obat Tradisional
+          </p>
+          <p className="text-xl sm:text-2xl font-black text-amber-900 dark:text-amber-200 mt-0.5">
+            {stats.tradisional}
+          </p>
+        </div>
       </div>
 
-      {/* ========================================================= */}
-      {/* MODAL TAMBAH / EDIT KARTU EDUKASI (DI ATAS SEMUA ELEMEN)  */}
-      {/* ========================================================= */}
-      {mounted &&
-        isFormModalOpen &&
-        createPortal(
-          <div className="fixed inset-0 z-[9999] flex items-center justify-center p-3 sm:p-5 bg-navy-950/75 backdrop-blur-sm animate-fade-in">
-            <div className="relative w-full max-w-4xl max-h-[92vh] rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-2xl flex flex-col overflow-hidden">
-            {/* Header Modal */}
-            <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 dark:border-slate-800 shrink-0">
-              <div className="flex items-center gap-2.5">
-                <div className="w-9 h-9 rounded-xl bg-orange-50 dark:bg-orange-500/15 text-brand-orange flex items-center justify-center">
-                  <BookOpen className="w-5 h-5" />
-                </div>
-                <div>
-                  <h2 className="text-base font-extrabold text-navy-900 dark:text-white font-brand">
-                    {editingItem
-                      ? `Edit Kartu Edukasi: ${editingItem.judul}`
-                      : "Tambah Kartu Edukasi Baru"}
-                  </h2>
-                  <p className="text-xs text-slate-500 dark:text-slate-400">
-                    Isi judul, deskripsi, pilih icon kartu, dan unggah dokumen PDF materi edukasi.
-                  </p>
-                </div>
-              </div>
-
+      {/* 3. Toolbar Pencarian & Filter Tab Komoditas */}
+      <div className="rounded-2xl border border-slate-200/90 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 shadow-2xs space-y-3">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          {/* Search Bar */}
+          <div className="relative flex-1 max-w-md">
+            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Cari judul, deskripsi, atau komoditas..."
+              className="w-full pl-9 pr-8 py-2 rounded-xl border border-slate-200 bg-slate-50/60 dark:bg-slate-800 dark:border-slate-700 text-xs font-medium text-slate-800 dark:text-slate-100 placeholder:text-slate-400 focus:outline-hidden focus:border-brand-orange"
+            />
+            {searchQuery && (
               <button
                 type="button"
-                onClick={handleCloseFormModal}
-                className="rounded-xl p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-slate-800 dark:hover:text-white transition-colors cursor-pointer"
+                onClick={() => setSearchQuery("")}
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-slate-600"
               >
-                <X className="h-5 w-5" />
+                <X className="w-3.5 h-3.5" />
+              </button>
+            )}
+          </div>
+
+          {/* Filter Status Publikasi Tabs */}
+          <div className="flex items-center gap-1.5 shrink-0 self-end sm:self-center">
+            <span className="text-[11px] font-semibold text-slate-400 mr-1 hidden sm:inline">
+              Status:
+            </span>
+            {(["semua", "aktif", "nonaktif"] as const).map((st) => (
+              <button
+                key={st}
+                type="button"
+                onClick={() => setFilterStatus(st)}
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold capitalize transition cursor-pointer ${
+                  filterStatus === st
+                    ? "bg-[#0f2257] dark:bg-blue-600 text-white shadow-2xs"
+                    : "text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
+                }`}
+              >
+                {st}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Filter Komoditas Pills */}
+        <div className="flex items-center gap-2 overflow-x-auto pt-2 border-t border-slate-100 dark:border-slate-800/80">
+          <button
+            type="button"
+            onClick={() => setFilterKomoditas("semua")}
+            className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition shrink-0 cursor-pointer ${
+              filterKomoditas === "semua"
+                ? "bg-brand-orange text-white shadow-2xs"
+                : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200"
+            }`}
+          >
+            Semua Komoditas ({items.length})
+          </button>
+
+          {KOMODITAS_OPTIONS.map((kom) => {
+            const count = items.filter((i) => i.komoditas === kom.key).length;
+            const isSelected = filterKomoditas === kom.key;
+            return (
+              <button
+                key={kom.key}
+                type="button"
+                onClick={() => setFilterKomoditas(kom.key)}
+                className={`px-3.5 py-1.5 rounded-full text-xs font-bold border transition shrink-0 cursor-pointer ${
+                  isSelected
+                    ? "bg-[#0f2257] dark:bg-blue-600 text-white border-transparent shadow-2xs"
+                    : `${kom.badgeClass} hover:opacity-90`
+                }`}
+              >
+                {kom.label} ({count})
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* 4. Daftar Kartu Materi Edukasi */}
+      <div className="space-y-3">
+        {filteredItems.length === 0 ? (
+          <div className="rounded-3xl border border-dashed border-slate-300 dark:border-slate-800 bg-white dark:bg-slate-900/50 p-12 text-center">
+            <div className="w-12 h-12 rounded-2xl bg-orange-50 text-brand-orange flex items-center justify-center mx-auto mb-3">
+              <BookOpen className="w-6 h-6" />
+            </div>
+            <h3 className="text-sm font-bold text-slate-800 dark:text-white">
+              Tidak Ada Materi Edukasi yang Cocok
+            </h3>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+              Coba sesuaikan kata kunci pencarian atau ubah filter komoditas.
+            </p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {filteredItems.map((item) => {
+              const badgeOpt =
+                KOMODITAS_OPTIONS.find((k) => k.key === item.komoditas) ||
+                KOMODITAS_OPTIONS[0];
+
+              return (
+                <div
+                  key={item.id}
+                  className="rounded-2xl border border-slate-200/90 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 sm:p-5 shadow-2xs flex flex-col justify-between hover:border-brand-orange/40 transition"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    {/* Sisi Kiri: Badge, Judul, Deskripsi */}
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2 mb-2">
+                        <span
+                          className={`px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider border ${badgeOpt.badgeClass}`}
+                        >
+                          {item.komoditas}
+                        </span>
+                        <span className="text-[11px] font-bold text-slate-400">
+                          Urutan #{item.urutan}
+                        </span>
+                      </div>
+
+                      <h3 className="text-sm sm:text-base font-bold text-navy-900 dark:text-white leading-snug line-clamp-2">
+                        {item.judul}
+                      </h3>
+
+                      <p className="text-xs text-slate-500 dark:text-slate-400 mt-1.5 leading-relaxed line-clamp-2">
+                        {item.deskripsi}
+                      </p>
+                    </div>
+
+                    {/* Sisi Kanan: Thumbnail Cover Gambar */}
+                    <div className="relative w-24 h-24 sm:w-28 sm:h-28 rounded-xl sm:rounded-tl-3xl overflow-hidden shrink-0 bg-slate-100 dark:bg-slate-800 border border-slate-100 dark:border-slate-700">
+                      <Image
+                        src={item.imageUrl || "/assets-landingpage/layanan/1.jpg"}
+                        alt={item.judul}
+                        fill
+                        sizes="(max-width: 640px) 96px, 112px"
+                        className="object-cover object-center"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Bagian Bawah: Aksi, Dokumen PDF & Switch Publikasi */}
+                  <div className="mt-4 pt-3 border-t border-slate-100 dark:border-slate-800 flex flex-wrap items-center justify-between gap-2">
+                    {/* Status PDF & Pratinjau */}
+                    <div className="flex items-center gap-2">
+                      {item.pdfUrl ? (
+                        <button
+                          type="button"
+                          onClick={() => setPreviewPdfItem(item)}
+                          className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-blue-50 text-blue-700 dark:bg-blue-950/40 dark:text-blue-300 text-[11px] font-bold hover:bg-blue-100 transition cursor-pointer"
+                        >
+                          <FileText className="w-3.5 h-3.5" />
+                          <span>Pratinjau PDF</span>
+                        </button>
+                      ) : (
+                        <span className="text-[11px] text-slate-400 italic">
+                          Belum ada PDF
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Switch & Tombol Aksi */}
+                    <div className="flex items-center gap-2">
+                      {/* Toggle Publikasi */}
+                      <button
+                        type="button"
+                        disabled={togglingId === item.id}
+                        onClick={() => handleToggleStatus(item)}
+                        className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                          item.isPublished
+                            ? "bg-emerald-500"
+                            : "bg-slate-300 dark:bg-slate-700"
+                        }`}
+                        title={
+                          item.isPublished
+                            ? "Klik untuk menonaktifkan"
+                            : "Klik untuk mempublikasikan"
+                        }
+                      >
+                        <span
+                          className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-md ring-0 transition duration-200 ease-in-out ${
+                            item.isPublished ? "translate-x-5" : "translate-x-0"
+                          }`}
+                        />
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => handleOpenEditModal(item)}
+                        className="p-2 rounded-xl text-slate-500 hover:text-[#1664e8] hover:bg-blue-50 dark:hover:bg-slate-800 transition cursor-pointer"
+                        title="Edit Materi"
+                      >
+                        <Edit2 className="w-4 h-4" />
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => setDeletingItem(item)}
+                        className="p-2 rounded-xl text-slate-500 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-slate-800 transition cursor-pointer"
+                        title="Hapus Materi"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
+      {/* ========================================================= */}
+      {/* 5. MODAL FORM TAMBAH / EDIT (createPortal + z-[9999])     */}
+      {/* ========================================================= */}
+      {mounted && isModalOpen && createPortal(
+        <div
+          role="dialog"
+          aria-modal="true"
+          className="fixed inset-0 z-[9999] flex items-center justify-center p-4 sm:p-6 overflow-y-auto"
+        >
+          {/* Fullscreen Backdrop */}
+          <div
+            className="fixed inset-0 bg-slate-950/70 backdrop-blur-sm transition-opacity animate-fade-in"
+            onClick={() => {
+              if (!isSubmitting) setIsModalOpen(false);
+            }}
+          />
+
+          {/* Modal Container */}
+          <div className="relative w-full max-w-xl rounded-3xl border border-slate-200 dark:border-slate-800 bg-white p-6 sm:p-7 shadow-2xl dark:bg-slate-900 z-10 my-auto animate-fade-up max-h-[92vh] overflow-y-auto">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3.5 dark:border-slate-800">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-orange-50 text-brand-orange flex items-center justify-center">
+                  {editingItem ? <Edit2 className="w-5 h-5" /> : <Plus className="w-5 h-5 stroke-[2.5]" />}
+                </div>
+                <div>
+                  <h3 className="text-base sm:text-lg font-bold text-[#0f2257] dark:text-white">
+                    {editingItem ? "Edit Materi Edukasi" : "Tambah Materi Edukasi Baru"}
+                  </h3>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">
+                    {editingItem
+                      ? `Mengubah materi ID #${editingItem.id}`
+                      : "Materi baru akan tampil pada rute /edukasi"}
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsModalOpen(false)}
+                disabled={isSubmitting}
+                className="p-1 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+              >
+                <X className="w-5 h-5" />
               </button>
             </div>
 
-            {/* Body Modal */}
-            <form
-              onSubmit={handleSaveForm}
-              className="flex-1 overflow-y-auto p-6 grid grid-cols-1 lg:grid-cols-12 gap-6 items-start"
-            >
-              {/* Kolom Kiri: Input Form (7 Kolom) */}
-              <div className="lg:col-span-7 space-y-4">
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
-                    Judul Kartu Edukasi *
-                  </label>
-                  <input
-                    type="text"
-                    value={judul}
-                    onChange={(e) => setJudul(e.target.value)}
-                    required
-                    placeholder="Contoh: Ketersediaan Farmasi / Keamanan Pangan"
-                    className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-xs sm:text-sm font-bold text-navy-900 focus:border-brand-orange focus:bg-white focus:outline-none dark:border-slate-700 dark:bg-slate-800 dark:text-white"
-                  />
-                </div>
+            <form onSubmit={handleSaveForm} className="mt-5 space-y-4">
+              {/* Judul Materi */}
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-200 mb-1">
+                  Judul Materi Edukasi <span className="text-rose-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={formJudul}
+                  onChange={(e) => setFormJudul(e.target.value)}
+                  placeholder="Contoh: Kenali Bahaya Formalin dan Boraks pada Pangan"
+                  className="w-full rounded-xl border border-slate-200 bg-slate-50/60 px-3.5 py-2.5 text-xs font-medium text-slate-800 focus:border-brand-orange focus:bg-white focus:outline-hidden dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                />
+              </div>
 
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
-                    Deskripsi Singkat Kartu *
-                  </label>
-                  <textarea
-                    rows={3}
-                    value={deskripsi}
-                    onChange={(e) => setDeskripsi(e.target.value)}
-                    required
-                    placeholder="Contoh: Baca informasi dan wawasan edukatif seputar keamanan obat & pangan."
-                    className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-xs sm:text-sm text-slate-900 focus:border-brand-orange focus:bg-white focus:outline-none dark:border-slate-700 dark:bg-slate-800 dark:text-white leading-relaxed"
-                  />
-                </div>
-
-                {/* Pilihan Icon Kartu */}
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-2">
-                    Pilih Icon Kartu *
-                  </label>
-                  <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
-                    {EDUKASI_ICON_OPTIONS.map((opt) => {
-                      const IconComp = opt.icon;
-                      const isSelected = selectedIcon === opt.name;
-                      return (
-                        <button
-                          key={opt.name}
-                          type="button"
-                          onClick={() => setSelectedIcon(opt.name)}
-                          className={`flex flex-col items-center justify-center gap-1 p-2.5 rounded-xl border text-center transition-all cursor-pointer ${
-                            isSelected
-                              ? "border-brand-orange bg-orange-50 text-brand-orange ring-2 ring-brand-orange/20 dark:bg-orange-500/15 dark:border-orange-400 dark:text-orange-400"
-                              : "border-slate-200 bg-slate-50/70 text-slate-600 hover:bg-white dark:border-slate-700 dark:bg-slate-800/60 dark:text-slate-300"
-                          }`}
-                        >
-                          <IconComp className="w-4 h-4 stroke-[1.9]" />
-                          <span className="text-[10px] font-bold leading-tight">
-                            {opt.label}
-                          </span>
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-
-                {/* Upload File PDF */}
-                <div className="space-y-2.5 pt-1">
-                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300">
-                    Unggah Dokumen PDF {editingItem ? "(Opsional jika tidak ganti file)" : "*"}
-                  </label>
-
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    accept="application/pdf,.pdf"
-                    onChange={handleFileChange}
-                    className="hidden"
-                    id="modal-edukasi-pdf-input"
-                  />
-
-                  <div className="flex flex-wrap items-center gap-2.5">
-                    <label
-                      htmlFor="modal-edukasi-pdf-input"
-                      className="inline-flex items-center gap-2 rounded-xl border-2 border-dashed border-brand-orange/60 bg-orange-50/50 hover:bg-orange-50 px-4 py-2.5 text-xs font-bold text-brand-orange transition-all cursor-pointer dark:border-orange-500/40 dark:bg-orange-500/10 dark:text-orange-400"
-                    >
-                      <Upload className="h-4 w-4" />
-                      <span>
-                        {selectedFile
-                          ? "Ganti Pilihan File PDF"
-                          : editingItem
-                          ? "Ganti Berkas PDF (.pdf)"
-                          : "Pilih Berkas PDF (.pdf)"}
-                      </span>
-                    </label>
-
-                    {(selectedFile || editingItem) && (
+              {/* Pilihan Komoditas */}
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-200 mb-1.5">
+                  Kategori Komoditas <span className="text-rose-500">*</span>
+                </label>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                  {KOMODITAS_OPTIONS.map((kom) => {
+                    const isSelected = formKomoditas === kom.key;
+                    return (
                       <button
+                        key={kom.key}
                         type="button"
-                        onClick={() =>
-                          setPreviewPdfData({
-                            title: judul || editingItem?.judul || "Pratinjau Materi Edukasi",
-                            pdfUrl: modalPreviewPdfUrl,
-                            filename: modalPreviewPdfFilename,
-                          })
-                        }
-                        className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2.5 text-xs font-bold text-slate-700 dark:text-slate-200 hover:border-brand-orange hover:text-brand-orange transition-colors cursor-pointer"
+                        onClick={() => setFormKomoditas(kom.key)}
+                        className={`p-2.5 rounded-xl border text-center text-xs font-bold transition cursor-pointer ${
+                          isSelected
+                            ? "border-brand-orange bg-orange-50 text-brand-orange-700 dark:bg-orange-500/20 dark:text-orange-300 shadow-2xs"
+                            : "border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300"
+                        }`}
                       >
-                        <Eye className="h-3.5 w-3.5" />
-                        <span>Uji Pratinjau PDF</span>
+                        {kom.label}
                       </button>
-                    )}
-                  </div>
+                    );
+                  })}
+                </div>
+              </div>
 
-                  {selectedFile ? (
-                    <p className="text-xs font-semibold text-emerald-600 dark:text-emerald-400">
-                      ✓ File dipilih: {selectedFile.name} ({(selectedFile.size / 1024).toFixed(1)} KB)
-                      {editingItem && " — File PDF lama akan otomatis dihapus saat disimpan."}
-                    </p>
-                  ) : editingItem ? (
-                    <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                      File saat ini: <strong className="text-slate-700 dark:text-slate-200">{editingItem.pdfFilename}</strong>
-                    </p>
+              {/* Upload Berkas Dokumen PDF */}
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-200 mb-1">
+                  Berkas Dokumen PDF Materi
+                </label>
+                <div className="rounded-2xl border-2 border-dashed border-slate-200 dark:border-slate-700 p-4 bg-slate-50/50 dark:bg-slate-800/40 text-center">
+                  <input
+                    ref={pdfInputRef}
+                    type="file"
+                    accept=".pdf,application/pdf"
+                    onChange={handlePdfChange}
+                    className="hidden"
+                    id="materi-pdf-input"
+                  />
+                  <label
+                    htmlFor="materi-pdf-input"
+                    className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-700 dark:text-slate-200 hover:border-brand-orange hover:text-brand-orange transition cursor-pointer shadow-2xs"
+                  >
+                    <Upload className="w-4 h-4" />
+                    <span>{selectedPdfFile ? "Ganti File PDF" : "Pilih File PDF Materi"}</span>
+                  </label>
+
+                  {selectedPdfFile ? (
+                    <div className="mt-2 text-xs text-slate-600 dark:text-slate-300">
+                      📄 Terpilih: <strong>{selectedPdfFile.name}</strong> ({(selectedPdfFile.size / (1024 * 1024)).toFixed(2)} MB)
+                    </div>
+                  ) : editingItem?.pdfFilename ? (
+                    <div className="mt-2 text-xs text-slate-500 dark:text-slate-400">
+                      Berkas saat ini: <strong>{editingItem.pdfFilename}</strong>
+                    </div>
                   ) : (
-                    <p className="text-[11px] text-slate-400">
-                      Berkas akan disimpan ke <code className="font-mono">/uploads/edukasi</code>.
+                    <p className="mt-1.5 text-[11px] text-slate-400">
+                      Unggah dokumen panduan materi PDF (Maksimal 15 MB).
                     </p>
+                  )}
+
+                  {isExtractingPdfCover && (
+                    <div className="mt-2.5 inline-flex items-center gap-2 text-xs font-bold text-brand-orange animate-pulse">
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      <span>Sedang mengekstrak Halaman 1 PDF menjadi Cover...</span>
+                    </div>
                   )}
                 </div>
               </div>
 
-              {/* Kolom Kanan: Live Preview Kartu (5 Kolom) */}
-              <div className="lg:col-span-5 flex flex-col items-center">
-                <span className="text-xs font-bold text-slate-500 dark:text-slate-400 mb-2">
-                  Pratinjau Tampilan Kartu
-                </span>
-                <div className="w-full rounded-3xl bg-slate-100/80 dark:bg-slate-950/60 p-6 border border-slate-200/80 dark:border-slate-800 flex flex-col items-center">
-                  <div className="w-full max-w-[260px] rounded-3xl bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 p-6 flex flex-col items-center text-center shadow-md">
-                    <div className="w-14 h-14 rounded-2xl bg-orange-50 dark:bg-orange-500/15 border border-orange-100/70 dark:border-orange-500/20 text-brand-orange dark:text-orange-400 flex items-center justify-center">
-                      <ActiveFormIconComponent className="w-7 h-7 stroke-[1.9]" />
-                    </div>
-                    <h3 className="font-brand font-bold text-lg text-navy-900 dark:text-white mt-4">
-                      {judul || "Judul Edukasi"}
-                    </h3>
-                    <div className="w-10 h-0.5 rounded-full bg-brand-orange/40 my-3" />
-                    <p className="text-xs text-ink-soft dark:text-slate-400 leading-relaxed max-w-[210px]">
-                      {deskripsi || "Deskripsi singkat kartu edukasi akan tampil di sini."}
+              {/* Bagian Pratinjau & Pengaturan Cover Thumbnail */}
+              <div className="rounded-2xl border border-slate-200 dark:border-slate-800 p-4 bg-slate-50/70 dark:bg-slate-800/50">
+                <div className="flex items-center justify-between mb-2">
+                  <label className="text-xs font-bold text-slate-700 dark:text-slate-200 flex items-center gap-1.5">
+                    <ImageIcon className="w-3.5 h-3.5 text-brand-orange" />
+                    Cover Thumbnail Kartu
+                  </label>
+
+                  {coverSource === "generated" && (
+                    <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/50 px-2 py-0.5 rounded-full">
+                      <Check className="w-3 h-3" />
+                      Otomatis dari Halaman 1 PDF
+                    </span>
+                  )}
+                  {coverSource === "custom" && (
+                    <span className="inline-flex items-center gap-1 text-[10px] font-bold text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/50 px-2 py-0.5 rounded-full">
+                      <Sparkles className="w-3 h-3" />
+                      Gambar Kustom
+                    </span>
+                  )}
+                </div>
+
+                <div className="flex items-start gap-4">
+                  {/* Pratinjau Gambar Cover */}
+                  <div className="relative w-28 h-28 rounded-xl sm:rounded-tl-3xl overflow-hidden shrink-0 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 shadow-2xs">
+                    {previewCoverUrl ? (
+                      <Image
+                        src={previewCoverUrl}
+                        alt="Preview Cover"
+                        fill
+                        className="object-cover object-center"
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-slate-400">
+                        <ImageIcon className="w-8 h-8 opacity-40" />
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Tombol Opsi Cover */}
+                  <div className="flex-1 space-y-2">
+                    <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed">
+                      Thumbnail cover kartu akan otomatis diambil dari <strong>Halaman 1 PDF</strong> saat Anda memilih berkas PDF. Anda juga bisa mengunggah gambar sendiri di bawah ini jika diinginkan.
                     </p>
-                    <div className="mt-5 inline-flex items-center gap-1.5 text-xs font-bold text-brand-orange">
-                      <span>Baca Artikel</span>
-                      <ArrowRight className="w-3.5 h-3.5" />
-                    </div>
+
+                    <input
+                      ref={imageInputRef}
+                      type="file"
+                      accept="image/*"
+                      onChange={handleCustomImageChange}
+                      className="hidden"
+                      id="custom-cover-input"
+                    />
+
+                    <label
+                      htmlFor="custom-cover-input"
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs font-semibold text-slate-700 dark:text-slate-200 hover:border-brand-orange hover:text-brand-orange transition cursor-pointer shadow-2xs"
+                    >
+                      <Upload className="w-3.5 h-3.5" />
+                      <span>Ganti dengan Gambar Sendiri</span>
+                    </label>
                   </div>
                 </div>
               </div>
 
-              {/* Footer Tombol Simpan */}
-              <div className="lg:col-span-12 flex items-center justify-end gap-3 pt-4 border-t border-slate-100 dark:border-slate-800">
+              {/* Deskripsi Singkat */}
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-200 mb-1">
+                  Deskripsi Singkat <span className="text-rose-500">*</span>
+                </label>
+                <textarea
+                  required
+                  rows={3}
+                  value={formDeskripsi}
+                  onChange={(e) => setFormDeskripsi(e.target.value)}
+                  placeholder="Ringkasan penjelasan mengenai materi ini (akan tampil pada kartu)..."
+                  className="w-full rounded-xl border border-slate-200 bg-slate-50/60 px-3.5 py-2.5 text-xs font-medium text-slate-800 focus:border-brand-orange focus:bg-white focus:outline-hidden dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                />
+              </div>
+
+              {/* Urutan & Status Publikasi */}
+              <div className="grid grid-cols-2 gap-4 pt-2 border-t border-slate-100 dark:border-slate-800">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-200 mb-1">
+                    Nomor Urut Tampil
+                  </label>
+                  <input
+                    type="number"
+                    min={1}
+                    value={formUrutan}
+                    onChange={(e) => setFormUrutan(parseInt(e.target.value) || 1)}
+                    className="w-full rounded-xl border border-slate-200 bg-slate-50/60 px-3.5 py-2 text-xs font-medium text-slate-800 focus:border-brand-orange focus:bg-white focus:outline-hidden dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                  />
+                </div>
+
+                <div className="flex flex-col justify-end">
+                  <div className="flex items-center justify-between pb-1">
+                    <span className="text-xs font-bold text-slate-700 dark:text-slate-200">
+                      Status Publikasi
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setFormIsPublished(!formIsPublished)}
+                      className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                        formIsPublished ? "bg-emerald-500" : "bg-slate-300 dark:bg-slate-700"
+                      }`}
+                    >
+                      <span
+                        className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-md ring-0 transition duration-200 ease-in-out ${
+                          formIsPublished ? "translate-x-5" : "translate-x-0"
+                        }`}
+                      />
+                    </button>
+                  </div>
+                  <span className="text-[10px] text-slate-400">
+                    {formIsPublished ? "Tampil di website /edukasi" : "Disimpan sebagai draft"}
+                  </span>
+                </div>
+              </div>
+
+              {/* Tombol Simpan & Batal */}
+              <div className="pt-3 border-t border-slate-100 dark:border-slate-800 flex justify-end gap-2.5">
                 <button
                   type="button"
-                  onClick={handleCloseFormModal}
-                  disabled={isPending}
-                  className="rounded-xl border border-slate-200 dark:border-slate-700 px-4 py-2.5 text-xs font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+                  disabled={isSubmitting}
+                  onClick={() => setIsModalOpen(false)}
+                  className="rounded-xl px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800 transition cursor-pointer"
                 >
                   Batal
                 </button>
                 <button
                   type="submit"
-                  disabled={isPending}
-                  className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-[#ff7a1a] to-[#f26a0f] px-5 py-2.5 text-xs font-bold text-white shadow-cta hover:brightness-110 transition-all disabled:opacity-50 cursor-pointer"
+                  disabled={isSubmitting || isExtractingPdfCover}
+                  className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-[#ff8a1f] to-[#f26a0f] px-5 py-2 text-xs font-bold text-white shadow-cta hover:opacity-90 disabled:opacity-50 transition cursor-pointer"
                 >
-                  {isPending ? (
+                  {isSubmitting ? (
                     <>
-                      <Loader2 className="h-4 w-4 animate-spin" />
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
                       <span>Menyimpan...</span>
                     </>
                   ) : (
-                    <>
-                      <Save className="h-4 w-4" />
-                      <span>
-                        {editingItem ? "Simpan Perubahan" : "Simpan Edukasi Baru"}
-                      </span>
-                    </>
+                    <span>{editingItem ? "Simpan Perubahan" : "Tambahkan Materi"}</span>
                   )}
                 </button>
               </div>
@@ -739,73 +996,116 @@ export function EdukasiSettingsForm({ initialItems }: EdukasiSettingsFormProps) 
       )}
 
       {/* ========================================================= */}
-      {/* MODAL KONFIRMASI HAPUS (DI ATAS SEMUA ELEMEN)             */}
+      {/* 6. MODAL KONFIRMASI HAPUS (createPortal + z-[9999])       */}
       {/* ========================================================= */}
-      {mounted &&
-        itemToDelete &&
-        createPortal(
-          <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-navy-950/75 backdrop-blur-sm animate-fade-in">
-            <div className="w-full max-w-md rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-6 shadow-2xl space-y-4">
-              <div className="flex items-center gap-3">
-                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-rose-100 dark:bg-rose-950/60 text-rose-600 dark:text-rose-400">
-                  <AlertTriangle className="h-6 w-6" />
-                </div>
-                <div>
-                  <h3 className="text-base font-extrabold text-navy-900 dark:text-white">
-                    Hapus Kartu Edukasi?
-                  </h3>
-                  <p className="text-xs text-slate-500 dark:text-slate-400">
-                    Kartu <strong>&ldquo;{itemToDelete.judul}&rdquo;</strong> beserta berkas PDF-nya di <code className="font-mono">/uploads/edukasi</code> akan dihapus permanen.
-                  </p>
-                </div>
-              </div>
+      {mounted && deletingItem && createPortal(
+        <div
+          role="dialog"
+          aria-modal="true"
+          className="fixed inset-0 z-[9999] flex items-center justify-center p-4 sm:p-6 overflow-y-auto"
+        >
+          <div
+            className="fixed inset-0 bg-slate-950/70 backdrop-blur-sm transition-opacity animate-fade-in"
+            onClick={() => {
+              if (!isDeleting) setDeletingItem(null);
+            }}
+          />
 
-              <div className="flex items-center justify-end gap-2.5 pt-2">
-                <button
-                  type="button"
-                  disabled={isPending}
-                  onClick={() => setItemToDelete(null)}
-                  className="rounded-xl border border-slate-200 dark:border-slate-700 px-4 py-2 text-xs font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-100 cursor-pointer"
-                >
-                  Batal
-                </button>
-                <button
-                  type="button"
-                  disabled={isPending}
-                  onClick={handleConfirmDelete}
-                  className="inline-flex items-center gap-1.5 rounded-xl bg-rose-600 hover:bg-rose-700 px-4 py-2 text-xs font-bold text-white shadow-sm disabled:opacity-50 cursor-pointer"
-                >
-                  {isPending ? (
-                    <>
-                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                      <span>Menghapus...</span>
-                    </>
-                  ) : (
-                    <>
-                      <Trash2 className="h-3.5 w-3.5" />
-                      <span>Ya, Hapus</span>
-                    </>
-                  )}
-                </button>
-              </div>
+          <div className="relative w-full max-w-sm rounded-3xl border border-slate-200 dark:border-slate-800 bg-white p-6 shadow-2xl dark:bg-slate-900 text-center z-10 my-auto animate-fade-up">
+            <div className="w-12 h-12 rounded-2xl bg-rose-50 text-rose-600 mx-auto flex items-center justify-center mb-3">
+              <Trash2 className="w-6 h-6" />
             </div>
-          </div>,
-          document.body
-        )}
+            <h3 className="text-base font-bold text-slate-900 dark:text-white">
+              Hapus Materi Edukasi?
+            </h3>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1.5 leading-relaxed">
+              Apakah Anda yakin ingin menghapus materi &quot;{deletingItem.judul}&quot;? Berkas gambar dan PDF yang terkait juga akan dihapus.
+            </p>
+            <div className="mt-5 flex items-center justify-center gap-2.5">
+              <button
+                type="button"
+                disabled={isDeleting}
+                onClick={() => setDeletingItem(null)}
+                className="rounded-xl px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800 transition cursor-pointer"
+              >
+                Batal
+              </button>
+              <button
+                type="button"
+                disabled={isDeleting}
+                onClick={handleDelete}
+                className="inline-flex items-center gap-1.5 rounded-xl bg-rose-600 px-4 py-2 text-xs font-bold text-white hover:bg-rose-700 transition cursor-pointer"
+              >
+                {isDeleting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : null}
+                <span>Ya, Hapus</span>
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
 
-      {/* Modal Preview & Unduh Materi Edukasi PDF (Di Atas Semua Elemen) */}
-      {mounted &&
-        createPortal(
-          <EducationPdfModal
-            isOpen={!!previewPdfData}
-            onClose={() => setPreviewPdfData(null)}
-            title={previewPdfData?.title}
-            badge={`Materi Edukasi • ${previewPdfData?.title || "BBPOM"}`}
-            pdfUrl={previewPdfData?.pdfUrl}
-            filename={previewPdfData?.filename}
-          />,
-          document.body
-        )}
+      {/* ========================================================= */}
+      {/* 7. MODAL RESET KE DEFAULT (createPortal + z-[9999])       */}
+      {/* ========================================================= */}
+      {mounted && isResetConfirmOpen && createPortal(
+        <div
+          role="dialog"
+          aria-modal="true"
+          className="fixed inset-0 z-[9999] flex items-center justify-center p-4 sm:p-6 overflow-y-auto"
+        >
+          <div
+            className="fixed inset-0 bg-slate-950/70 backdrop-blur-sm transition-opacity animate-fade-in"
+            onClick={() => {
+              if (!isResetting) setIsResetConfirmOpen(false);
+            }}
+          />
+
+          <div className="relative w-full max-w-sm rounded-3xl border border-slate-200 dark:border-slate-800 bg-white p-6 shadow-2xl dark:bg-slate-900 text-center z-10 my-auto animate-fade-up">
+            <div className="w-12 h-12 rounded-2xl bg-amber-50 text-amber-600 mx-auto flex items-center justify-center mb-3">
+              <RotateCcw className="w-6 h-6" />
+            </div>
+            <h3 className="text-base font-bold text-slate-900 dark:text-white">
+              Reset ke 12 Materi Bawaan?
+            </h3>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1.5 leading-relaxed">
+              Tindakan ini akan mengatur ulang daftar materi menjadi 12 panduan materi resmi bawaan BBPOM (Pangan, Kosmetik, Obat, dan Obat Tradisional).
+            </p>
+            <div className="mt-5 flex items-center justify-center gap-2.5">
+              <button
+                type="button"
+                disabled={isResetting}
+                onClick={() => setIsResetConfirmOpen(false)}
+                className="rounded-xl px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800 transition cursor-pointer"
+              >
+                Batal
+              </button>
+              <button
+                type="button"
+                disabled={isResetting}
+                onClick={handleResetToDefault}
+                className="inline-flex items-center gap-1.5 rounded-xl bg-amber-600 px-4 py-2 text-xs font-bold text-white hover:bg-amber-700 transition cursor-pointer"
+              >
+                {isResetting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : null}
+                <span>Ya, Reset Sekarang</span>
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {/* ========================================================= */}
+      {/* 8. MODAL PRATINJAU PDF                                    */}
+      {/* ========================================================= */}
+      <EducationPdfModal
+        isOpen={Boolean(previewPdfItem)}
+        onClose={() => setPreviewPdfItem(null)}
+        title={previewPdfItem?.judul}
+        badge={`Materi Edukasi • ${previewPdfItem?.komoditas}`}
+        pdfUrl={previewPdfItem?.pdfUrl || "/documents/materi-edukasi-bbpom.pdf"}
+        filename={previewPdfItem?.pdfFilename || "Materi-Edukasi-BBPOM.pdf"}
+      />
     </div>
   );
 }

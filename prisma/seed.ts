@@ -174,23 +174,23 @@ async function main() {
       data: [
         {
           judul: "Waspada Bahan Berbahaya pada Pangan Olahan Tradisional",
-          kategori: "Pangan Aman",
-          ringkasan:
+          komoditas: "Pangan",
+          deskripsi:
             "Kenali ciri-ciri pangan yang mengandung formalin, boraks, rhodamin B, dan metanil yellow pada makanan favorit di pasar tradisional.",
-          konten:
-            "Formalin dan boraks sering disalahgunakan sebagai pengawet pada mie basah, tahu, bakso, dan ikan asin. BBPOM Palembang rutin melakukan uji cepat di pasar-pasar lokal untuk menjamin keamanan pangan masyarakat.",
-          imageUrl: "/assets-landingpage/hero1.png",
+          imageUrl: "/assets-landingpage/layanan/pengujian-cepat-hero.jpg",
+          pdfUrl: "/documents/materi-edukasi-bbpom.pdf",
+          pdfFilename: "Panduan-Keamanan-Pangan-BBPOM.pdf",
           isPublished: true,
           urutan: 1,
         },
         {
           judul: "Ingat Cek KLIK Sebelum Membeli Produk Obat dan Kosmetik",
-          kategori: "Cek KLIK",
-          ringkasan:
+          komoditas: "Kosmetik",
+          deskripsi:
             "Pastikan Anda selalu memeriksa Kemasan, Label, Izin Edar, dan Kedaluwarsa demi melindungi diri dan keluarga dari produk ilegal.",
-          konten:
-            "Cek Kemasan dalam kondisi baik, Cek Label untuk informasi komposisi dan aturan pakai, Cek Izin Edar melalui aplikasi BPOM Mobile, dan Cek Kedaluwarsa agar tidak mengonsumsi produk kedaluwarsa.",
-          imageUrl: "/assets-landingpage/hero2.png",
+          imageUrl: "/documents/materi-edukasi-page-2.png",
+          pdfUrl: "/documents/materi-edukasi-bbpom.pdf",
+          pdfFilename: "Panduan-Keamanan-Pangan-BBPOM.pdf",
           isPublished: true,
           urutan: 2,
         },

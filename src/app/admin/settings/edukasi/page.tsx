@@ -1,11 +1,11 @@
 import React from "react";
-import { getEdukasiList } from "@/app/actions/settings-edukasi";
+import { getMateriEdukasiAdminListAction } from "@/app/actions/settings-edukasi";
 import { EdukasiSettingsForm } from "./EdukasiSettingsForm";
 
 export const dynamic = "force-dynamic";
 
 export default async function AdminEdukasiSettingsPage() {
-  const items = await getEdukasiList();
+  const items = await getMateriEdukasiAdminListAction();
 
   return <EdukasiSettingsForm initialItems={items} />;
 }

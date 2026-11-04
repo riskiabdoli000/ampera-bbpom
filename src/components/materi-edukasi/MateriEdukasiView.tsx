@@ -151,14 +151,19 @@ const INITIAL_MATERI_ITEMS: MateriEdukasiItem[] = [
   },
 ];
 
-export function MateriEdukasiView() {
+interface MateriEdukasiViewProps {
+  initialItems?: MateriEdukasiItem[];
+}
+
+export function MateriEdukasiView({ initialItems }: MateriEdukasiViewProps) {
+  const allItems = initialItems && initialItems.length > 0 ? initialItems : INITIAL_MATERI_ITEMS;
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedKomoditas, setSelectedKomoditas] = useState("semua");
   const [selectedPdfItem, setSelectedPdfItem] = useState<MateriEdukasiItem | null>(null);
 
   // Filter materi berdasarkan input pencarian dan komoditas
   const filteredMateri = useMemo(() => {
-    return INITIAL_MATERI_ITEMS.filter((item) => {
+    return allItems.filter((item) => {
       // 1. Filter Komoditas
       if (selectedKomoditas !== "semua") {
         const itemKomoditasSlug = item.komoditas.toLowerCase().replace(/\s+/g, "-");

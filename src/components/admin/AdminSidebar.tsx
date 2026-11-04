@@ -125,7 +125,7 @@ export function AdminSidebar({
 
   const websiteSubItems = [
     { title: "Hero Content", href: "/admin/settings/hero", icon: Sparkles },
-    { title: "Konten Edukasi", href: "/admin/settings/edukasi", icon: BookOpen },
+    { title: "Materi Edukasi", href: "/admin/settings/edukasi", icon: BookOpen },
     { title: "Video Profil", href: "/admin/settings/video", icon: Video },
     { title: "Kontak & Lokasi", href: "/admin/settings/kontak", icon: PhoneCall },
     { title: "Tautan BBPOM", href: "/admin/settings/bbpom", icon: Building2 },

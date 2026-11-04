@@ -310,21 +310,23 @@ model KontakKantor {
   updatedAt      DateTime @updatedAt
 }
 
-// 4. Konten Edukasi Konsumen
+// 4. Konten Materi Edukasi Konsumen
 model Edukasi {
   id          Int      @id @default(autoincrement())
   judul       String
-  kategori    String   // obat, pangan, kosmetik, cek_klik
-  ringkasan   String   @db.Text
-  konten      String?  @db.Text
+  komoditas   String   @default("Pangan") // "Pangan" | "Kosmetik" | "Obat" | "Obat Tradisional"
+  deskripsi   String   @default("") @db.Text
   imageUrl    String?  @db.Text
   imagePath   String?  @db.Text
+  pdfUrl      String?  @db.Text
+  pdfFilename String?  @db.Text
   isPublished Boolean  @default(true)
   urutan      Int      @default(0)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
   @@index([urutan])
+  @@index([komoditas])
 }
 
 // 5. Tautan Portal Eksternal BBPOM (Navbar Dropdown)

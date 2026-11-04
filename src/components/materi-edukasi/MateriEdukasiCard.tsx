@@ -7,13 +7,13 @@ import { ArrowRight, BookOpen, Sparkles } from "lucide-react";
 export type KomoditasType = "Pangan" | "Kosmetik" | "Obat" | "Obat Tradisional";
 
 export interface MateriEdukasiItem {
-  id: string;
+  id: string | number;
   judul: string;
   komoditas: KomoditasType;
   deskripsi: string;
   imageUrl: string;
-  pdfUrl?: string;
-  pdfFilename?: string;
+  pdfUrl?: string | null;
+  pdfFilename?: string | null;
 }
 
 interface MateriEdukasiCardProps {
