@@ -482,7 +482,7 @@ export async function exportToPdfOfficial({
   // 1. Gambar Kop Surat Resmi: Logo BBPOM (Kiri) & Logo AMPERA (Kanan)
   const [logoBpomBase64, logoAmperaBase64] = await Promise.all([
     getImageBase64("/assets-landingpage/logo-bpom.png"),
-    getImageBase64("/assets-landingpage/am.png"),
+    getImageBase64("/assets-landingpage/ampera-new.png"),
   ]);
 
   // Logo BBPOM di Kiri
