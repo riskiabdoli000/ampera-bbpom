@@ -2,6 +2,7 @@
 
 import { prisma } from "@/lib/prisma";
 import { triggerPengajuanCreatedNotifications } from "@/lib/whatsapp";
+import { validateNik } from "@/lib/nik-validator";
 
 export interface PermintaanInformasiFormState {
   nik: string;
@@ -38,24 +39,11 @@ export async function submitPermintaanInformasiAction(
   const cleanKategori = formData.kategoriInformasi?.trim() || "Konsultasi / Regulasi Umum";
 
   // 1. Validasi Input Dasar Sesuai Syarat Formulir
-  if (!cleanNik) {
+  const nikValidation = validateNik(cleanNik);
+  if (!nikValidation.isValid) {
     return {
       success: false,
-      message: "NIK (Nomor Induk Kependudukan) wajib diisi.",
-      kodePengajuan: "",
-      data: {
-        ...formData,
-        tanggalPengajuan: new Date().toISOString(),
-        estimasiPenyelesaian: "1 - 3 Hari Kerja",
-        status: "MENUNGGU_VERIFIKASI",
-      },
-    };
-  }
-
-  if (cleanNik.replace(/\D/g, "").length < 8) {
-    return {
-      success: false,
-      message: "Format NIK tidak valid (minimal 8 hingga 16 digit).",
+      message: nikValidation.message || "Format NIK tidak valid.",
       kodePengajuan: "",
       data: {
         ...formData,

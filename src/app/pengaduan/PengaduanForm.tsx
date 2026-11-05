@@ -32,6 +32,7 @@ import {
 } from "@/app/actions/pengaduan";
 import { lookupNikAction } from "@/app/actions/lookup-nik";
 import { ServiceSavingOverlay } from "@/components/common/ServiceSavingOverlay";
+import { validateNik } from "@/lib/nik-validator";
 
 const MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024; // 10MB
 const BUKTI_ALLOWED_EXTS = [".jpg", ".jpeg", ".png"];
@@ -143,6 +144,32 @@ export function PengaduanForm() {
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
   ) => {
     const { name, value } = e.target;
+
+    if (name === "nik") {
+      const numericVal = value.replace(/\D/g, "").slice(0, 16);
+      setFormData((prev) => ({ ...prev, nik: numericVal }));
+
+      if (errors.nik) {
+        setErrors((prev) => {
+          const newErr = { ...prev };
+          delete newErr.nik;
+          return newErr;
+        });
+      }
+
+      if (numericVal.length === 16) {
+        const valRes = validateNik(numericVal);
+        if (valRes.isValid) {
+          performNikLookup(numericVal);
+        } else {
+          setErrors((prev) => ({ ...prev, nik: valRes.message || "NIK tidak valid, periksa kembali NIK anda" }));
+        }
+      } else {
+        setNikLookupStatus({ status: "idle", message: "" });
+      }
+      return;
+    }
+
     setFormData((prev) => ({ ...prev, [name]: value }));
 
     // Hapus error saat user mengetik
@@ -153,20 +180,20 @@ export function PengaduanForm() {
         return newErr;
       });
     }
-
-    if (name === "nik") {
-      const clean = value.trim().replace(/\D/g, "");
-      if (clean.length === 16) {
-        performNikLookup(clean);
-      } else {
-        setNikLookupStatus({ status: "idle", message: "" });
-      }
-    }
   };
 
   const handleNikBlur = () => {
-    const clean = formData.nik.trim().replace(/\D/g, "");
-    if (clean.length >= 8) {
+    const clean = formData.nik.trim();
+    if (!clean) return;
+    const valRes = validateNik(clean);
+    if (!valRes.isValid) {
+      setErrors((prev) => ({ ...prev, nik: valRes.message || "NIK tidak valid, periksa kembali NIK anda" }));
+    } else {
+      setErrors((prev) => {
+        const newErr = { ...prev };
+        delete newErr.nik;
+        return newErr;
+      });
       performNikLookup(clean);
     }
   };
@@ -281,11 +308,9 @@ export function PengaduanForm() {
   const validateStep1 = () => {
     const errs: { [key: string]: string } = {};
 
-    const cleanNik = formData.nik.trim().replace(/\D/g, "");
-    if (!formData.nik.trim()) {
-      errs.nik = "Nomor Induk Kependudukan (NIK) pelapor wajib diisi";
-    } else if (cleanNik.length < 8 || cleanNik.length > 16) {
-      errs.nik = "NIK harus terdiri dari 8 hingga 16 digit angka";
+    const nikRes = validateNik(formData.nik);
+    if (!nikRes.isValid) {
+      errs.nik = nikRes.message || "NIK tidak valid, periksa kembali NIK anda";
     }
 
     if (!formData.nama.trim()) {
@@ -884,12 +909,24 @@ export function PengaduanForm() {
                     >
                       NIK (Nomor Induk Kependudukan) <span className="text-red-500">*</span>
                     </label>
-                    {isCheckingNik && (
-                      <span className="inline-flex items-center gap-1.5 text-xs font-medium text-sky-600 dark:text-sky-400">
-                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                        Mengecek NIK otomatis...
-                      </span>
-                    )}
+                    <div className="flex items-center gap-2">
+                      {isCheckingNik ? (
+                        <span className="inline-flex items-center gap-1.5 text-xs font-medium text-sky-600 dark:text-sky-400">
+                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                          Mengecek NIK...
+                        </span>
+                      ) : (
+                        <span
+                          className={`text-[11px] font-mono px-2 py-0.5 rounded-full transition-colors ${
+                            formData.nik.length === 16
+                              ? "bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 font-semibold border border-emerald-200 dark:border-emerald-800"
+                              : "bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400"
+                          }`}
+                        >
+                          {formData.nik.length} / 16 digit
+                        </span>
+                      )}
+                    </div>
                   </div>
                   <div className="relative">
                     <input
@@ -920,7 +957,7 @@ export function PengaduanForm() {
                   </div>
                   {errors.nik ? (
                     <p className="mt-1.5 text-xs text-red-500 flex items-center gap-1">
-                      <AlertCircle className="w-3.5 h-3.5" />
+                      <AlertCircle className="w-3.5 h-3.5 shrink-0" />
                       <span>{errors.nik}</span>
                     </p>
                   ) : (
