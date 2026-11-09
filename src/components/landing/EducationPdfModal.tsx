@@ -287,7 +287,7 @@ export function EducationPdfModal({
 
   return (
     <div
-      className="fixed inset-0 z-[70] flex items-center justify-center p-2.5 sm:p-4 md:p-6"
+      className="fixed inset-0 z-[10000] flex items-center justify-center p-3 sm:p-4 md:p-6"
       role="dialog"
       aria-modal="true"
       aria-labelledby="pdf-modal-title"
@@ -299,25 +299,25 @@ export function EducationPdfModal({
         aria-hidden="true"
       />
 
-      {/* Main Modal Box: h-[88dvh] agar proporsional di HP tanpa terpotong address bar */}
+      {/* Main Modal Box: di HP tinggi menyesuaikan isi (maks 82dvh), di desktop tinggi tetap 86vh */}
       <div
         ref={containerRef}
-        className="relative z-10 w-full max-w-4xl h-[88dvh] sm:h-[86vh] max-h-[860px] flex flex-col rounded-2xl sm:rounded-3xl bg-white dark:bg-slate-900 shadow-2xl border border-slate-200/90 dark:border-slate-800 overflow-hidden animate-fade-up"
+        className="relative z-10 w-full max-w-4xl h-auto max-h-[82dvh] sm:h-[86vh] sm:max-h-[860px] flex flex-col rounded-xl sm:rounded-3xl bg-white dark:bg-slate-900 shadow-2xl border border-slate-200/90 dark:border-slate-800 overflow-hidden animate-fade-up"
       >
         {/* ========================================================= */}
         {/* HEADER MODAL                                              */}
         {/* ========================================================= */}
-        <div className="flex items-center justify-between gap-2 sm:gap-3 px-3.5 sm:px-6 py-2.5 sm:py-3.5 border-b border-slate-100 dark:border-slate-800/80 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md shrink-0">
+        <div className="flex items-center justify-between gap-2 sm:gap-3 px-3 sm:px-6 py-2 sm:py-3.5 border-b border-slate-100 dark:border-slate-800/80 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md shrink-0">
           {/* Logo & Judul */}
           <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
-            <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-br from-[#ff8a1f] to-[#f26a0f] text-white flex items-center justify-center shrink-0 shadow-cta">
-              <BookOpen className="w-4 h-4 sm:w-5 sm:h-5 stroke-[2]" />
+            <div className="hidden sm:flex w-10 h-10 rounded-xl bg-gradient-to-br from-[#ff8a1f] to-[#f26a0f] text-white items-center justify-center shrink-0 shadow-cta">
+              <BookOpen className="w-5 h-5 stroke-[2]" />
             </div>
             <div className="min-w-0 flex-1">
-              <div className="flex items-center gap-1.5">
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] sm:text-xs font-bold bg-orange-100 dark:bg-orange-500/20 text-brand-orange-600 dark:text-orange-400">
-                  <Sparkles className="w-2.5 h-2.5" />
-                  {badge}
+              <div className="flex items-center gap-1.5 min-w-0">
+                <span className="inline-flex items-center gap-1 px-1.5 sm:px-2 py-0.5 rounded-full text-[9px] sm:text-xs font-bold bg-orange-100 dark:bg-orange-500/20 text-brand-orange-600 dark:text-orange-400 max-w-full min-w-0">
+                  <Sparkles className="w-2.5 h-2.5 shrink-0" />
+                  <span className="truncate">{badge}</span>
                 </span>
                 <span className="hidden sm:inline-block text-[11px] text-slate-400 dark:text-slate-500">•</span>
                 <span className="hidden sm:inline-block text-[11px] text-slate-500 dark:text-slate-400 font-medium">
@@ -340,7 +340,7 @@ export function EducationPdfModal({
             <a
               href={pdfUrl}
               download={filename}
-              className="inline-flex items-center gap-1 px-2.5 sm:px-3.5 py-1.5 sm:py-2 rounded-xl bg-gradient-to-r from-[#ff8a1f] to-[#f26a0f] text-white text-xs sm:text-sm font-bold shadow-cta hover:opacity-95 transition-all active:scale-95 cursor-pointer"
+              className="inline-flex items-center gap-1 px-2 sm:px-3.5 py-1.5 sm:py-2 h-7 sm:h-auto rounded-lg sm:rounded-xl bg-gradient-to-r from-[#ff8a1f] to-[#f26a0f] text-white text-xs sm:text-sm font-bold shadow-cta hover:opacity-95 transition-all active:scale-95 cursor-pointer"
               title="Unduh File PDF Lengkap"
             >
               <Download className="w-3.5 h-3.5 sm:w-4 sm:h-4 stroke-[2.2]" />
@@ -352,7 +352,7 @@ export function EducationPdfModal({
               href={pdfUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-700 flex items-center justify-center transition-all cursor-pointer"
+              className="w-7 h-7 sm:w-9 sm:h-9 rounded-lg sm:rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-700 flex items-center justify-center transition-all cursor-pointer"
               title="Buka PDF di Tab Baru"
               aria-label="Buka PDF di tab baru"
             >
@@ -363,7 +363,7 @@ export function EducationPdfModal({
             <button
               type="button"
               onClick={onClose}
-              className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-rose-50 hover:text-rose-600 dark:hover:bg-rose-950/40 dark:hover:text-rose-400 flex items-center justify-center transition-all cursor-pointer"
+              className="w-7 h-7 sm:w-9 sm:h-9 rounded-lg sm:rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-rose-50 hover:text-rose-600 dark:hover:bg-rose-950/40 dark:hover:text-rose-400 flex items-center justify-center transition-all cursor-pointer"
               title="Tutup Modal"
               aria-label="Tutup pratinjau"
             >
@@ -375,7 +375,7 @@ export function EducationPdfModal({
         {/* ========================================================= */}
         {/* TOOLBAR CONTROLS (NAVIGASI & ZOOM)                        */}
         {/* ========================================================= */}
-        <div className="flex items-center justify-between px-3 sm:px-6 py-1.5 sm:py-2 bg-slate-50 dark:bg-slate-900 border-b border-slate-100 dark:border-slate-800 text-xs shrink-0 select-none">
+        <div className="flex items-center justify-between px-2.5 sm:px-6 py-1 sm:py-2 bg-slate-50 dark:bg-slate-900 border-b border-slate-100 dark:border-slate-800 text-xs shrink-0 select-none">
           {/* Navigasi Halaman */}
           <div className="flex items-center gap-1 sm:gap-1.5">
             <button
@@ -454,7 +454,7 @@ export function EducationPdfModal({
           onTouchStart={handleTouchStart}
           onTouchMove={handleTouchMove}
           onTouchEnd={handleTouchEnd}
-          className={`relative flex-1 w-full h-full bg-slate-100 dark:bg-slate-950/80 overflow-auto p-2 sm:p-4 flex ${
+          className={`relative flex-1 w-full min-h-[220px] sm:h-full bg-slate-100 dark:bg-slate-950/80 overflow-auto p-1.5 sm:p-4 flex ${
             scale > 1.0 ? "cursor-grab active:cursor-grabbing select-none" : "items-center justify-center"
           }`}
           style={{ touchAction: scale > 1.0 ? "none" : "auto" }}
@@ -520,7 +520,7 @@ export function EducationPdfModal({
         {/* ========================================================= */}
         {/* FOOTER BAR                                                */}
         {/* ========================================================= */}
-        <div className="flex items-center justify-between gap-2 px-3.5 sm:px-6 py-2 border-t border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 shrink-0 text-[11px] sm:text-xs text-slate-500 dark:text-slate-400">
+        <div className="hidden sm:flex items-center justify-between gap-2 px-3.5 sm:px-6 py-2 border-t border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 shrink-0 text-[11px] sm:text-xs text-slate-500 dark:text-slate-400">
           <div className="flex items-center gap-2 truncate">
             <FileText className="w-3.5 h-3.5 text-brand-orange shrink-0" />
             <span className="font-semibold text-navy-900 dark:text-slate-200 truncate">

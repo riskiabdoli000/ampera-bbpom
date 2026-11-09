@@ -3,13 +3,17 @@
 import React, { useState, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { Sun, Moon, Menu, X, HelpCircle } from "lucide-react";
+import { Sun, Moon, Menu, X, HelpCircle, ArrowRight } from "lucide-react";
+import { PanduanDropdown, PanduanMobileMenu } from "@/components/common/PanduanMenu";
+import { BbpomDropdown, BbpomMobileMenu } from "@/components/common/BbpomMenu";
 
 interface SubpageNavbarProps {
-  activePage?: "beranda" | "layanan" | "edukasi" | "video" | "kontak";
+  activePage?: "beranda" | "layanan" | "edukasi" | "panduan" | "video" | "kontak";
+  /** Slug panduan yang sedang dibuka (khusus halaman /panduan) */
+  activePanduanSlug?: string;
 }
 
-export function SubpageNavbar({ activePage = "layanan" }: SubpageNavbarProps) {
+export function SubpageNavbar({ activePage = "layanan", activePanduanSlug }: SubpageNavbarProps) {
   const [isScrolled, setIsScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [isDark, setIsDark] = useState(false);
@@ -53,6 +57,8 @@ export function SubpageNavbar({ activePage = "layanan" }: SubpageNavbarProps) {
     { label: "Edukasi", href: "/#edukasi", key: "edukasi" },
     { label: "Video", href: "/#video", key: "video" },
     { label: "Kontak", href: "/#kontak", key: "kontak" },
+    { label: "Panduan", href: "/panduan", key: "panduan" },
+    { label: "Website", href: "#bbpom", key: "bbpom" },
   ];
 
   return (
@@ -83,10 +89,10 @@ export function SubpageNavbar({ activePage = "layanan" }: SubpageNavbarProps) {
             </div>
             <div className="flex flex-col leading-none">
               <span className="font-brand font-extrabold text-xl sm:text-2xl tracking-tight text-navy-900 dark:text-white">
-                BBPOM
+                AMPERA
               </span>
               <span className="font-brand font-medium text-[11px] sm:text-xs text-brand-orange dark:text-orange-400 tracking-wide mt-0.5">
-                Balai Besar POM di Palembang
+                Amankan Produk Edukasi Masyarakat
               </span>
             </div>
           </Link>
@@ -98,11 +104,23 @@ export function SubpageNavbar({ activePage = "layanan" }: SubpageNavbarProps) {
           >
             {navItems.map((item) => {
               const isActive = activePage === item.key;
+              if (item.key === "panduan") {
+                return (
+                  <PanduanDropdown
+                    key={item.label}
+                    isActive={isActive}
+                    activeSlug={activePanduanSlug}
+                  />
+                );
+              }
+              if (item.key === "bbpom") {
+                return <BbpomDropdown key={item.label} label={item.label} />;
+              }
               return (
                 <Link
                   key={item.label}
                   href={item.href}
-                  className={`font-brand rounded-full px-5 py-2 text-[13px] transition-all duration-200 focus-visible:outline-2 focus-visible:outline-brand-orange ${
+                  className={`font-brand rounded-full px-4 xl:px-5 py-2 text-[13px] transition-all duration-200 focus-visible:outline-2 focus-visible:outline-brand-orange ${
                     isActive
                       ? "bg-[#fff0e5] text-[#f26a0f] font-bold dark:bg-orange-500/20 dark:text-orange-300 shadow-xs"
                       : "text-navy-900 dark:text-slate-200 font-semibold hover:text-brand-orange hover:bg-slate-50 dark:hover:bg-slate-800/50"
@@ -126,6 +144,15 @@ export function SubpageNavbar({ activePage = "layanan" }: SubpageNavbarProps) {
               {isDark ? <Sun className="w-5 h-5 text-amber-400" /> : <Moon className="w-5 h-5 text-slate-700 dark:text-slate-200" />}
             </button>
 
+            {/* Tombol CTA Garda Ampera (Desktop) */}
+            <Link
+              href="/garda-ampera"
+              className="hidden lg:inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-[#ff8a1f] to-[#f26a0f] px-4 xl:px-5 py-2 text-xs font-bold text-white shadow-cta hover:shadow-orange-500/25 hover:scale-105 active:scale-95 transition-all duration-200 cursor-pointer"
+            >
+              <span>Garda Ampera</span>
+              <ArrowRight className="w-3.5 h-3.5 transition-transform duration-200 hover:translate-x-0.5" />
+            </Link>
+
             {/* Mobile Menu Button */}
             <button
               type="button"
@@ -145,6 +172,25 @@ export function SubpageNavbar({ activePage = "layanan" }: SubpageNavbarProps) {
             <nav className="flex flex-col gap-1.5" aria-label="Navigasi mobile">
               {navItems.map((item) => {
                 const isActive = activePage === item.key;
+                if (item.key === "panduan") {
+                  return (
+                    <PanduanMobileMenu
+                      key={item.label}
+                      isActive={isActive}
+                      activeSlug={activePanduanSlug}
+                      onNavigate={() => setMobileMenuOpen(false)}
+                    />
+                  );
+                }
+                if (item.key === "bbpom") {
+                  return (
+                    <BbpomMobileMenu
+                      key={item.label}
+                      label={item.label}
+                      onNavigate={() => setMobileMenuOpen(false)}
+                    />
+                  );
+                }
                 return (
                   <Link
                     key={item.label}

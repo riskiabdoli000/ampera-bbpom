@@ -15,13 +15,15 @@ export default function GardaAmperaPage() {
   return (
     <main className="min-h-screen bg-gradient-to-b from-[#f2f7ff] via-white to-[#f0f6ff] dark:from-slate-950 dark:via-[#06122e]/40 dark:to-slate-950 text-slate-800 dark:text-slate-100 flex flex-col selection:bg-brand-orange selection:text-white overflow-x-hidden transition-colors duration-300">
       {/* 1. Navbar Subpage Khusus Garda Ampera POM */}
-      <GardaAmperaNavbar />
+      <div className="no-print">
+        <GardaAmperaNavbar />
+      </div>
 
       {/* 2. Container Halaman Utama */}
-      <div className="flex-1 w-full pt-28 sm:pt-32 pb-16 sm:pb-24">
-        <div className="max-w-[1240px] mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="flex-1 w-full pt-28 sm:pt-32 pb-16 sm:pb-24 print:!pt-0 print:!pb-0">
+        <div className="max-w-[1240px] mx-auto px-4 sm:px-6 lg:px-8 print:!max-w-none print:!px-0">
           {/* Header Title Section */}
-          <div className="relative mb-8 sm:mb-12 max-w-3xl mx-auto text-center animate-fade-up">
+          <div className="no-print relative mb-8 sm:mb-12 max-w-3xl mx-auto text-center animate-fade-up">
             <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-blue-100 dark:bg-blue-950/70 border border-blue-200 dark:border-blue-800 text-blue-800 dark:text-blue-300 text-xs font-bold uppercase tracking-widest mb-3">
               <ShieldCheck className="w-4 h-4 text-brand-orange" />
               PORTAL E-LEARNING
@@ -68,7 +70,9 @@ export default function GardaAmperaPage() {
       </div>
 
       {/* 4. Footer Resmi */}
-      <Footer />
+      <div className="no-print">
+        <Footer />
+      </div>
     </main>
   );
 }

@@ -154,6 +154,10 @@ export function ContactSection({ initialData }: ContactSectionProps) {
     ? (rawSocialLinks.filter((item) => Boolean(item.href)) as ActiveSocialLink[])
     : [];
 
+  const email1Value = kontak.email1?.trim();
+  const email2Value = kontak.email2?.trim();
+  const hasAnyEmail = Boolean(email1Value || email2Value);
+
   return (
     <section
       id="kontak"
@@ -215,8 +219,12 @@ export function ContactSection({ initialData }: ContactSectionProps) {
                 {kontak.deskripsi || DEFAULT_KONTAK.deskripsi}
               </p>
 
-              {/* 3 Contact Columns (Address, Email, Phone) */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 mt-8 pt-6 border-t border-slate-100 dark:border-slate-800">
+              {/* Contact Columns (Address, Email, Phone) */}
+              <div
+                className={`grid grid-cols-1 ${
+                  hasAnyEmail ? "sm:grid-cols-3" : "sm:grid-cols-2"
+                } gap-6 mt-8 pt-6 border-t border-slate-100 dark:border-slate-800`}
+              >
                 {/* 1. Address */}
                 <div className="flex items-start gap-3">
                   <div className="w-9 h-9 rounded-xl bg-orange-50 dark:bg-orange-500/15 border border-orange-100 dark:border-orange-500/20 text-brand-orange dark:text-orange-400 flex items-center justify-center shrink-0 mt-0.5">
@@ -232,33 +240,37 @@ export function ContactSection({ initialData }: ContactSectionProps) {
                   </div>
                 </div>
 
-                {/* 2. Email */}
-                <div className="flex items-start gap-3">
-                  <div className="w-9 h-9 rounded-xl bg-orange-50 dark:bg-orange-500/15 border border-orange-100 dark:border-orange-500/20 text-brand-orange dark:text-orange-400 flex items-center justify-center shrink-0 mt-0.5">
-                    <Mail className="w-4 h-4 stroke-[2.2]" />
-                  </div>
-                  <div>
-                    <h3 className="text-xs sm:text-sm font-bold text-navy-900 dark:text-white">
-                      Email
-                    </h3>
-                    <div className="text-[11px] sm:text-xs text-ink-soft dark:text-slate-400 mt-1 space-y-0.5">
-                      <a
-                        href={`mailto:${kontak.email1 || DEFAULT_KONTAK.email1}`}
-                        className="block hover:text-brand-orange transition-colors truncate"
-                      >
-                        {kontak.email1 || DEFAULT_KONTAK.email1}
-                      </a>
-                      {kontak.email2 && (
-                        <a
-                          href={`mailto:${kontak.email2}`}
-                          className="block hover:text-brand-orange transition-colors truncate"
-                        >
-                          {kontak.email2}
-                        </a>
-                      )}
+                {/* 2. Email (Hanya tampil jika ada email yang diisi) */}
+                {hasAnyEmail && (
+                  <div className="flex items-start gap-3">
+                    <div className="w-9 h-9 rounded-xl bg-orange-50 dark:bg-orange-500/15 border border-orange-100 dark:border-orange-500/20 text-brand-orange dark:text-orange-400 flex items-center justify-center shrink-0 mt-0.5">
+                      <Mail className="w-4 h-4 stroke-[2.2]" />
+                    </div>
+                    <div>
+                      <h3 className="text-xs sm:text-sm font-bold text-navy-900 dark:text-white">
+                        Email
+                      </h3>
+                      <div className="text-[11px] sm:text-xs text-ink-soft dark:text-slate-400 mt-1 space-y-0.5">
+                        {email1Value && (
+                          <a
+                            href={`mailto:${email1Value}`}
+                            className="block hover:text-brand-orange transition-colors truncate"
+                          >
+                            {email1Value}
+                          </a>
+                        )}
+                        {email2Value && (
+                          <a
+                            href={`mailto:${email2Value}`}
+                            className="block hover:text-brand-orange transition-colors truncate"
+                          >
+                            {email2Value}
+                          </a>
+                        )}
+                      </div>
                     </div>
                   </div>
-                </div>
+                )}
 
                 {/* 3. Phone */}
                 <div className="flex items-start gap-3">

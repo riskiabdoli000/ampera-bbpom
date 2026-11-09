@@ -14,6 +14,7 @@ import {
   ShieldAlert,
 } from "lucide-react";
 import { resetOperatorPasswordAction, AdminAccountItem } from "@/app/actions/admin-account";
+import { AdminLoadingOverlay } from "@/components/admin/AdminLoadingOverlay";
 
 interface ResetPasswordModalProps {
   isOpen: boolean;
@@ -237,6 +238,13 @@ export function ResetPasswordModal({
           </div>
         </form>
       </div>
+
+      <AdminLoadingOverlay
+        isOpen={loading}
+        actionType="save"
+        title="Mereset Password Operator..."
+        description={`Sedang memperbarui kata sandi untuk akun (${targetAccount.username}) di database BBPOM...`}
+      />
     </div>,
     document.body
   );

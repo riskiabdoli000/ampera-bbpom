@@ -8,15 +8,17 @@ import {
   ArrowRight,
   Sliders,
   ExternalLink,
+  BookOpen,
 } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
 export default async function WebsiteSettingsIndexPage() {
-  const [activeSlidesCount, videoProfil, kontakKantor] = await Promise.all([
+  const [activeSlidesCount, videoProfil, kontakKantor, activeEdukasiCount] = await Promise.all([
     prisma.heroSlide.count({ where: { isActive: true } }),
     prisma.videoProfil.findUnique({ where: { id: 1 } }),
     prisma.kontakKantor.findUnique({ where: { id: 1 } }),
+    prisma.edukasi.count({ where: { isPublished: true } }),
   ]);
 
   const sections = [
@@ -27,6 +29,14 @@ export default async function WebsiteSettingsIndexPage() {
       href: "/admin/settings/hero",
       badge: `${activeSlidesCount} Slide Aktif`,
       color: "from-amber-500 to-orange-600",
+    },
+    {
+      title: "Konten Edukasi (PDF)",
+      desc: "Tambah, ubah, dan hapus kartu artikel edukasi beserta dokumen PDF di beranda.",
+      icon: BookOpen,
+      href: "/admin/settings/edukasi",
+      badge: `${activeEdukasiCount || 1} Artikel Aktif`,
+      color: "from-sky-500 to-blue-600",
     },
     {
       title: "Video Profil BBPOM",
@@ -73,8 +83,8 @@ export default async function WebsiteSettingsIndexPage() {
         </Link>
       </div>
 
-      {/* Grid of 3 Modules */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      {/* Grid of 4 Modules */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {sections.map((section, idx) => {
           const Icon = section.icon;
           return (

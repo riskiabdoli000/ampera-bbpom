@@ -325,15 +325,15 @@ export function AdminTrendsChartCard({ submissions }: AdminTrendsChartCardProps)
   }, [submissions, filter]);
 
   return (
-    <div className="rounded-2xl border border-[#e3ecfa] bg-white p-5 dark:border-slate-800 dark:bg-slate-900 xl:col-span-8">
+    <div className="rounded-2xl border border-[#e3ecfa] bg-white p-4 sm:p-5 dark:border-slate-800 dark:bg-slate-900 xl:col-span-8">
       {/* Header dengan Dropdown Filter */}
-      <div className="flex flex-wrap items-center justify-between gap-3">
+      <div className="flex flex-wrap items-center justify-between gap-2.5 sm:gap-3">
         <div>
-          <div className="flex flex-wrap items-center gap-3">
-            <h2 className="text-sm font-bold text-[#0f2257] dark:text-white">
+          <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+            <h2 className="text-xs sm:text-sm font-bold text-[#0f2257] dark:text-white">
               Statistik Tren Layanan
             </h2>
-            <div className="flex items-center gap-3 text-xs">
+            <div className="flex items-center gap-2.5 sm:gap-3 text-[11px] sm:text-xs">
               <span className="flex items-center gap-1.5 font-medium text-[#f97316]">
                 <span className="h-2 w-2 rounded-full bg-[#f97316]" />
                 Pengajuan Masuk
@@ -344,7 +344,7 @@ export function AdminTrendsChartCard({ submissions }: AdminTrendsChartCardProps)
               </span>
             </div>
           </div>
-          <p className="mt-0.5 text-xs text-[#7b8aa8]">
+          <p className="mt-0.5 text-[10px] sm:text-xs text-[#7b8aa8]">
             {subtitle} • Perbandingan permohonan masuk vs layanan diselesaikan
           </p>
         </div>
@@ -354,7 +354,7 @@ export function AdminTrendsChartCard({ submissions }: AdminTrendsChartCardProps)
           <button
             type="button"
             onClick={() => setIsOpen(!isOpen)}
-            className="inline-flex items-center gap-1.5 rounded-xl border border-[#e3ecfa] bg-white px-3 py-1.5 text-xs font-semibold text-[#0f2257] shadow-xs hover:bg-[#f8fbff] dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 transition-all cursor-pointer"
+            className="inline-flex items-center gap-1.5 rounded-xl border border-[#e3ecfa] bg-white px-2.5 sm:px-3 py-1.5 text-[11px] sm:text-xs font-semibold text-[#0f2257] shadow-xs hover:bg-[#f8fbff] dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 transition-all cursor-pointer"
           >
             <Calendar className="h-3.5 w-3.5 text-[#1664e8]" />
             <span>{filterLabels[filter]}</span>

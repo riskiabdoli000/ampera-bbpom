@@ -10,6 +10,7 @@ export interface AdminAccountItem {
   id: number;
   username: string;
   nama: string;
+  telepon: string | null;
   role: "SUPERADMIN" | "OPERATOR";
   isAktif: boolean;
   createdAt: string;
@@ -21,6 +22,7 @@ export interface CurrentAdminProfile {
   id: number;
   username: string;
   nama: string;
+  telepon: string | null;
   role: string;
   isAktif: boolean;
   createdAt: string;
@@ -50,6 +52,7 @@ export async function getAdminAccountDataAction(): Promise<
         id: true,
         username: true,
         nama: true,
+        telepon: true,
         role: true,
         isAktif: true,
         createdAt: true,
@@ -74,6 +77,7 @@ export async function getAdminAccountDataAction(): Promise<
       id: acc.id,
       username: acc.username,
       nama: acc.nama,
+      telepon: acc.telepon,
       role: acc.role as "SUPERADMIN" | "OPERATOR",
       isAktif: acc.isAktif,
       createdAt: acc.createdAt.toISOString(),
@@ -88,6 +92,7 @@ export async function getAdminAccountDataAction(): Promise<
           id: currentAdminDb.id,
           username: currentAdminDb.username,
           nama: currentAdminDb.nama,
+          telepon: currentAdminDb.telepon,
           role: currentAdminDb.role,
           isAktif: currentAdminDb.isAktif,
           createdAt: currentAdminDb.createdAt.toISOString(),
@@ -182,14 +187,15 @@ export async function changeMyPasswordAction(payload: {
 }
 
 /**
- * Perbarui nama tampilan profil admin yang sedang login
+ * Perbarui profil (nama tampilan & nomor WhatsApp) admin yang sedang login
  */
 export async function updateMyProfileAction(payload: {
   nama: string;
-}): Promise<ActionResult> {
+  telepon?: string;
+}): Promise<ActionResult<{ nama: string; telepon: string | null }>> {
   try {
     const session = await verifyAdminSession();
-    const namaClean = payload.nama.trim();
+    const namaClean = payload.nama?.trim();
 
     if (!namaClean || namaClean.length < 3) {
       return {
@@ -198,21 +204,31 @@ export async function updateMyProfileAction(payload: {
       };
     }
 
+    const teleponClean =
+      payload.telepon !== undefined ? payload.telepon.trim() : undefined;
+
     await prisma.admin.update({
       where: { id: session.id },
-      data: { nama: namaClean },
+      data: {
+        nama: namaClean,
+        ...(teleponClean !== undefined ? { telepon: teleponClean || null } : {}),
+      },
     });
 
     revalidatePath("/admin/pengaturan-akun");
     return {
       success: true,
-      message: "Nama profil Anda berhasil diperbarui.",
+      message: "Profil Anda berhasil diperbarui.",
+      data: {
+        nama: namaClean,
+        telepon: teleponClean || null,
+      },
     };
   } catch (error) {
     console.error("[updateMyProfileAction] Error:", error);
     return {
       success: false,
-      error: "Gagal memperbarui nama profil.",
+      error: "Gagal memperbarui profil.",
     };
   }
 }

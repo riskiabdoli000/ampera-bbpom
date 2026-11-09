@@ -240,11 +240,11 @@ export default async function AdminDashboardPage() {
   });
 
   return (
-    <div className="space-y-6 animate-fade-up">
+    <div className="space-y-4 sm:space-y-6 animate-fade-up">
       {/* Top Section with Atmospheric Hero Image Flowing Behind Top-Right & Stat Cards */}
       <div className="relative">
         {/* Foto hero2.png menyatu dari pojok kanan atas hingga ke belakang 2 card di sebelah kanan */}
-        <div className="pointer-events-none absolute -right-6 -top-16 sm:-top-20 z-0 h-[320px] sm:h-[350px] w-3/4 sm:w-2/3 md:w-3/5 lg:w-[560px] xl:w-[620px]">
+        <div className="pointer-events-none absolute -right-6 -top-16 sm:-top-20 z-0 h-[220px] sm:h-[350px] w-3/4 sm:w-2/3 md:w-3/5 lg:w-[560px] xl:w-[620px]">
           <div
             className="relative h-full w-full"
             style={{
@@ -269,71 +269,71 @@ export default async function AdminDashboardPage() {
         </div>
 
         {/* Content sitting on top of the hero image */}
-        <div className="relative z-10 space-y-6">
+        <div className="relative z-10 space-y-4 sm:space-y-6">
           {/* Title */}
           <div>
-            <h1 className="text-3xl font-black tracking-tight text-[#0f2257] dark:text-white">
+            <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-[#0f2257] dark:text-white">
               Dashboard AMPERA
             </h1>
-            <p className="mt-1 text-sm text-[#5d6c8c] dark:text-slate-400">
+            <p className="mt-1 text-xs sm:text-sm text-[#5d6c8c] dark:text-slate-400">
               Pantau pengajuan layanan publik dan kelola konten landing page dengan mudah.
             </p>
             {/* Status WhatsApp Gateway */}
             <WaStatusBadge />
           </div>
 
-          {/* Stat cards */}
-          <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-2 xl:grid-cols-4">
+          {/* Stat cards (2 sejajar di mobile, 4 di layar lebar) */}
+          <div className="grid grid-cols-2 gap-2.5 sm:gap-3.5 xl:grid-cols-4">
             {stats.map((s) => {
               const Icon = s.icon;
               return (
                 <div
                   key={s.title}
-                  className={`relative overflow-hidden rounded-xl p-4 transition-all hover:-translate-y-0.5 hover:shadow-md ${
+                  className={`relative overflow-hidden rounded-xl p-3 sm:p-4 transition-all hover:-translate-y-0.5 hover:shadow-md ${
                     s.primary
                       ? "bg-gradient-to-br from-[#0b55d9] to-[#2f86f6] text-white shadow-md shadow-blue-500/20"
                       : "border border-[#e3ecfa]/90 bg-white/80 backdrop-blur-md shadow-xs hover:bg-white/95 dark:border-slate-800/90 dark:bg-slate-900/80 dark:hover:bg-slate-900/95"
                   }`}
                 >
-                  <div className="flex items-start justify-between gap-2">
+                  <div className="flex items-start justify-between gap-1.5 sm:gap-2">
                     <span
-                      className={`text-xs font-semibold leading-snug sm:text-[13px] ${
+                      className={`text-[11px] sm:text-[13px] font-semibold leading-tight line-clamp-1 ${
                         s.primary ? "text-white" : "text-[#0f2257] dark:text-white"
                       }`}
                     >
                       {s.title}
                     </span>
                     <div
-                      className={`flex h-8.5 w-8.5 shrink-0 items-center justify-center rounded-full transition-colors ${
+                      className={`flex h-7 w-7 sm:h-8.5 sm:w-8.5 shrink-0 items-center justify-center rounded-full transition-colors ${
                         s.iconColor ||
                         (s.primary
                           ? "bg-white text-[#1664e8]"
                           : "border border-[#e3ecfa] text-[#0f2257] dark:border-slate-700 dark:text-white")
                       }`}
                     >
-                      <Icon className="h-4 w-4" />
+                      <Icon className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                     </div>
                   </div>
                   <div
-                    className={`mt-2 text-2xl font-bold sm:text-3xl ${
+                    className={`mt-1.5 sm:mt-2 text-xl font-black sm:text-2xl lg:text-3xl ${
                       s.primary ? "" : "text-[#0f2257] dark:text-white"
                     }`}
                   >
                     {s.value}
                   </div>
                   <p
-                    className={`mt-2 flex items-center gap-1.5 text-[11px] sm:text-xs ${
+                    className={`mt-1.5 sm:mt-2 flex items-center gap-1 sm:gap-1.5 text-[10px] sm:text-xs truncate ${
                       s.primary ? "text-blue-100" : "font-medium text-[#1664e8] dark:text-blue-400"
                     }`}
                   >
                     <span
-                      className={`flex h-4.5 w-4.5 items-center justify-center rounded-md ${
+                      className={`flex h-4 w-4 sm:h-4.5 sm:w-4.5 shrink-0 items-center justify-center rounded-md ${
                         s.primary ? "bg-white/25" : "bg-[#e8f1fe] text-[#1664e8] dark:bg-blue-950/60 dark:text-blue-300"
                       }`}
                     >
                       <TrendingUp className="h-2.5 w-2.5" />
                     </span>
-                    {s.subtext}
+                    <span className="truncate">{s.subtext}</span>
                   </p>
                 </div>
               );
@@ -343,33 +343,33 @@ export default async function AdminDashboardPage() {
       </div>
 
       {/* Row: analytics + reminder + settings */}
-      <div className="grid grid-cols-1 gap-4 xl:grid-cols-12">
+      <div className="grid grid-cols-1 gap-3.5 sm:gap-4 xl:grid-cols-12">
         <AdminWeeklyAnalyticsCard submissions={serializedSubmissions} />
 
-        <div className={`${card} flex flex-col p-5 xl:col-span-3 justify-between`}>
+        <div className={`${card} flex flex-col p-4 sm:p-5 xl:col-span-3 justify-between`}>
           <div>
             <div className="flex items-center justify-between">
-              <h2 className="text-sm font-bold text-[#0f2257] dark:text-white">Pengingat Tugas</h2>
-              <Link href="/admin/data-ampera" className="text-xs font-semibold text-[#1664e8] hover:underline">
+              <h2 className="text-xs sm:text-sm font-bold text-[#0f2257] dark:text-white">Pengingat Tugas</h2>
+              <Link href="/admin/data-ampera" className="text-[11px] sm:text-xs font-semibold text-[#1664e8] hover:underline">
                 Lihat Data
               </Link>
             </div>
-            <div className="mt-4 rounded-xl border border-[#e3ecfa] p-4 dark:border-slate-700 bg-[#f8fbff] dark:bg-slate-800/40">
-              <div className="flex items-start gap-3">
+            <div className="mt-3 sm:mt-4 rounded-xl border border-[#e3ecfa] p-3 sm:p-4 dark:border-slate-700 bg-[#f8fbff] dark:bg-slate-800/40">
+              <div className="flex items-start gap-2.5 sm:gap-3">
                 <div
-                  className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${
+                  className={`flex h-8 w-8 sm:h-9 sm:w-9 shrink-0 items-center justify-center rounded-lg ${
                     menungguVerifikasi > 0
                       ? "bg-amber-100 text-amber-700 dark:bg-amber-950/60 dark:text-amber-400"
                       : "bg-[#e8f1fe] text-[#1664e8]"
                   }`}
                 >
-                  <ShieldCheck className="h-[18px] w-[18px]" />
+                  <ShieldCheck className="h-4 w-4 sm:h-[18px] sm:w-[18px]" />
                 </div>
                 <div>
-                  <p className="text-sm font-bold leading-snug text-[#0f2257] dark:text-white">
+                  <p className="text-xs sm:text-sm font-bold leading-snug text-[#0f2257] dark:text-white">
                     {menungguVerifikasi > 0 ? "Perlu Verifikasi Petugas" : "Layanan Berjalan Normal"}
                   </p>
-                  <p className="mt-1.5 text-xs leading-relaxed text-[#5d6c8c] dark:text-slate-400">
+                  <p className="mt-1 text-[11px] sm:text-xs leading-relaxed text-[#5d6c8c] dark:text-slate-400">
                     {menungguVerifikasi > 0 ? (
                       <>
                         Terdapat <strong>{menungguVerifikasi} permohonan</strong> berstatus Menunggu Verifikasi. Segera tindak lanjuti untuk menjaga standar SLA respon cepat BBPOM.
@@ -386,28 +386,28 @@ export default async function AdminDashboardPage() {
           </div>
           <Link
             href="/admin/data-ampera"
-            className="mt-4 inline-flex items-center justify-center gap-2 rounded-full bg-[#1664e8] py-3 text-sm font-semibold text-white shadow-lg shadow-blue-500/30 transition hover:bg-[#0f55cc]"
+            className="mt-3 sm:mt-4 inline-flex items-center justify-center gap-2 rounded-xl sm:rounded-full bg-[#1664e8] py-2.5 sm:py-3 text-xs sm:text-sm font-semibold text-white shadow-md shadow-blue-500/25 transition hover:bg-[#0f55cc]"
           >
             <ClipboardList className="h-4 w-4" /> {menungguVerifikasi > 0 ? "Verifikasi Sekarang" : "Buka Data Ampera"}
           </Link>
         </div>
 
-        <div className={`${card} p-5 xl:col-span-4 flex flex-col justify-between`}>
+        <div className={`${card} p-4 sm:p-5 xl:col-span-4 flex flex-col justify-between`}>
           <div>
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-blue-50 text-[#1664e8] dark:bg-blue-950/50 dark:text-blue-400">
                   <Users className="h-4 w-4" />
                 </div>
-                <h2 className="text-sm font-bold text-[#0f2257] dark:text-white">Data Petugas</h2>
+                <h2 className="text-xs sm:text-sm font-bold text-[#0f2257] dark:text-white">Data Petugas</h2>
               </div>
-              <span className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-200/90 bg-emerald-50 px-2 py-0.5 text-[11px] font-bold text-emerald-700 dark:border-emerald-800/60 dark:bg-emerald-950/40 dark:text-emerald-400">
+              <span className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-200/90 bg-emerald-50 px-2 py-0.5 text-[10px] sm:text-[11px] font-bold text-emerald-700 dark:border-emerald-800/60 dark:bg-emerald-950/40 dark:text-emerald-400">
                 <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
                 {petugasAktif} Aktif
               </span>
             </div>
 
-            <div className="mt-3 space-y-1.5">
+            <div className="mt-3 space-y-1">
               {rawPetugas.length === 0 ? (
                 <div className="py-7 text-center text-xs text-slate-400 dark:text-slate-500">
                   Belum ada master data petugas terdaftar.
@@ -417,10 +417,10 @@ export default async function AdminDashboardPage() {
                   <Link
                     key={petugas.id}
                     href="/admin/petugas"
-                    className="group flex items-center justify-between rounded-xl p-2 transition-colors hover:bg-[#f1f6ff] dark:hover:bg-slate-800"
+                    className="group flex items-center justify-between rounded-xl p-1.5 sm:p-2 transition-colors hover:bg-[#f1f6ff] dark:hover:bg-slate-800"
                   >
-                    <div className="flex items-center gap-3 min-w-0">
-                      <div className="relative h-9 w-9 shrink-0 overflow-hidden rounded-xl bg-slate-100 border border-slate-200 dark:border-slate-700 dark:bg-slate-800 flex items-center justify-center">
+                    <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
+                      <div className="relative h-8 w-8 sm:h-9 sm:w-9 shrink-0 overflow-hidden rounded-xl bg-slate-100 border border-slate-200 dark:border-slate-700 dark:bg-slate-800 flex items-center justify-center">
                         {petugas.fotoUrl ? (
                           <Image
                             src={petugas.fotoUrl}
@@ -430,7 +430,7 @@ export default async function AdminDashboardPage() {
                             sizes="36px"
                           />
                         ) : (
-                          <span className="text-xs font-black text-slate-500 dark:text-slate-400">
+                          <span className="text-[11px] sm:text-xs font-black text-slate-500 dark:text-slate-400">
                             {petugas.nama.slice(0, 2).toUpperCase()}
                           </span>
                         )}
@@ -439,10 +439,10 @@ export default async function AdminDashboardPage() {
                         )}
                       </div>
                       <div className="min-w-0 flex-1">
-                        <p className="truncate text-sm font-semibold text-[#0f2257] group-hover:text-[#1664e8] dark:text-white transition-colors">
+                        <p className="truncate text-xs sm:text-sm font-semibold text-[#0f2257] group-hover:text-[#1664e8] dark:text-white transition-colors">
                           {petugas.nama}
                         </p>
-                        <p className="truncate text-[11px] text-[#7b8aa8]">
+                        <p className="truncate text-[10px] sm:text-[11px] text-[#7b8aa8]">
                           {petugas.layananNama || petugas.jabatan || `NIP. ${petugas.nip}`}
                         </p>
                       </div>
@@ -454,13 +454,13 @@ export default async function AdminDashboardPage() {
             </div>
           </div>
 
-          <div className="mt-3 pt-3 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between text-xs">
-            <span className="text-slate-500 dark:text-slate-400 text-[11px]">
+          <div className="mt-3 pt-3 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between text-[11px] sm:text-xs">
+            <span className="text-slate-500 dark:text-slate-400">
               Total: <strong className="text-[#0f2257] dark:text-white">{totalPetugas}</strong> petugas
             </span>
             <Link
               href="/admin/petugas"
-              className="font-bold text-[#1664e8] hover:underline inline-flex items-center gap-1 text-[11px]"
+              className="font-bold text-[#1664e8] hover:underline inline-flex items-center gap-1"
             >
               Kelola Petugas <ChevronRight className="h-3 w-3" />
             </Link>
@@ -469,12 +469,12 @@ export default async function AdminDashboardPage() {
       </div>
 
       {/* Row: table + progress */}
-      <div className="grid grid-cols-1 gap-4 xl:grid-cols-12">
+      <div className="grid grid-cols-1 gap-3.5 sm:gap-4 xl:grid-cols-12">
         <AdminTrendsChartCard submissions={serializedSubmissions} />
 
-        <div className={`${card} p-5 xl:col-span-4`}>
-          <h2 className="text-sm font-bold text-[#0f2257] dark:text-white">Progres Pengajuan</h2>
-          <div className="relative mx-auto mt-4 w-full max-w-[240px]">
+        <div className={`${card} p-4 sm:p-5 xl:col-span-4`}>
+          <h2 className="text-xs sm:text-sm font-bold text-[#0f2257] dark:text-white">Progres Pengajuan</h2>
+          <div className="relative mx-auto mt-3 sm:mt-4 w-full max-w-[220px] sm:max-w-[240px]">
             <svg viewBox="0 0 200 110" className="w-full">
               {arcs.map((a) => (
                 <path
@@ -490,15 +490,15 @@ export default async function AdminDashboardPage() {
               ))}
             </svg>
             <div className="absolute inset-x-0 bottom-0 text-center">
-              <div className="text-3xl font-bold text-[#0f2257] dark:text-white">{selesaiPct}%</div>
-              <div className="text-[11px] text-[#7b8aa8]">Pengajuan Selesai</div>
+              <div className="text-2xl sm:text-3xl font-bold text-[#0f2257] dark:text-white">{selesaiPct}%</div>
+              <div className="text-[10px] sm:text-[11px] text-[#7b8aa8]">Pengajuan Selesai</div>
             </div>
           </div>
-          <div className="mt-5 space-y-2.5">
+          <div className="mt-4 sm:mt-5 space-y-2 sm:space-y-2.5">
             {progress.map((p) => (
-              <div key={p.label} className="flex items-center justify-between text-xs">
+              <div key={p.label} className="flex items-center justify-between text-[11px] sm:text-xs">
                 <span className="flex items-center gap-2 text-[#5d6c8c] dark:text-slate-400">
-                  <span className="h-2.5 w-2.5 rounded-full" style={{ background: p.color }} />
+                  <span className="h-2 w-2 sm:h-2.5 sm:w-2.5 rounded-full" style={{ background: p.color }} />
                   {p.label}
                 </span>
                 <span className="font-bold text-[#0f2257] dark:text-white">
@@ -511,25 +511,91 @@ export default async function AdminDashboardPage() {
       </div>
 
       {/* Row: Pengajuan Layanan Terkini Table Card (Full Width) */}
-      <div className={`${card} p-5`}>
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2.5">
-            <h2 className="text-base font-bold text-[#0f2257] dark:text-white">
+      <div className={`${card} p-4 sm:p-5`}>
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2 sm:gap-2.5 min-w-0">
+            <h2 className="text-sm sm:text-base font-bold text-[#0f2257] dark:text-white truncate">
               Pengajuan Layanan Terkini
             </h2>
-            <span className="rounded-full bg-blue-50 px-2.5 py-0.5 text-[11px] font-bold text-[#1664e8] dark:bg-blue-950/60 dark:text-blue-300">
+            <span className="rounded-full bg-blue-50 px-2 sm:px-2.5 py-0.5 text-[10px] sm:text-[11px] font-bold text-[#1664e8] dark:bg-blue-950/60 dark:text-blue-300 shrink-0">
               Hari Ini ({recentSubmissions.length})
             </span>
           </div>
           <Link
             href="/admin/data-ampera"
-            className="text-xs font-semibold text-[#1664e8] transition hover:underline"
+            className="text-[11px] sm:text-xs font-semibold text-[#1664e8] transition hover:underline shrink-0"
           >
             Lihat Semua
           </Link>
         </div>
 
-        <div className="mt-4 overflow-x-auto">
+        {/* Tampilan Mobile: Kartu Daftar Terkini (md:hidden) */}
+        <div className="mt-3 divide-y divide-[#eef3fb] dark:divide-slate-800 md:hidden">
+          {recentSubmissions.length === 0 ? (
+            <div className="py-8 text-center text-xs text-slate-400 dark:text-slate-500">
+              Belum ada pengajuan layanan yang masuk pada hari ini.
+            </div>
+          ) : (
+            recentSubmissions.map((row) => {
+              let badge = "bg-slate-100 text-slate-600";
+              let label: string = row.status;
+              if (row.status === "MENUNGGU") {
+                badge = "bg-rose-50 text-rose-600 dark:bg-rose-950/40 dark:text-rose-400";
+                label = "Menunggu";
+              } else if (row.status === "DIPROSES") {
+                badge = "bg-amber-50 text-amber-600 dark:bg-amber-950/40 dark:text-amber-400";
+                label = "Diproses";
+              } else if (row.status === "SELESAI") {
+                badge = "bg-emerald-50 text-emerald-600 dark:bg-emerald-950/40 dark:text-emerald-400";
+                label = "Selesai";
+              }
+
+              return (
+                <div key={row.id} className="py-3 space-y-2">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#e8f1fe] text-xs font-bold text-[#1664e8]">
+                        {row.nama.charAt(0)}
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-xs font-bold text-[#0f2257] dark:text-white truncate">
+                          {row.nama}
+                        </p>
+                        <p className="text-[10px] text-[#7b8aa8]">
+                          {row.id} • {row.waktu}
+                        </p>
+                      </div>
+                    </div>
+                    <span className={`shrink-0 rounded-full px-2.5 py-0.5 text-[10px] font-semibold ${badge}`}>
+                      {label}
+                    </span>
+                  </div>
+
+                  <div className="rounded-xl bg-[#f8fbff] dark:bg-slate-800/40 p-2.5 text-xs">
+                    <p className="font-semibold text-[#0f2257] dark:text-slate-200">
+                      {row.layanan}
+                    </p>
+                    <p className="line-clamp-1 text-[11px] text-[#7b8aa8] mt-0.5">
+                      {row.sampel}
+                    </p>
+                  </div>
+
+                  <div className="flex justify-end pt-0.5">
+                    <Link
+                      href="/admin/data-ampera"
+                      className="inline-flex items-center gap-1 rounded-lg border border-[#e3ecfa] bg-white px-2.5 py-1 text-[11px] font-semibold text-[#0f2257] transition hover:border-[#1664e8] hover:text-[#1664e8] dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
+                    >
+                      Detail <ArrowUpRight className="h-3 w-3" />
+                    </Link>
+                  </div>
+                </div>
+              );
+            })
+          )}
+        </div>
+
+        {/* Tampilan Desktop: Tabel (hidden md:block) */}
+        <div className="mt-4 hidden md:block overflow-x-auto">
           <table className="w-full text-left text-xs">
             <thead className="border-b border-[#eef3fb] text-[#7b8aa8] dark:border-slate-800">
               <tr>

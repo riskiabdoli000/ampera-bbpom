@@ -10,6 +10,7 @@ import {
   Loader2,
   ShieldAlert,
 } from "lucide-react";
+import { AdminLoadingOverlay } from "@/components/admin/AdminLoadingOverlay";
 
 export interface HeroSlideData {
   id: number;
@@ -177,6 +178,13 @@ export function DeleteSlideModal({
           )}
         </div>
       </div>
+
+      <AdminLoadingOverlay
+        isOpen={isPending}
+        actionType="delete"
+        title="Menghapus Slide Hero..."
+        description="Sedang menghapus berkas gambar slide dari database BBPOM..."
+      />
     </div>,
     document.body
   );

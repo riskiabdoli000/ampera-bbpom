@@ -29,6 +29,7 @@ import {
   extractGoogleMapsEmbedUrl,
   buildWhatsAppLink,
 } from "@/lib/maps";
+import { useAdminLoading } from "@/context/AdminLoadingContext";
 
 // Brand SVG Icons untuk preview media sosial persis seperti di ContactSection landing page
 function InstagramIcon({ className = "w-4 h-4" }: { className?: string }) {
@@ -110,7 +111,7 @@ export function KontakSettingsForm({ initialData }: KontakSettingsFormProps) {
 
   // 2. Kontak Info
   const [alamat, setAlamat] = useState(initialData.alamat);
-  const [email1, setEmail1] = useState(initialData.email1);
+  const [email1, setEmail1] = useState(initialData.email1 || "");
   const [email2, setEmail2] = useState(initialData.email2 || "");
   const [telepon, setTelepon] = useState(initialData.telepon);
   const [whatsapp, setWhatsapp] = useState(initialData.whatsapp);
@@ -248,6 +249,7 @@ export function KontakSettingsForm({ initialData }: KontakSettingsFormProps) {
   }, [feedback]);
 
   const [isPending, startTransition] = useTransition();
+  const { showLoading, hideLoading } = useAdminLoading();
 
   // Bersihkan Embed URL secara real-time
   const cleanEmbedUrl = useMemo(() => {
@@ -271,49 +273,59 @@ export function KontakSettingsForm({ initialData }: KontakSettingsFormProps) {
     if (e) e.preventDefault();
     setFeedback(null);
 
+    showLoading({
+      actionType: "save",
+      title: "Menyimpan Pengaturan Kontak...",
+      description: "Sedang memvalidasi dan menyimpan informasi kontak & lokasi ke database BBPOM...",
+    });
+
     startTransition(async () => {
-      // Helper untuk format URL tersimpan (jika nonaktif diberi prefix [NONAKTIF])
-      const formatSocialSave = (isActive: boolean, url: string) => {
-        const trimmed = url.trim();
-        if (!trimmed) return null;
-        return isActive ? trimmed : `[NONAKTIF]${trimmed}`;
-      };
+      try {
+        // Helper untuk format URL tersimpan (jika nonaktif diberi prefix [NONAKTIF])
+        const formatSocialSave = (isActive: boolean, url: string) => {
+          const trimmed = url.trim();
+          if (!trimmed) return null;
+          return isActive ? trimmed : `[NONAKTIF]${trimmed}`;
+        };
 
-      const payload: KontakSettingsInput = {
-        eyebrow,
-        judul,
-        deskripsi,
-        labelSosmed: isSosmedActive
-          ? (labelSosmed.trim() || "Media Sosial Resmi BBPOM Palembang:")
-          : `[NONAKTIF] ${labelSosmed.trim() || "Media Sosial Resmi BBPOM Palembang:"}`,
-        alamat,
-        email1,
-        email2: email2.trim() ? email2.trim() : null,
-        telepon,
-        whatsapp,
-        whatsappPesan,
-        mapsEmbedUrl: cleanEmbedUrl,
-        mapsLinkUrl,
-        instagramUrl: formatSocialSave(isInstagramActive, instagramUrl),
-        facebookUrl: formatSocialSave(isFacebookActive, facebookUrl),
-        tiktokUrl: formatSocialSave(isTiktokActive, tiktokUrl),
-        threadsUrl: formatSocialSave(isThreadsActive, threadsUrl),
-        youtubeUrl: formatSocialSave(isYoutubeActive, youtubeUrl),
-      };
+        const payload: KontakSettingsInput = {
+          eyebrow,
+          judul,
+          deskripsi,
+          labelSosmed: isSosmedActive
+            ? (labelSosmed.trim() || "Media Sosial Resmi BBPOM Palembang:")
+            : `[NONAKTIF] ${labelSosmed.trim() || "Media Sosial Resmi BBPOM Palembang:"}`,
+          alamat,
+          email1,
+          email2: email2.trim() ? email2.trim() : null,
+          telepon,
+          whatsapp,
+          whatsappPesan,
+          mapsEmbedUrl: cleanEmbedUrl,
+          mapsLinkUrl,
+          instagramUrl: formatSocialSave(isInstagramActive, instagramUrl),
+          facebookUrl: formatSocialSave(isFacebookActive, facebookUrl),
+          tiktokUrl: formatSocialSave(isTiktokActive, tiktokUrl),
+          threadsUrl: formatSocialSave(isThreadsActive, threadsUrl),
+          youtubeUrl: formatSocialSave(isYoutubeActive, youtubeUrl),
+        };
 
-      const res = await saveKontakSettingsAction(payload);
+        const res = await saveKontakSettingsAction(payload);
 
-      if (res.success) {
-        setFeedback({
-          type: "success",
-          message:
-            "Pengaturan Kontak & Lokasi Kantor berhasil disimpan ke database dan diperbarui di landing page!",
-        });
-      } else {
-        setFeedback({
-          type: "error",
-          message: res.error || "Gagal menyimpan pengaturan kontak.",
-        });
+        if (res.success) {
+          setFeedback({
+            type: "success",
+            message:
+              "Pengaturan Kontak & Lokasi Kantor berhasil disimpan ke database dan diperbarui di landing page!",
+          });
+        } else {
+          setFeedback({
+            type: "error",
+            message: res.error || "Gagal menyimpan pengaturan kontak.",
+          });
+        }
+      } finally {
+        hideLoading();
       }
     });
   };
@@ -498,15 +510,18 @@ export function KontakSettingsForm({ initialData }: KontakSettingsFormProps) {
               <div>
                 <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5 flex items-center gap-1.5">
                   <Mail className="w-3.5 h-3.5 text-brand-orange" />
-                  <span>Email 1: Utama BBPOM</span>
+                  <span>Email 1: Utama BBPOM (Opsional)</span>
                 </label>
                 <input
                   type="email"
                   value={email1}
                   onChange={(e) => setEmail1(e.target.value)}
-                  placeholder="bpom_palembang@pom.go.id"
+                  placeholder="Kosongkan jika tidak ingin ditampilkan"
                   className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-xs sm:text-sm font-semibold text-slate-900 focus:border-brand-orange focus:bg-white focus:outline-none dark:border-slate-700 dark:bg-slate-800 dark:text-white"
                 />
+                <p className="text-[11px] text-slate-400 dark:text-slate-500 mt-1">
+                  Kosongkan kolom ini jika tidak ingin menampilkan email di halaman utama.
+                </p>
               </div>
 
               <div>

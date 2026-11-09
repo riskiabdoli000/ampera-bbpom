@@ -30,6 +30,7 @@ import {
 } from "@/app/actions/permintaan-informasi";
 import { lookupNikAction } from "@/app/actions/lookup-nik";
 import { ServiceSavingOverlay } from "@/components/common/ServiceSavingOverlay";
+import { validateNik } from "@/lib/nik-validator";
 
 export function PermintaanInformasiForm() {
   const [currentStep, setCurrentStep] = useState<1 | 2 | 3>(1);
@@ -81,11 +82,16 @@ export function PermintaanInformasiForm() {
             status: "found",
             message: `${res.message}. Data Anda telah diisikan otomatis.`,
           });
+          const nikVal = validateNik(cleanNik);
+          const computedAge =
+            nikVal.isValid && nikVal.details?.perkiraanUmur !== undefined
+              ? String(nikVal.details.perkiraanUmur)
+              : "";
           setFormData((prev) => ({
             ...prev,
             nama: res.data?.nama || prev.nama,
             email: res.data?.email || prev.email,
-            umur: res.data?.umur ? String(res.data.umur) : prev.umur,
+            umur: res.data?.umur ? String(res.data.umur) : (computedAge || prev.umur),
             alamatAsalInstansi:
               res.data?.asalInstansi || res.data?.alamat || prev.alamatAsalInstansi,
             telepon: res.data?.telepon || prev.telepon,
@@ -102,6 +108,18 @@ export function PermintaanInformasiForm() {
             return next;
           });
         } else {
+          const nikVal = validateNik(cleanNik);
+          if (nikVal.isValid && nikVal.details?.perkiraanUmur !== undefined) {
+            setFormData((prev) => ({
+              ...prev,
+              umur: String(nikVal.details!.perkiraanUmur),
+            }));
+            setErrors((prev) => {
+              const next = { ...prev };
+              delete next.umur;
+              return next;
+            });
+          }
           setNikLookupStatus({
             status: "not_found",
             message: res.message || "NIK belum terdaftar di sistem. Silakan lengkapi formulir di bawah ini.",
@@ -124,15 +142,51 @@ export function PermintaanInformasiForm() {
   useEffect(() => {
     const cleanNik = formData.nik.trim().replace(/\D/g, "");
     if (cleanNik.length === 16 && cleanNik !== lastCheckedNikRef.current) {
-      performNikLookup(cleanNik);
+      const valRes = validateNik(cleanNik);
+      if (valRes.isValid) {
+        if (valRes.details?.perkiraanUmur !== undefined) {
+          setFormData((prev) => ({
+            ...prev,
+            umur: String(valRes.details!.perkiraanUmur),
+          }));
+          setErrors((prev) => {
+            const next = { ...prev };
+            delete next.umur;
+            return next;
+          });
+        }
+        performNikLookup(cleanNik);
+      } else {
+        setErrors((prev) => ({ ...prev, nik: valRes.message || "NIK tidak valid, periksa kembali NIK anda" }));
+      }
     }
   }, [formData.nik, performNikLookup]);
 
-  // Lookup cadangan saat user selesai input NIK (onBlur) jika panjang >= 8
+  // Lookup cadangan saat user selesai input NIK (onBlur)
   const handleNikBlur = () => {
-    const cleanNik = formData.nik.trim().replace(/\D/g, "");
-    if (cleanNik.length >= 8 && cleanNik !== lastCheckedNikRef.current) {
-      performNikLookup(cleanNik);
+    const cleanNik = formData.nik.trim();
+    if (!cleanNik) return;
+    const valRes = validateNik(cleanNik);
+    if (!valRes.isValid) {
+      setErrors((prev) => ({ ...prev, nik: valRes.message || "NIK tidak valid, periksa kembali NIK anda" }));
+    } else {
+      if (valRes.details?.perkiraanUmur !== undefined) {
+        setFormData((prev) => ({
+          ...prev,
+          umur: String(valRes.details!.perkiraanUmur),
+        }));
+      }
+      setErrors((prev) => {
+        const next = { ...prev };
+        delete next.nik;
+        if (valRes.details?.perkiraanUmur !== undefined) {
+          delete next.umur;
+        }
+        return next;
+      });
+      if (cleanNik !== lastCheckedNikRef.current) {
+        performNikLookup(cleanNik);
+      }
     }
   };
 
@@ -144,18 +198,41 @@ export function PermintaanInformasiForm() {
     if (name === "nik") {
       // Hanya izinkan angka, maksimal 16 digit
       const numericVal = value.replace(/\D/g, "").slice(0, 16);
-      setFormData((prev) => ({ ...prev, nik: numericVal }));
+
+      let computedAge = "";
+      if (numericVal.length === 16) {
+        const valRes = validateNik(numericVal);
+        if (valRes.isValid && valRes.details?.perkiraanUmur !== undefined) {
+          computedAge = String(valRes.details.perkiraanUmur);
+        }
+      }
+
+      setFormData((prev) => ({
+        ...prev,
+        nik: numericVal,
+        ...(computedAge ? { umur: computedAge } : {}),
+      }));
+
+      setErrors((prev) => {
+        const newErr = { ...prev };
+        delete newErr.nik;
+        if (computedAge) {
+          delete newErr.umur;
+        }
+        return newErr;
+      });
 
       // Reset lookup status jika NIK diubah dan berbeda dari NIK yang dicek sebelumnya
       if (numericVal !== lastCheckedNikRef.current) {
         setNikLookupStatus({ status: "idle", message: "" });
       }
-      if (numericVal.length < 8) {
+      if (numericVal.length < 16) {
         lastCheckedNikRef.current = "";
       }
-    } else {
-      setFormData((prev) => ({ ...prev, [name]: value }));
+      return;
     }
+
+    setFormData((prev) => ({ ...prev, [name]: value }));
 
     // Clear error on type
     if (errors[name]) {
@@ -172,11 +249,9 @@ export function PermintaanInformasiForm() {
     const errs: { [key: string]: string } = {};
 
     // 1. NIK
-    const cleanNik = formData.nik.trim().replace(/\D/g, "");
-    if (!formData.nik.trim()) {
-      errs.nik = "Nomor Induk Kependudukan (NIK) wajib diisi";
-    } else if (cleanNik.length < 8 || cleanNik.length > 16) {
-      errs.nik = "NIK harus terdiri dari 8 hingga 16 digit angka";
+    const nikRes = validateNik(formData.nik);
+    if (!nikRes.isValid) {
+      errs.nik = nikRes.message || "NIK tidak valid, periksa kembali NIK anda";
     }
 
     // 2. Nama
@@ -269,6 +344,10 @@ export function PermintaanInformasiForm() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (currentStep < 3) {
+      handleNext();
+      return;
+    }
     if (!validateStep1() || !validateStep2()) {
       return;
     }
@@ -767,12 +846,24 @@ export function PermintaanInformasiForm() {
                     >
                       NIK (Nomor Induk Kependudukan) <span className="text-red-500">*</span>
                     </label>
-                    {isCheckingNik && (
-                      <span className="inline-flex items-center gap-1.5 text-xs font-medium text-sky-600 dark:text-sky-400">
-                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                        Mengecek NIK otomatis...
-                      </span>
-                    )}
+                    <div className="flex items-center gap-2">
+                      {isCheckingNik ? (
+                        <span className="inline-flex items-center gap-1.5 text-xs font-medium text-sky-600 dark:text-sky-400">
+                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                          Mengecek NIK...
+                        </span>
+                      ) : (
+                        <span
+                          className={`text-[11px] font-mono px-2 py-0.5 rounded-full transition-colors ${
+                            formData.nik.length === 16
+                              ? "bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 font-semibold border border-emerald-200 dark:border-emerald-800"
+                              : "bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400"
+                          }`}
+                        >
+                          {formData.nik.length} / 16 digit
+                        </span>
+                      )}
+                    </div>
                   </div>
                   <div className="relative">
                     <input
@@ -803,7 +894,7 @@ export function PermintaanInformasiForm() {
                   </div>
                   {errors.nik ? (
                     <p className="mt-1.5 text-xs text-red-500 flex items-center gap-1">
-                      <AlertCircle className="w-3.5 h-3.5" />
+                      <AlertCircle className="w-3.5 h-3.5 shrink-0" />
                       <span>{errors.nik}</span>
                     </p>
                   ) : (
@@ -846,12 +937,20 @@ export function PermintaanInformasiForm() {
 
                 {/* Field 3: Umur */}
                 <div>
-                  <label
-                    htmlFor="umur"
-                    className="block text-xs sm:text-[13px] font-bold text-navy-900 dark:text-slate-200 mb-2"
-                  >
-                    Umur (Tahun) <span className="text-red-500">*</span>
-                  </label>
+                  <div className="flex items-center justify-between mb-2">
+                    <label
+                      htmlFor="umur"
+                      className="block text-xs sm:text-[13px] font-bold text-navy-900 dark:text-slate-200"
+                    >
+                      Umur (Tahun) <span className="text-red-500">*</span>
+                    </label>
+                    {validateNik(formData.nik).isValid && formData.umur && (
+                      <span className="text-[11px] text-emerald-600 dark:text-emerald-400 font-medium flex items-center gap-1">
+                        <CheckCircle2 className="w-3 h-3" />
+                        Terisi otomatis dari NIK
+                      </span>
+                    )}
+                  </div>
                   <div className="relative">
                     <input
                       id="umur"

@@ -62,6 +62,12 @@ import {
 } from "@/components/garda-ampera/GardaNotificationModal";
 import { EducationPdfModal } from "@/components/landing/EducationPdfModal";
 import { AdminPagination } from "@/components/admin/AdminPagination";
+import {
+  GardaStatCardsSkeleton,
+  GardaPesertaTableSkeleton,
+  GardaSoalSkeleton,
+  GardaMateriSkeleton,
+} from "@/components/admin/garda-ampera/GardaAmperaLoadingSkeleton";
 
 const MONTHS_LIST = [
   { value: "1", label: "Januari" },
@@ -937,81 +943,85 @@ export default function AdminGardaAmperaPage() {
       </div>
 
       {/* 2. Top Summary Stat Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {/* Total Peserta */}
-        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-sm flex items-center justify-between">
-          <div>
-            <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">
-              Total Peserta
-            </p>
-            <h3 className="text-2xl font-black text-navy-900 dark:text-white mt-1">
-              {stats.totalPeserta}
-            </h3>
-            <p className="text-[11px] text-slate-500 mt-0.5">Peserta terdaftar</p>
+      {loading ? (
+        <GardaStatCardsSkeleton />
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 animate-fade-in">
+          {/* Total Peserta */}
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-sm flex items-center justify-between">
+            <div>
+              <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">
+                Total Peserta
+              </p>
+              <h3 className="text-2xl font-black text-navy-900 dark:text-white mt-1">
+                {stats.totalPeserta}
+              </h3>
+              <p className="text-[11px] text-slate-500 mt-0.5">Peserta terdaftar</p>
+            </div>
+            <div className="w-12 h-12 rounded-xl bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 flex items-center justify-center">
+              <Users className="w-6 h-6" />
+            </div>
           </div>
-          <div className="w-12 h-12 rounded-xl bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 flex items-center justify-center">
-            <Users className="w-6 h-6" />
-          </div>
-        </div>
 
-        {/* Tingkat Kelulusan */}
-        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-sm flex items-center justify-between">
-          <div>
-            <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">
-              Tingkat Kelulusan
-            </p>
-            <h3 className="text-2xl font-black text-emerald-600 dark:text-emerald-400 mt-1">
-              {stats.tingkatKelulusanPersen}%
-            </h3>
-            <p className="text-[11px] text-slate-500 mt-0.5">
-              {stats.totalLulus} Lulus • {stats.totalRemidi} Remidi
-            </p>
+          {/* Tingkat Kelulusan */}
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-sm flex items-center justify-between">
+            <div>
+              <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">
+                Tingkat Kelulusan
+              </p>
+              <h3 className="text-2xl font-black text-emerald-600 dark:text-emerald-400 mt-1">
+                {stats.tingkatKelulusanPersen}%
+              </h3>
+              <p className="text-[11px] text-slate-500 mt-0.5">
+                {stats.totalLulus} Lulus • {stats.totalRemidi} Remidi
+              </p>
+            </div>
+            <div className="w-12 h-12 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
+              <GraduationCap className="w-6 h-6" />
+            </div>
           </div>
-          <div className="w-12 h-12 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
-            <GraduationCap className="w-6 h-6" />
-          </div>
-        </div>
 
-        {/* Rata-rata Pre-Test */}
-        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-sm flex items-center justify-between">
-          <div>
-            <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">
-              Rata-rata Pre-Test
-            </p>
-            <h3 className="text-2xl font-black text-navy-900 dark:text-white mt-1">
-              {stats.rataRataPreTest}
-              <span className="text-xs text-slate-400 font-medium ml-1">pts</span>
-            </h3>
-            <p className="text-[11px] text-slate-500 mt-0.5">
-              Rata-rata total {stats.totalPeserta} peserta
-            </p>
+          {/* Rata-rata Pre-Test */}
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-sm flex items-center justify-between">
+            <div>
+              <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">
+                Rata-rata Pre-Test
+              </p>
+              <h3 className="text-2xl font-black text-navy-900 dark:text-white mt-1">
+                {stats.rataRataPreTest}
+                <span className="text-xs text-slate-400 font-medium ml-1">pts</span>
+              </h3>
+              <p className="text-[11px] text-slate-500 mt-0.5">
+                Rata-rata total {stats.totalPeserta} peserta
+              </p>
+            </div>
+            <div className="w-12 h-12 rounded-xl bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 flex items-center justify-center">
+              <HelpCircle className="w-6 h-6" />
+            </div>
           </div>
-          <div className="w-12 h-12 rounded-xl bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 flex items-center justify-center">
-            <HelpCircle className="w-6 h-6" />
-          </div>
-        </div>
 
-        {/* Rata-rata Post-Test */}
-        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-sm flex items-center justify-between">
-          <div>
-            <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">
-              Rata-rata Post-Test
-            </p>
-            <h3 className="text-2xl font-black text-navy-900 dark:text-white mt-1">
-              {stats.rataRataPostTest}
-              <span className="text-xs text-emerald-600 font-bold ml-1.5">
-                (+{stats.peningkatanNilai} pts)
-              </span>
-            </h3>
-            <p className="text-[11px] text-slate-500 mt-0.5">
-              Rata-rata total {stats.totalPeserta} peserta
-            </p>
-          </div>
-          <div className="w-12 h-12 rounded-xl bg-amber-50 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400 flex items-center justify-center">
-            <TrendingUp className="w-6 h-6" />
+          {/* Rata-rata Post-Test */}
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-sm flex items-center justify-between">
+            <div>
+              <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">
+                Rata-rata Post-Test
+              </p>
+              <h3 className="text-2xl font-black text-navy-900 dark:text-white mt-1">
+                {stats.rataRataPostTest}
+                <span className="text-xs text-emerald-600 font-bold ml-1.5">
+                  (+{stats.peningkatanNilai} pts)
+                </span>
+              </h3>
+              <p className="text-[11px] text-slate-500 mt-0.5">
+                Rata-rata total {stats.totalPeserta} peserta
+              </p>
+            </div>
+            <div className="w-12 h-12 rounded-xl bg-amber-50 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400 flex items-center justify-center">
+              <TrendingUp className="w-6 h-6" />
+            </div>
           </div>
         </div>
-      </div>
+      )}
 
       {/* 3. Navigation Tabs */}
       <div className="border-b border-slate-200 dark:border-slate-800 flex items-center gap-4">
@@ -1058,8 +1068,11 @@ export default function AdminGardaAmperaPage() {
       {/* ===================================================================== */}
       {/* TAB 1: DATA PESERTA & KELULUSAN */}
       {/* ===================================================================== */}
-      {activeTab === "peserta" && (
-        <div className="space-y-4">
+      {activeTab === "peserta" &&
+        (loading ? (
+          <GardaPesertaTableSkeleton />
+        ) : (
+          <div className="space-y-4 animate-fade-in">
           {/* Filter Bar */}
           <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs space-y-3">
             <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3">
@@ -1410,13 +1423,16 @@ export default function AdminGardaAmperaPage() {
             />
           </div>
         </div>
-      )}
+      ))}
 
       {/* ===================================================================== */}
       {/* TAB 2: KELOLA BANK SOAL (DUAL INPUT: PDF UPLOAD & MANUAL SATU-SATU) */}
       {/* ===================================================================== */}
-      {activeTab === "soal" && (
-        <div className="space-y-4">
+      {activeTab === "soal" &&
+        (loading ? (
+          <GardaSoalSkeleton />
+        ) : (
+          <div className="space-y-4 animate-fade-in">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
             <div className="flex items-center gap-2">
               <span className="text-xs font-bold text-slate-500">Tampilkan Soal:</span>
@@ -1606,13 +1622,16 @@ export default function AdminGardaAmperaPage() {
             </div>
           )}
         </div>
-      )}
+      ))}
 
       {/* ===================================================================== */}
       {/* TAB 3: KELOLA MODUL MATERI (LENGKAP DENGAN FITUR TAMBAH MATERI BARU) */}
       {/* ===================================================================== */}
-      {activeTab === "materi" && (
-        <div className="space-y-6">
+      {activeTab === "materi" &&
+        (loading ? (
+          <GardaMateriSkeleton />
+        ) : (
+          <div className="space-y-6 animate-fade-in">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
               <h3 className="text-base font-bold text-navy-900 dark:text-white">
@@ -1731,13 +1750,13 @@ export default function AdminGardaAmperaPage() {
             </div>
           )}
         </div>
-      )}
+      ))}
 
       {/* ===================================================================== */}
       {/* MODAL UPLOAD SOAL VIA PDF (DENGAN GENERATE & PRATINJAU OTOMATIS) */}
       {/* ===================================================================== */}
       {showPdfModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs animate-fade-up">
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-up">
           <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl max-w-3xl w-full p-6 space-y-5 shadow-2xl max-h-[92vh] overflow-y-auto">
             <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
               <div>
@@ -2035,7 +2054,7 @@ Kunci: A`)
       {/* MODAL DETAIL PESERTA */}
       {/* ===================================================================== */}
       {selectedPeserta && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs animate-fade-up">
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-up">
           <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl max-w-xl w-full p-6 space-y-5 shadow-2xl">
             <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
               <div>
@@ -2176,7 +2195,7 @@ Kunci: A`)
       {/* MODAL FORM TAMBAH / EDIT SOAL SATU-SATU (MANUAL) */}
       {/* ===================================================================== */}
       {showSoalModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs animate-fade-up">
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-up">
           <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl max-w-2xl w-full p-6 space-y-4 shadow-2xl max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
               <h3 className="text-lg font-extrabold text-navy-900 dark:text-white">
@@ -2337,7 +2356,7 @@ Kunci: A`)
       {/* MODAL TAMBAH MODUL MATERI BARU (UPLOAD PDF / PPT) */}
       {/* ===================================================================== */}
       {showCreateMateriModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs animate-fade-up">
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-up">
           <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl max-w-xl w-full p-6 space-y-4 shadow-2xl max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
               <div>
@@ -2504,7 +2523,7 @@ Kunci: A`)
       {/* MODAL EDIT MODUL MATERI */}
       {/* ===================================================================== */}
       {editingMateri && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs animate-fade-up">
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-up">
           <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl max-w-lg w-full p-6 space-y-4 shadow-2xl">
             <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
               <h3 className="text-lg font-extrabold text-navy-900 dark:text-white">

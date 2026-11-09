@@ -51,6 +51,7 @@ export interface PengajuanItem {
   kodePengajuan: string;
   status: StatusPengajuan;
   catatanPetugas: string | null;
+  waktuSelesai?: Date | string | null;
   createdAt: Date;
   updatedAt: Date;
 
@@ -210,6 +211,7 @@ export async function getDataAmperaOverview(): Promise<DataAmperaOverviewRespons
         kodePengajuan: p.kodePengajuan,
         status: p.status as StatusPengajuan,
         catatanPetugas: p.catatanPetugas,
+        waktuSelesai: p.waktuSelesai,
         createdAt: p.createdAt,
         updatedAt: p.updatedAt,
         layanan: {
@@ -346,18 +348,26 @@ export async function getDataAmperaOverview(): Promise<DataAmperaOverviewRespons
 export async function updatePengajuanStatusAction(
   id: number,
   status: StatusPengajuan,
-  catatanPetugas?: string
+  catatanPetugas?: string,
+  waktuSelesai?: Date | string | null
 ): Promise<{ success: boolean; message: string }> {
   try {
     const session = await verifyAdminSession();
     if (!session) {
       return { success: false, message: "Akses ditolak. Silakan login sebagai Admin." };
     }
+
+    let finalWaktuSelesai: Date | null = null;
+    if (status === "SELESAI") {
+      finalWaktuSelesai = waktuSelesai ? new Date(waktuSelesai) : new Date();
+    }
+
     const updated = await prisma.pengajuanLayanan.update({
       where: { id },
       data: {
         status,
         ...(catatanPetugas !== undefined ? { catatanPetugas } : {}),
+        waktuSelesai: finalWaktuSelesai,
       },
       select: {
         id: true,
@@ -409,6 +419,7 @@ export async function updatePengajuanTindakanWithLampiranAction(
 
     const status = (formData.get("status") as StatusPengajuan) || "MENUNGGU_VERIFIKASI";
     const catatanPetugas = (formData.get("catatanPetugas") as string) || "";
+    const waktuSelesaiRaw = formData.get("waktuSelesai") as string | null;
 
     const rawDeletedIds = formData.get("deletedLampiranIds");
     let deletedLampiranIds: number[] = [];
@@ -510,6 +521,21 @@ export async function updatePengajuanTindakanWithLampiranAction(
       ),
     ]);
 
+    // Tentukan waktuSelesai
+    let finalWaktuSelesai: Date | null = null;
+    if (status === "SELESAI") {
+      if (waktuSelesaiRaw && waktuSelesaiRaw.trim()) {
+        const parsed = new Date(waktuSelesaiRaw);
+        finalWaktuSelesai = isNaN(parsed.getTime()) ? new Date() : parsed;
+      } else if (existingPengajuan.waktuSelesai) {
+        finalWaktuSelesai = existingPengajuan.waktuSelesai;
+      } else {
+        finalWaktuSelesai = new Date();
+      }
+    } else {
+      finalWaktuSelesai = null;
+    }
+
     // 3. Simpan lampiran baru (jika ada) dan update status/catatan petugas secara PARALEL
     await Promise.all([
       newRecords.length > 0
@@ -529,6 +555,7 @@ export async function updatePengajuanTindakanWithLampiranAction(
         data: {
           status,
           catatanPetugas: catatanPetugas.trim() || null,
+          waktuSelesai: finalWaktuSelesai,
         },
       }),
     ]);
@@ -565,6 +592,7 @@ export async function updatePengajuanTindakanWithLampiranAction(
       kodePengajuan: updated.kodePengajuan,
       status: updated.status as StatusPengajuan,
       catatanPetugas: updated.catatanPetugas,
+      waktuSelesai: updated.waktuSelesai,
       createdAt: updated.createdAt,
       updatedAt: updated.updatedAt,
       layanan: {
@@ -745,6 +773,7 @@ export async function getServiceLaporanData(
       kodePengajuan: p.kodePengajuan,
       status: p.status as StatusPengajuan,
       catatanPetugas: p.catatanPetugas,
+      waktuSelesai: p.waktuSelesai,
       createdAt: p.createdAt,
       updatedAt: p.updatedAt,
       layanan: {

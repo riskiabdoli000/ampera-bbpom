@@ -23,6 +23,7 @@ import {
   PetugasRecord,
   LayananOption,
 } from "@/app/actions/admin-petugas";
+import { AdminLoadingOverlay } from "@/components/admin/AdminLoadingOverlay";
 
 interface PetugasModalProps {
   isOpen: boolean;
@@ -185,7 +186,7 @@ export function PetugasModal({
   };
 
   return createPortal(
-    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 sm:p-6 overflow-y-auto">
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-3.5 sm:p-6 overflow-y-auto">
       {/* Fullscreen Backdrop */}
       <div
         onClick={onClose}
@@ -193,18 +194,18 @@ export function PetugasModal({
       />
 
       {/* Modal Dialog Card */}
-      <div className="relative w-full max-w-xl rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-2xl p-6 sm:p-8 z-10 animate-fade-up my-auto">
+      <div className="relative w-full max-w-xl max-h-[92vh] overflow-y-auto rounded-2xl sm:rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-2xl p-4 sm:p-6 sm:p-8 z-10 animate-fade-up my-auto">
         {/* Header */}
-        <div className="flex items-center justify-between pb-4 border-b border-slate-100 dark:border-slate-800">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-blue-50 dark:bg-blue-500/15 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0">
-              <UserCheck className="w-5 h-5 stroke-[2.2]" />
+        <div className="flex items-center justify-between pb-3 sm:pb-4 border-b border-slate-100 dark:border-slate-800">
+          <div className="flex items-center gap-2.5 sm:gap-3">
+            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl sm:rounded-2xl bg-blue-50 dark:bg-blue-500/15 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0">
+              <UserCheck className="w-4 h-4 sm:w-5 sm:h-5 stroke-[2.2]" />
             </div>
             <div>
-              <h3 className="text-base sm:text-lg font-bold text-navy-900 dark:text-white font-brand">
+              <h3 className="text-sm sm:text-lg font-bold text-navy-900 dark:text-white font-brand">
                 {isEditing ? "Edit Data Petugas" : "Tambah Petugas Baru"}
               </h3>
-              <p className="text-xs text-slate-500 dark:text-slate-400">
+              <p className="text-[11px] sm:text-xs text-slate-500 dark:text-slate-400">
                 {isEditing
                   ? `Memperbarui rincian profil ID #${petugasToEdit?.id}`
                   : "Mendaftarkan profil petugas pelayanan BBPOM Palembang"}
@@ -215,7 +216,7 @@ export function PetugasModal({
           <button
             type="button"
             onClick={onClose}
-            className="w-8 h-8 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-500 hover:text-navy-900 dark:hover:text-white flex items-center justify-center transition-colors cursor-pointer"
+            className="w-8 h-8 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-500 hover:text-navy-900 dark:hover:text-white flex items-center justify-center transition-colors cursor-pointer shrink-0"
           >
             <X className="w-4 h-4" />
           </button>
@@ -475,6 +476,13 @@ export function PetugasModal({
           </div>
         </form>
       </div>
+
+      <AdminLoadingOverlay
+        isOpen={isPending}
+        actionType={fotoFile ? "upload" : "save"}
+        title={isEditing ? "Menyimpan Perubahan Petugas..." : "Menambahkan Petugas Baru..."}
+        description={fotoFile ? "Sedang mengunggah foto dan menyimpan profil petugas..." : "Sedang menyimpan data profil petugas ke database BBPOM..."}
+      />
     </div>,
     document.body
   );

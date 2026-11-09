@@ -433,14 +433,16 @@ export function GardaAmperaContainer() {
   return (
     <div className="w-full">
       {/* Visual Stepper */}
-      <StepProgress
-        currentStep={step}
-        completedSteps={completedSteps}
-        onStepClick={(targetStep) => {
-          if (step === "sertifikat" || completedSteps.has("sertifikat")) return;
-          setStep(targetStep);
-        }}
-      />
+      <div className="no-print">
+        <StepProgress
+          currentStep={step}
+          completedSteps={completedSteps}
+          onStepClick={(targetStep) => {
+            if (step === "sertifikat" || completedSteps.has("sertifikat")) return;
+            setStep(targetStep);
+          }}
+        />
+      </div>
 
       {/* Sesi Restored Banner (hanya tampil jika belum sampai tahap sertifikat) */}
       {restoredBanner &&

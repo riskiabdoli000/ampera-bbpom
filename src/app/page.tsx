@@ -12,24 +12,22 @@ import { getLandingHeroData } from "@/app/actions/settings-hero";
 import { getLandingServicesData } from "@/app/actions/admin-layanan";
 import { getKontakSettings } from "@/app/actions/settings-kontak";
 import { getLandingPenilaianData } from "@/app/actions/landing-penilaian";
+import { getLandingEdukasiList } from "@/app/actions/settings-edukasi";
+import { getLandingVideoList } from "@/app/actions/settings-video";
 
 // ISR Caching 60 detik (Otomatis di-revalidate secara instan saat Admin memperbarui pengaturan melalui revalidatePath("/"))
 export const revalidate = 60;
 
 export default async function Home() {
-  const [heroData, servicesData, contactData, penilaianData] =
+  const [heroData, servicesData, contactData, penilaianData, edukasiData, videoList] =
     await Promise.all([
       getLandingHeroData(),
       getLandingServicesData(),
       getKontakSettings(),
       getLandingPenilaianData(),
+      getLandingEdukasiList(),
+      getLandingVideoList(),
     ]);
-
-  // Gunakan data video yang sudah diambil di dalam getLandingHeroData() untuk menghindari query database ganda
-  const videoData = {
-    id: 1,
-    ...heroData.video,
-  };
 
   return (
     <main className="min-h-screen bg-white dark:bg-slate-950 text-slate-800 dark:text-slate-100 flex flex-col selection:bg-teal-700 selection:text-white overflow-x-hidden transition-colors duration-300">
@@ -45,14 +43,14 @@ export default async function Home() {
       {/* Badge Kecepatan Layanan (Compact Strip) */}
       <SpeedBadgesSection />
 
+      {/* Section Edukasi & Literasi Konsumen */}
+      <EducationSection initialData={edukasiData} />
+
       {/* Section Penilaian & Indeks Kepuasan Masyarakat (IKM) */}
       <PenilaianSection initialData={penilaianData} />
 
-      {/* Section Edukasi & Literasi Konsumen */}
-      <EducationSection />
-
       {/* Section Video Profil & Dokumentasi Resmi BBPOM Palembang */}
-      <VideoSection initialData={videoData} />
+      <VideoSection initialData={videoList} />
 
       {/* Section Kontak & Peta Lokasi Kantor */}
       <ContactSection initialData={contactData} />

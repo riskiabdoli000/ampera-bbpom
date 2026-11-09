@@ -81,46 +81,46 @@ export function AdminHeader({
   };
 
   const iconBtn =
-    "relative flex h-11 w-11 items-center justify-center rounded-xl border border-[#e3ecfa] bg-white text-[#0f2257] transition-colors hover:bg-[#f1f6ff] hover:text-[#1664e8] dark:border-slate-800 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800 cursor-pointer";
+    "relative flex h-9 w-9 sm:h-10 sm:w-10 lg:h-11 lg:w-11 items-center justify-center rounded-lg sm:rounded-xl border border-[#e3ecfa] bg-white text-[#0f2257] transition-colors hover:bg-[#f1f6ff] hover:text-[#1664e8] dark:border-slate-800 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800 cursor-pointer shrink-0";
 
   return (
     <>
-      <header className="sticky top-0 z-30 flex h-[84px] w-full items-center justify-between gap-4 border-b border-[#e3ecfa] bg-[#f7faff]/90 px-4 backdrop-blur-md transition-colors dark:border-slate-800 dark:bg-slate-950/80 sm:px-8">
+      <header className="sticky top-0 z-30 flex h-16 sm:h-[76px] lg:h-[84px] w-full items-center justify-between gap-2 sm:gap-4 border-b border-[#e3ecfa] bg-[#f7faff]/95 px-3 sm:px-6 lg:px-8 backdrop-blur-md transition-colors dark:border-slate-800 dark:bg-slate-950/90">
       {/* Kiri: hamburger + Logo BPOM & Nama Instansi */}
-      <div className="flex items-center gap-3 sm:gap-4">
+      <div className="flex items-center gap-2 sm:gap-3.5 min-w-0">
         <button
           type="button"
           onClick={onOpenSidebar}
           className={`${iconBtn} lg:hidden`}
           aria-label="Buka Menu Sidebar"
         >
-          <Menu className="h-5 w-5" />
+          <Menu className="h-4 w-4 sm:h-5 sm:w-5" />
         </button>
 
-        <div className="flex items-center gap-3">
-          <div className="relative h-10 w-10 shrink-0 sm:h-11 sm:w-11">
+        <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+          <div className="relative h-8 w-8 sm:h-9 sm:w-9 lg:h-10 lg:w-10 shrink-0">
             <Image
               src="/assets-landingpage/logo-bpom.png"
               alt="Logo BPOM"
-              width={44}
-              height={44}
+              width={40}
+              height={40}
               className="h-full w-full object-contain"
               priority
             />
           </div>
-          <div className="flex flex-col leading-tight">
-            <span className="text-sm font-extrabold tracking-tight text-[#0f2257] dark:text-white sm:text-base md:text-lg">
+          <div className="flex flex-col leading-tight min-w-0">
+            <span className="text-xs font-black tracking-tight text-[#0f2257] dark:text-white sm:text-base md:text-lg truncate">
               AMPERA BBPOM
             </span>
-            <span className="text-[11px] font-medium text-[#7b8aa8] dark:text-slate-400 sm:text-xs">
-              Balai Besar POM Palembang
+            <span className="hidden sm:block text-[10px] font-medium text-[#7b8aa8] dark:text-slate-400 sm:text-xs truncate">
+              AMankan Produk Edukasi MasyaRakat
             </span>
           </div>
         </div>
       </div>
 
       {/* Kanan */}
-      <div className="flex items-center gap-2.5 sm:gap-3">
+      <div className="flex items-center gap-1.5 sm:gap-2.5 lg:gap-3 shrink-0">
         {/* Bell Notification Button + Dropdown */}
         <div className="relative" ref={dropdownRef}>
           <button
@@ -130,16 +130,16 @@ export function AdminHeader({
             aria-label="Pemberitahuan"
             title="Pemberitahuan Layanan Baru Hari Ini"
           >
-            <Bell className="h-[18px] w-[18px]" />
+            <Bell className="h-4 w-4 sm:h-[18px] sm:w-[18px]" />
             {todayWaitingCount > 0 && (
-              <span className="absolute -right-1.5 -top-1.5 flex h-5 min-w-[20px] items-center justify-center rounded-full bg-red-600 px-1.5 text-[10px] font-extrabold leading-none text-white shadow-sm ring-2 ring-white dark:ring-slate-900 animate-pulse">
+              <span className="absolute -right-1 -top-1 sm:-right-1.5 sm:-top-1.5 flex h-4 min-w-[16px] sm:h-5 sm:min-w-[20px] items-center justify-center rounded-full bg-red-600 px-1 sm:px-1.5 text-[9px] sm:text-[10px] font-extrabold leading-none text-white shadow-sm ring-2 ring-white dark:ring-slate-900 animate-pulse">
                 {todayWaitingCount > 99 ? "99+" : todayWaitingCount}
               </span>
             )}
           </button>
 
           {notifOpen && (
-            <div className="absolute right-0 mt-2.5 w-80 sm:w-96 rounded-2xl border border-[#e3ecfa] bg-white shadow-xl dark:border-slate-800 dark:bg-slate-900 overflow-hidden z-50">
+            <div className="fixed left-3 right-3 top-[68px] sm:absolute sm:left-auto sm:right-0 sm:top-full sm:mt-2.5 w-auto sm:w-96 rounded-2xl border border-[#e3ecfa] bg-white shadow-2xl dark:border-slate-800 dark:bg-slate-900 overflow-hidden z-50">
               <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 bg-[#f7faff] dark:bg-slate-800/60 px-4 py-3">
                 <div>
                   <h4 className="text-xs font-extrabold text-[#0f2257] dark:text-white">
@@ -221,14 +221,18 @@ export function AdminHeader({
           title={isDark ? "Ganti ke Mode Terang" : "Ganti ke Mode Gelap"}
           aria-label="Ganti Tema"
         >
-          {isDark ? <Sun className="h-[18px] w-[18px] text-amber-400" /> : <Moon className="h-[18px] w-[18px]" />}
+          {isDark ? (
+            <Sun className="h-4 w-4 sm:h-[18px] sm:w-[18px] text-amber-400" />
+          ) : (
+            <Moon className="h-4 w-4 sm:h-[18px] sm:w-[18px]" />
+          )}
         </button>
 
-        <div className="ml-1 flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-[#0b4fd1] to-[#2f86f6] text-xs font-bold text-white shadow-sm ring-1 ring-white/20">
+        <div className="flex items-center gap-1.5 sm:gap-2.5">
+          <div className="flex h-8 w-8 sm:h-9 sm:w-9 lg:h-10 lg:w-10 items-center justify-center rounded-lg sm:rounded-xl bg-gradient-to-br from-[#0b4fd1] to-[#2f86f6] text-[10px] sm:text-xs font-bold text-white shadow-sm ring-1 ring-white/20 shrink-0">
             ADM
           </div>
-          <div className="hidden flex-col leading-tight sm:flex">
+          <div className="hidden flex-col leading-tight xl:flex">
             <span className="text-xs font-bold text-[#0f2257] dark:text-white">Admin BBPOM</span>
             <span className="text-[10px] text-[#7b8aa8]">Petugas Terverifikasi</span>
           </div>
@@ -236,7 +240,7 @@ export function AdminHeader({
           <button
             type="button"
             onClick={() => setLogoutModalOpen(true)}
-            className="flex h-10 items-center gap-1.5 rounded-xl border border-red-200 bg-red-50/70 px-3 text-xs font-semibold text-red-600 transition-colors hover:bg-red-100 hover:text-red-700 dark:border-red-900/40 dark:bg-red-950/40 dark:text-red-300 dark:hover:bg-red-900/60 cursor-pointer"
+            className="flex h-8 sm:h-9 lg:h-10 items-center justify-center gap-1.5 rounded-lg sm:rounded-xl border border-red-200 bg-red-50/70 px-2 sm:px-3 text-xs font-semibold text-red-600 transition-colors hover:bg-red-100 hover:text-red-700 dark:border-red-900/40 dark:bg-red-950/40 dark:text-red-300 dark:hover:bg-red-900/60 cursor-pointer shrink-0"
             title="Keluar dari akun admin"
           >
             <LogOut className="h-3.5 w-3.5" />
@@ -249,7 +253,7 @@ export function AdminHeader({
       {/* Pop-up Modal Konfirmasi Logout */}
       {logoutModalOpen && (
         <div
-          className="fixed inset-0 z-[100] flex items-center justify-center bg-[#06132f]/60 p-4 backdrop-blur-sm animate-fade-in"
+          className="fixed inset-0 z-[9999] flex items-center justify-center bg-[#06132f]/60 p-4 backdrop-blur-sm animate-fade-in"
           onClick={() => {
             if (!isLoggingOut) setLogoutModalOpen(false);
           }}
@@ -258,7 +262,7 @@ export function AdminHeader({
           aria-labelledby="logout-modal-title"
         >
           <div
-            className="relative w-full max-w-md overflow-hidden rounded-2xl border border-[#e3ecfa] bg-white p-6 shadow-2xl transition-all dark:border-slate-800 dark:bg-slate-900"
+            className="relative w-full max-w-sm sm:max-w-md overflow-hidden rounded-2xl border border-[#e3ecfa] bg-white p-5 sm:p-6 shadow-2xl transition-all dark:border-slate-800 dark:bg-slate-900"
             onClick={(e) => e.stopPropagation()}
           >
             <button

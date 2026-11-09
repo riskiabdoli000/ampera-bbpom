@@ -24,6 +24,9 @@ import {
   Award,
   MessageSquareHeart,
   UserCog,
+  BookOpen,
+  Database,
+  Building2,
 } from "lucide-react";
 
 interface AdminSidebarProps {
@@ -47,7 +50,7 @@ export function AdminSidebar({
   const navRef = useRef<HTMLElement>(null);
 
   const isDashboardActive = pathname === "/admin" || pathname === "/admin/dashboard";
-  const isDataAmperaActive = pathname === "/admin/data-ampera";
+  const isDataLaporanActive = pathname === "/admin/data-ampera";
   const isLayananActive = pathname.startsWith("/admin/layanan");
   const isPetugasActive = pathname.startsWith("/admin/petugas");
   const isPenilaianActive = pathname.startsWith("/admin/penilaian");
@@ -56,16 +59,22 @@ export function AdminSidebar({
   const isLaporanPath = pathname.startsWith("/admin/laporan");
   const isPengaturanAkunActive = pathname.startsWith("/admin/pengaturan-akun");
 
+  const isAmperaPath = isDataLaporanActive || isLaporanPath || isPenilaianActive;
+  const isMasterPath = isLayananActive || isPetugasActive;
+
+  // AMPERA submenu collapse state (buka otomatis jika sedang berada di menu data ampera, laporan, atau penilaian)
+  const [amperaOpen, setAmperaOpen] = useState(isAmperaPath);
+  // Laporan Pelayanan submenu collapse state (buka otomatis jika sedang berada di menu laporan)
+  const [laporanPelayananOpen, setLaporanPelayananOpen] = useState(isLaporanPath);
   // Website Settings submenu collapse state
   const [settingsOpen, setSettingsOpen] = useState(pathname.startsWith("/admin/settings"));
-  // Data Laporan Pengguna submenu collapse state (buka otomatis jika sedang berada di menu laporan)
-  const [laporanOpen, setLaporanOpen] = useState(pathname.startsWith("/admin/laporan"));
+  // Data Master submenu collapse state (buka otomatis jika sedang berada di menu data master)
+  const [masterOpen, setMasterOpen] = useState(isMasterPath);
   // Garda Ampera submenu collapse state (buka otomatis jika sedang berada di menu garda-ampera)
   const [gardaOpen, setGardaOpen] = useState(pathname.startsWith("/admin/garda-ampera"));
 
   const menuItems = [
     { title: "Dashboard", href: "/admin", icon: LayoutDashboard, active: isDashboardActive },
-    { title: "Data Ampera", href: "/admin/data-ampera", icon: FileSpreadsheet, active: isDataAmperaActive },
   ];
 
   const laporanSubItems = [
@@ -96,13 +105,16 @@ export function AdminSidebar({
   ];
 
   const isAnyLaporanSubActive = laporanSubItems.some((item) => pathname === item.href);
-  const isLaporanParentActive = isLaporanPath && (!laporanOpen || !isAnyLaporanSubActive);
+  const isLaporanParentActive = isLaporanPath && (!laporanPelayananOpen || !isAnyLaporanSubActive);
+  const isAmperaParentActive = isAmperaPath && !amperaOpen;
 
-  const masterItems = [
+  const masterSubItems = [
     { title: "Data Layanan", href: "/admin/layanan", icon: ClipboardList, active: isLayananActive },
     { title: "Data Petugas", href: "/admin/petugas", icon: Users, active: isPetugasActive },
-    { title: "Data Penilaian", href: "/admin/penilaian", icon: Star, active: isPenilaianActive },
   ];
+
+  const isAnyMasterSubActive = masterSubItems.some((item) => item.active);
+  const isMasterParentActive = isMasterPath && (!masterOpen || !isAnyMasterSubActive);
 
   const gardaSubItems = [
     { title: "Dashboard Garda Ampera", href: "/admin/garda-ampera/dashboard", icon: LayoutDashboard },
@@ -115,8 +127,10 @@ export function AdminSidebar({
 
   const websiteSubItems = [
     { title: "Hero Content", href: "/admin/settings/hero", icon: Sparkles },
+    { title: "Materi Edukasi", href: "/admin/settings/edukasi", icon: BookOpen },
     { title: "Video Profil", href: "/admin/settings/video", icon: Video },
     { title: "Kontak & Lokasi", href: "/admin/settings/kontak", icon: PhoneCall },
+    { title: "Tautan BBPOM", href: "/admin/settings/bbpom", icon: Building2 },
   ];
 
   const isAnySubActive = websiteSubItems.some((item) => pathname === item.href);
@@ -159,7 +173,7 @@ export function AdminSidebar({
       window.removeEventListener("resize", updateIndicator);
       clearTimeout(timer);
     };
-  }, [pathname, settingsOpen, laporanOpen, gardaOpen]);
+  }, [pathname, settingsOpen, amperaOpen, laporanPelayananOpen, masterOpen, gardaOpen]);
 
   const handleLinkClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
     if (navRef.current) {
@@ -178,8 +192,16 @@ export function AdminSidebar({
     setSettingsOpen((prev) => !prev);
   };
 
-  const handleLaporanToggle = () => {
-    setLaporanOpen((prev) => !prev);
+  const handleAmperaToggle = () => {
+    setAmperaOpen((prev) => !prev);
+  };
+
+  const handleLaporanPelayananToggle = () => {
+    setLaporanPelayananOpen((prev) => !prev);
+  };
+
+  const handleMasterToggle = () => {
+    setMasterOpen((prev) => !prev);
   };
 
   const handleGardaToggle = () => {
@@ -229,7 +251,7 @@ export function AdminSidebar({
         <div className="flex items-center justify-center px-6 pb-5 pt-6">
           <Link href="/admin" onClick={onClose} className="flex items-center justify-center">
             <Image
-              src="/assets-landingpage/am.png"
+              src="/assets-landingpage/ampera-new.png"
               alt="Logo AMPERA BBPOM"
               width={240}
               height={160}
@@ -289,29 +311,29 @@ export function AdminSidebar({
             <div className="space-y-1.5">
               {menuItems.map(renderLink)}
 
-              {/* Data Laporan Pengguna (Collapsible Navlink with 4 Sub-items) */}
+              {/* AMPERA (Collapsible Group: Data Laporan, Laporan Pelayanan, Data Penilaian) */}
               <div>
                 <button
                   type="button"
-                  onClick={handleLaporanToggle}
-                  data-active={isLaporanParentActive ? "true" : "false"}
+                  onClick={handleAmperaToggle}
+                  data-active={isAmperaParentActive ? "true" : "false"}
                   className={`group relative z-10 flex w-full items-center justify-between py-3 pl-4 pr-5 text-sm transition-colors duration-200 cursor-pointer ${
-                    isLaporanParentActive
+                    isAmperaParentActive
                       ? "font-bold text-[#0b2a6b] dark:text-blue-400"
-                      : isLaporanPath
+                      : isAmperaPath
                       ? "mr-4 rounded-xl font-semibold text-white hover:bg-white/15"
                       : "mr-4 rounded-xl font-medium text-white hover:bg-white/15"
                   }`}
                 >
                   <div className="flex items-center gap-3">
-                    <FolderKanban
+                    <FileSpreadsheet
                       className={`h-[19px] w-[19px] shrink-0 transition-colors duration-200 ${
-                        isLaporanParentActive
+                        isAmperaParentActive
                           ? "text-[#0b2a6b] dark:text-blue-400"
                           : "text-white/90 group-hover:text-white"
                       }`}
                     />
-                    <span>Data Laporan</span>
+                    <span>AMPERA</span>
                   </div>
                   <div className="flex items-center gap-2">
                     {waitingByService.total > 0 && (
@@ -322,10 +344,10 @@ export function AdminSidebar({
                         {waitingByService.total > 99 ? "99+" : waitingByService.total}
                       </span>
                     )}
-                    {laporanOpen ? (
+                    {amperaOpen ? (
                       <ChevronDown
                         className={`h-4 w-4 transition-colors ${
-                          isLaporanParentActive
+                          isAmperaParentActive
                             ? "text-[#0b2a6b] dark:text-blue-400"
                             : "text-white/80 group-hover:text-white"
                         }`}
@@ -333,7 +355,7 @@ export function AdminSidebar({
                     ) : (
                       <ChevronRight
                         className={`h-4 w-4 transition-colors ${
-                          isLaporanParentActive
+                          isAmperaParentActive
                             ? "text-[#0b2a6b] dark:text-blue-400"
                             : "text-white/80 group-hover:text-white"
                         }`}
@@ -342,50 +364,149 @@ export function AdminSidebar({
                   </div>
                 </button>
 
-                {/* 4 Sub-items */}
-                {laporanOpen && (
+                {/* Sub-items AMPERA */}
+                {amperaOpen && (
                   <div className="mt-1 space-y-1 pl-3">
-                    {laporanSubItems.map((sub) => {
-                      const SubIcon = sub.icon;
-                      const active = pathname === sub.href;
-                      return (
-                        <Link
-                          key={sub.href}
-                          href={sub.href}
-                          onClick={handleLinkClick}
-                          data-active={active ? "true" : "false"}
-                          className={`group relative z-10 flex items-center justify-between gap-2 py-2.5 pl-5 pr-5 text-[13px] transition-colors duration-200 ${
-                            active
-                              ? "font-bold text-[#0b2a6b] dark:text-blue-400"
-                              : "mr-4 rounded-xl font-medium text-white hover:bg-white/15"
-                          }`}
-                        >
-                          <div className="flex items-center gap-2.5 min-w-0">
-                            <SubIcon
-                              className={`h-4 w-4 shrink-0 transition-colors duration-200 ${
-                                active
-                                  ? "text-[#0b2a6b] dark:text-blue-400"
-                                  : "text-white/90 group-hover:text-white"
-                              }`}
-                            />
-                            <span className="truncate">{sub.title}</span>
-                          </div>
-                          {sub.badgeCount > 0 && (
+                    {/* 1. Data Laporan (/admin/data-ampera) */}
+                    <Link
+                      href="/admin/data-ampera"
+                      onClick={handleLinkClick}
+                      data-active={isDataLaporanActive ? "true" : "false"}
+                      className={`group relative z-10 flex items-center gap-2.5 py-2.5 pl-5 pr-5 text-[13px] transition-colors duration-200 ${
+                        isDataLaporanActive
+                          ? "font-bold text-[#0b2a6b] dark:text-blue-400"
+                          : "mr-4 rounded-xl font-medium text-white hover:bg-white/15"
+                      }`}
+                    >
+                      <FileSpreadsheet
+                        className={`h-4 w-4 shrink-0 transition-colors duration-200 ${
+                          isDataLaporanActive
+                            ? "text-[#0b2a6b] dark:text-blue-400"
+                            : "text-white/90 group-hover:text-white"
+                        }`}
+                      />
+                      <span>Data Laporan</span>
+                    </Link>
+
+                    {/* 2. Laporan Pelayanan (Collapsible Sub-menu: 4 Layanan) */}
+                    <div>
+                      <button
+                        type="button"
+                        onClick={handleLaporanPelayananToggle}
+                        data-active={isLaporanParentActive ? "true" : "false"}
+                        className={`group relative z-10 flex w-full items-center justify-between py-2.5 pl-5 pr-5 text-[13px] transition-colors duration-200 cursor-pointer ${
+                          isLaporanParentActive
+                            ? "font-bold text-[#0b2a6b] dark:text-blue-400"
+                            : isLaporanPath
+                            ? "mr-4 rounded-xl font-semibold text-white hover:bg-white/15"
+                            : "mr-4 rounded-xl font-medium text-white hover:bg-white/15"
+                        }`}
+                      >
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          <FolderKanban
+                            className={`h-4 w-4 shrink-0 transition-colors duration-200 ${
+                              isLaporanParentActive
+                                ? "text-[#0b2a6b] dark:text-blue-400"
+                                : "text-white/90 group-hover:text-white"
+                            }`}
+                          />
+                          <span className="truncate">Laporan Pelayanan</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          {waitingByService.total > 0 && (
                             <span
-                              className="inline-flex h-5 min-w-[20px] shrink-0 items-center justify-center rounded-full bg-red-500 px-1.5 text-[10px] font-extrabold leading-none text-white shadow-xs"
-                              title={`${sub.badgeCount} laporan menunggu verifikasi`}
+                              className="inline-flex h-4 min-w-[18px] items-center justify-center rounded-full bg-red-500 px-1 text-[9px] font-extrabold leading-none text-white shadow-xs"
+                              title={`${waitingByService.total} pengajuan menunggu verifikasi`}
                             >
-                              {sub.badgeCount > 99 ? "99+" : sub.badgeCount}
+                              {waitingByService.total > 99 ? "99+" : waitingByService.total}
                             </span>
                           )}
-                        </Link>
-                      );
-                    })}
+                          {laporanPelayananOpen ? (
+                            <ChevronDown
+                              className={`h-3.5 w-3.5 transition-colors ${
+                                isLaporanParentActive
+                                  ? "text-[#0b2a6b] dark:text-blue-400"
+                                  : "text-white/80 group-hover:text-white"
+                              }`}
+                            />
+                          ) : (
+                            <ChevronRight
+                              className={`h-3.5 w-3.5 transition-colors ${
+                                isLaporanParentActive
+                                  ? "text-[#0b2a6b] dark:text-blue-400"
+                                  : "text-white/80 group-hover:text-white"
+                              }`}
+                            />
+                          )}
+                        </div>
+                      </button>
+
+                      {/* 4 Sub-items Layanan */}
+                      {laporanPelayananOpen && (
+                        <div className="mt-1 space-y-1 pl-4 border-l border-white/15 ml-5">
+                          {laporanSubItems.map((sub) => {
+                            const SubIcon = sub.icon;
+                            const active = pathname === sub.href;
+                            return (
+                              <Link
+                                key={sub.href}
+                                href={sub.href}
+                                onClick={handleLinkClick}
+                                data-active={active ? "true" : "false"}
+                                className={`group relative z-10 flex items-center justify-between gap-2 py-2 pl-3 pr-4 text-xs transition-colors duration-200 ${
+                                  active
+                                    ? "font-bold text-[#0b2a6b] dark:text-blue-400"
+                                    : "mr-4 rounded-xl font-medium text-white hover:bg-white/15"
+                                }`}
+                              >
+                                <div className="flex items-center gap-2 min-w-0">
+                                  <SubIcon
+                                    className={`h-3.5 w-3.5 shrink-0 transition-colors duration-200 ${
+                                      active
+                                        ? "text-[#0b2a6b] dark:text-blue-400"
+                                        : "text-white/90 group-hover:text-white"
+                                    }`}
+                                  />
+                                  <span className="truncate">{sub.title}</span>
+                                </div>
+                                {sub.badgeCount > 0 && (
+                                  <span
+                                    className="inline-flex h-4 min-w-[18px] shrink-0 items-center justify-center rounded-full bg-red-500 px-1 text-[9px] font-extrabold leading-none text-white shadow-xs"
+                                    title={`${sub.badgeCount} laporan menunggu verifikasi`}
+                                  >
+                                    {sub.badgeCount > 99 ? "99+" : sub.badgeCount}
+                                  </span>
+                                )}
+                              </Link>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* 3. Data Penilaian (/admin/penilaian) */}
+                    <Link
+                      href="/admin/penilaian"
+                      onClick={handleLinkClick}
+                      data-active={isPenilaianActive ? "true" : "false"}
+                      className={`group relative z-10 flex items-center gap-2.5 py-2.5 pl-5 pr-5 text-[13px] transition-colors duration-200 ${
+                        isPenilaianActive
+                          ? "font-bold text-[#0b2a6b] dark:text-blue-400"
+                          : "mr-4 rounded-xl font-medium text-white hover:bg-white/15"
+                      }`}
+                    >
+                      <Star
+                        className={`h-4 w-4 shrink-0 transition-colors duration-200 ${
+                          isPenilaianActive
+                            ? "text-[#0b2a6b] dark:text-blue-400"
+                            : "text-white/90 group-hover:text-white"
+                        }`}
+                      />
+                      <span>Data Penilaian</span>
+                    </Link>
                   </div>
                 )}
               </div>
-
-              {masterItems.map(renderLink)}
 
               {/* Garda Ampera (Collapsible Navlink with 3 Sub-items) */}
               <div>
@@ -449,6 +570,84 @@ export function AdminSidebar({
                   </div>
                 )}
               </div>
+
+              {/* Data Master (Collapsible Navlink with 2 Sub-items: Layanan, Petugas) */}
+              <div>
+                <button
+                  type="button"
+                  onClick={handleMasterToggle}
+                  data-active={isMasterParentActive ? "true" : "false"}
+                  className={`group relative z-10 flex w-full items-center justify-between py-3 pl-4 pr-5 text-sm transition-colors duration-200 cursor-pointer ${
+                    isMasterParentActive
+                      ? "font-bold text-[#0b2a6b] dark:text-blue-400"
+                      : isMasterPath
+                      ? "mr-4 rounded-xl font-semibold text-white hover:bg-white/15"
+                      : "mr-4 rounded-xl font-medium text-white hover:bg-white/15"
+                  }`}
+                >
+                  <div className="flex items-center gap-3">
+                    <Database
+                      className={`h-[19px] w-[19px] shrink-0 transition-colors duration-200 ${
+                        isMasterParentActive
+                          ? "text-[#0b2a6b] dark:text-blue-400"
+                          : "text-white/90 group-hover:text-white"
+                      }`}
+                    />
+                    <span>Data Master</span>
+                  </div>
+                  {masterOpen ? (
+                    <ChevronDown
+                      className={`h-4 w-4 transition-colors ${
+                        isMasterParentActive
+                          ? "text-[#0b2a6b] dark:text-blue-400"
+                          : "text-white/80 group-hover:text-white"
+                      }`}
+                    />
+                  ) : (
+                    <ChevronRight
+                      className={`h-4 w-4 transition-colors ${
+                        isMasterParentActive
+                          ? "text-[#0b2a6b] dark:text-blue-400"
+                          : "text-white/80 group-hover:text-white"
+                      }`}
+                    />
+                  )}
+                </button>
+
+                {/* 2 Sub-items: Data Layanan, Data Petugas */}
+                {masterOpen && (
+                  <div className="mt-1 space-y-1 pl-3">
+                    {masterSubItems.map((sub) => {
+                      const SubIcon = sub.icon;
+                      const active = sub.active;
+                      return (
+                        <Link
+                          key={sub.href}
+                          href={sub.href}
+                          onClick={handleLinkClick}
+                          data-active={active ? "true" : "false"}
+                          className={`group relative z-10 flex items-center gap-2.5 py-2.5 pl-5 pr-5 text-[13px] transition-colors duration-200 ${
+                            active
+                              ? "font-bold text-[#0b2a6b] dark:text-blue-400"
+                              : "mr-4 rounded-xl font-medium text-white hover:bg-white/15"
+                          }`}
+                        >
+                          <SubIcon
+                            className={`h-4 w-4 shrink-0 transition-colors duration-200 ${
+                              active
+                                ? "text-[#0b2a6b] dark:text-blue-400"
+                                : "text-white/90 group-hover:text-white"
+                            }`}
+                          />
+                          <span className="truncate">{sub.title}</span>
+                        </Link>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+
+
             </div>
           </div>
 

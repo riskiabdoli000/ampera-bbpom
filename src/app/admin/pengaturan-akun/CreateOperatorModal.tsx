@@ -15,6 +15,7 @@ import {
   Loader2,
 } from "lucide-react";
 import { createOperatorAccountAction } from "@/app/actions/admin-account";
+import { AdminLoadingOverlay } from "@/components/admin/AdminLoadingOverlay";
 
 interface CreateOperatorModalProps {
   isOpen: boolean;
@@ -310,6 +311,13 @@ export function CreateOperatorModal({
           </div>
         </form>
       </div>
+
+      <AdminLoadingOverlay
+        isOpen={loading}
+        actionType="save"
+        title="Menyimpan Akun Operator..."
+        description={`Sedang mendaftarkan akun operator baru (${username}) ke sistem autentikasi BBPOM...`}
+      />
     </div>,
     document.body
   );

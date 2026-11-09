@@ -164,19 +164,19 @@ export function AdminPetugasClient({
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       {/* Top Header Card */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 rounded-3xl border border-slate-200/80 bg-white p-6 sm:p-7 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 rounded-2xl sm:rounded-3xl border border-slate-200/80 bg-white p-4 sm:p-6 lg:p-7 shadow-sm dark:border-slate-800 dark:bg-slate-900">
         <div>
           <div className="flex items-center gap-3">
-            <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-orange-50 dark:bg-orange-500/15 text-brand-orange shadow-2xs">
-              <Users className="h-6 w-6 stroke-[2.2]" />
+            <div className="flex h-10 w-10 sm:h-11 sm:w-11 items-center justify-center rounded-xl sm:rounded-2xl bg-orange-50 dark:bg-orange-500/15 text-brand-orange shadow-2xs shrink-0">
+              <Users className="h-5 w-5 sm:h-6 sm:w-6 stroke-[2.2]" />
             </div>
             <div>
-              <h1 className="text-xl sm:text-2xl font-black tracking-tight text-navy-900 dark:text-white font-brand">
+              <h1 className="text-lg sm:text-2xl font-black tracking-tight text-navy-900 dark:text-white font-brand">
                 Master Data Petugas Pelayanan
               </h1>
-              <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-0.5">
+              <p className="text-[11px] sm:text-sm text-slate-500 dark:text-slate-400 mt-0.5">
                 Kelola data profil petugas pelayanan publik BBPOM Palembang (NIP, nama, kontak WhatsApp, foto, dan status tugas).
               </p>
             </div>
@@ -184,11 +184,11 @@ export function AdminPetugasClient({
         </div>
 
         {/* Action Button: Tambah Petugas */}
-        <div className="shrink-0">
+        <div className="w-full sm:w-auto shrink-0">
           <button
             type="button"
             onClick={handleOpenAdd}
-            className="inline-flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-[#ff7a1a] to-[#f26a0f] px-5 py-3 text-xs sm:text-sm font-bold text-white shadow-cta hover:brightness-110 transition-all hover:-translate-y-0.5 active:translate-y-0 cursor-pointer whitespace-nowrap"
+            className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-xl sm:rounded-2xl bg-gradient-to-r from-[#ff7a1a] to-[#f26a0f] px-4 sm:px-5 py-2.5 sm:py-3 text-xs sm:text-sm font-bold text-white shadow-cta hover:brightness-110 transition-all hover:-translate-y-0.5 active:translate-y-0 cursor-pointer whitespace-nowrap"
           >
             <Plus className="h-4 w-4 stroke-[2.5]" />
             <span>Tambah Petugas Baru</span>
@@ -199,7 +199,7 @@ export function AdminPetugasClient({
       {/* Feedback Toast Banner */}
       {feedback && (
         <div
-          className={`flex items-center justify-between p-4 rounded-2xl border text-xs sm:text-sm font-medium animate-fade-in ${
+          className={`flex items-center justify-between p-3.5 sm:p-4 rounded-xl sm:rounded-2xl border text-xs sm:text-sm font-medium animate-fade-in ${
             feedback.type === "success"
               ? "bg-emerald-50 border-emerald-200 text-emerald-800 dark:bg-emerald-950/40 dark:border-emerald-800 dark:text-emerald-300"
               : "bg-red-50 border-red-200 text-red-800 dark:bg-red-950/40 dark:border-red-800 dark:text-red-300"
@@ -223,87 +223,87 @@ export function AdminPetugasClient({
         </div>
       )}
 
-      {/* Overview Stat Cards (Matching Modern Reference Design) */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      {/* Overview Stat Cards (Matching Modern Reference Design: 2 Columns on Mobile) */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-4">
         {/* Card 1: Total Petugas (Blue Squircle) */}
-        <div className="rounded-3xl border border-slate-100 dark:border-slate-800/80 bg-white dark:bg-slate-900 p-5 shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:shadow-none hover:shadow-md transition-all flex items-center gap-4">
-          <div className="w-14 h-14 rounded-2xl bg-[#1d68f6] text-white flex items-center justify-center shrink-0 shadow-lg shadow-blue-500/30">
-            <Users className="w-7 h-7 stroke-[2.2]" />
+        <div className="rounded-2xl sm:rounded-3xl border border-slate-100 dark:border-slate-800/80 bg-white dark:bg-slate-900 p-3 sm:p-5 shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:shadow-none hover:shadow-md transition-all flex items-center gap-2.5 sm:gap-4">
+          <div className="w-10 h-10 sm:w-14 sm:h-14 rounded-xl sm:rounded-2xl bg-[#1d68f6] text-white flex items-center justify-center shrink-0 shadow-lg shadow-blue-500/30">
+            <Users className="w-5 h-5 sm:w-7 sm:h-7 stroke-[2.2]" />
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-xs font-medium text-slate-500 dark:text-slate-400 truncate">
-              Total Petugas Terdaftar
+            <p className="text-[11px] sm:text-xs font-medium text-slate-500 dark:text-slate-400 truncate">
+              Total Petugas
             </p>
-            <p className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white font-brand mt-0.5 leading-tight">
+            <p className="text-xl sm:text-3xl font-extrabold text-slate-900 dark:text-white font-brand mt-0.5 leading-tight">
               {stats.total}
             </p>
-            <div className="flex items-center gap-1.5 mt-1 text-[11px]">
+            <div className="flex items-center gap-1.5 mt-0.5 sm:mt-1 text-[10px] sm:text-[11px]">
               <span className="font-bold text-[#1d68f6] dark:text-blue-400">Pegawai</span>
-              <span className="text-slate-400 dark:text-slate-500 font-medium">BBPOM</span>
+              <span className="text-slate-400 dark:text-slate-500 font-medium hidden sm:inline">BBPOM</span>
             </div>
           </div>
         </div>
 
         {/* Card 2: Petugas Nonaktif (Orange Squircle) */}
-        <div className="rounded-3xl border border-slate-100 dark:border-slate-800/80 bg-white dark:bg-slate-900 p-5 shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:shadow-none hover:shadow-md transition-all flex items-center gap-4">
-          <div className="w-14 h-14 rounded-2xl bg-[#ff9500] text-white flex items-center justify-center shrink-0 shadow-lg shadow-orange-500/30">
-            <Clock className="w-7 h-7 stroke-[2.2]" />
+        <div className="rounded-2xl sm:rounded-3xl border border-slate-100 dark:border-slate-800/80 bg-white dark:bg-slate-900 p-3 sm:p-5 shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:shadow-none hover:shadow-md transition-all flex items-center gap-2.5 sm:gap-4">
+          <div className="w-10 h-10 sm:w-14 sm:h-14 rounded-xl sm:rounded-2xl bg-[#ff9500] text-white flex items-center justify-center shrink-0 shadow-lg shadow-orange-500/30">
+            <Clock className="w-5 h-5 sm:w-7 sm:h-7 stroke-[2.2]" />
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-xs font-medium text-slate-500 dark:text-slate-400 truncate">
+            <p className="text-[11px] sm:text-xs font-medium text-slate-500 dark:text-slate-400 truncate">
               Petugas Nonaktif
             </p>
-            <p className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white font-brand mt-0.5 leading-tight">
+            <p className="text-xl sm:text-3xl font-extrabold text-slate-900 dark:text-white font-brand mt-0.5 leading-tight">
               {stats.inactive}
             </p>
-            <div className="flex items-center gap-1.5 mt-1 text-[11px]">
+            <div className="flex items-center gap-1.5 mt-0.5 sm:mt-1 text-[10px] sm:text-[11px]">
               <span className="font-bold text-[#ff9500] dark:text-amber-400">Status</span>
-              <span className="text-slate-400 dark:text-slate-500 font-medium">Cuti / Nonaktif</span>
+              <span className="text-slate-400 dark:text-slate-500 font-medium hidden sm:inline">Cuti / Nonaktif</span>
             </div>
           </div>
         </div>
 
         {/* Card 3: Berfoto Profil (Blue Squircle) */}
-        <div className="rounded-3xl border border-slate-100 dark:border-slate-800/80 bg-white dark:bg-slate-900 p-5 shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:shadow-none hover:shadow-md transition-all flex items-center gap-4">
-          <div className="w-14 h-14 rounded-2xl bg-[#2563eb] text-white flex items-center justify-center shrink-0 shadow-lg shadow-blue-500/30">
-            <Camera className="w-7 h-7 stroke-[2.2]" />
+        <div className="rounded-2xl sm:rounded-3xl border border-slate-100 dark:border-slate-800/80 bg-white dark:bg-slate-900 p-3 sm:p-5 shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:shadow-none hover:shadow-md transition-all flex items-center gap-2.5 sm:gap-4">
+          <div className="w-10 h-10 sm:w-14 sm:h-14 rounded-xl sm:rounded-2xl bg-[#2563eb] text-white flex items-center justify-center shrink-0 shadow-lg shadow-blue-500/30">
+            <Camera className="w-5 h-5 sm:w-7 sm:h-7 stroke-[2.2]" />
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-xs font-medium text-slate-500 dark:text-slate-400 truncate">
-              Lengkap dengan Foto
+            <p className="text-[11px] sm:text-xs font-medium text-slate-500 dark:text-slate-400 truncate">
+              Berfoto Profil
             </p>
-            <p className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white font-brand mt-0.5 leading-tight">
+            <p className="text-xl sm:text-3xl font-extrabold text-slate-900 dark:text-white font-brand mt-0.5 leading-tight">
               {stats.withPhoto}
             </p>
-            <div className="flex items-center gap-1.5 mt-1 text-[11px]">
+            <div className="flex items-center gap-1.5 mt-0.5 sm:mt-1 text-[10px] sm:text-[11px]">
               <span className="font-bold text-[#2563eb] dark:text-blue-400">Profil</span>
-              <span className="text-slate-400 dark:text-slate-500 font-medium">Terverifikasi</span>
+              <span className="text-slate-400 dark:text-slate-500 font-medium hidden sm:inline">Terverifikasi</span>
             </div>
           </div>
         </div>
 
         {/* Card 4: Petugas Aktif (Emerald Squircle) */}
-        <div className="rounded-3xl border border-slate-100 dark:border-slate-800/80 bg-white dark:bg-slate-900 p-5 shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:shadow-none hover:shadow-md transition-all flex items-center gap-4">
-          <div className="w-14 h-14 rounded-2xl bg-[#00c076] text-white flex items-center justify-center shrink-0 shadow-lg shadow-emerald-500/30">
-            <CheckCircle2 className="w-7 h-7 stroke-[2.2]" />
+        <div className="rounded-2xl sm:rounded-3xl border border-slate-100 dark:border-slate-800/80 bg-white dark:bg-slate-900 p-3 sm:p-5 shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:shadow-none hover:shadow-md transition-all flex items-center gap-2.5 sm:gap-4">
+          <div className="w-10 h-10 sm:w-14 sm:h-14 rounded-xl sm:rounded-2xl bg-[#00c076] text-white flex items-center justify-center shrink-0 shadow-lg shadow-emerald-500/30">
+            <CheckCircle2 className="w-5 h-5 sm:w-7 sm:h-7 stroke-[2.2]" />
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-xs font-medium text-slate-500 dark:text-slate-400 truncate">
-              Petugas Aktif Bertugas
+            <p className="text-[11px] sm:text-xs font-medium text-slate-500 dark:text-slate-400 truncate">
+              Petugas Aktif
             </p>
-            <p className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white font-brand mt-0.5 leading-tight">
+            <p className="text-xl sm:text-3xl font-extrabold text-slate-900 dark:text-white font-brand mt-0.5 leading-tight">
               {stats.active}
             </p>
-            <div className="flex items-center gap-1.5 mt-1 text-[11px]">
+            <div className="flex items-center gap-1.5 mt-0.5 sm:mt-1 text-[10px] sm:text-[11px]">
               <span className="font-bold text-[#00c076] dark:text-emerald-400">Siap</span>
-              <span className="text-slate-400 dark:text-slate-500 font-medium">Melayani</span>
+              <span className="text-slate-400 dark:text-slate-500 font-medium hidden sm:inline">Melayani</span>
             </div>
           </div>
         </div>
       </div>
 
       {/* Filter & Search Bar */}
-      <div className="rounded-3xl border border-slate-200/80 bg-white p-4 sm:p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900 space-y-4 sm:space-y-0 sm:flex sm:items-center sm:justify-between sm:gap-4">
+      <div className="rounded-2xl sm:rounded-3xl border border-slate-200/80 bg-white p-3.5 sm:p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900 space-y-3 sm:space-y-0 sm:flex sm:items-center sm:justify-between sm:gap-4">
         {/* Search */}
         <div className="relative flex-1 max-w-md">
           <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
@@ -312,7 +312,7 @@ export function AdminPetugasClient({
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Cari nama petugas, NIP, jabatan, layanan, atau WhatsApp..."
-            className="w-full rounded-xl border border-slate-200 bg-slate-50 pl-10 pr-4 py-2.5 text-xs sm:text-sm text-slate-900 focus:border-brand-orange focus:bg-white focus:outline-none dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+            className="w-full rounded-xl border border-slate-200 bg-slate-50 pl-10 pr-4 py-2 sm:py-2.5 text-xs sm:text-sm text-slate-900 focus:border-brand-orange focus:bg-white focus:outline-none dark:border-slate-700 dark:bg-slate-800 dark:text-white"
           />
           {searchQuery && (
             <button
@@ -325,11 +325,11 @@ export function AdminPetugasClient({
         </div>
 
         {/* Status Filter Pills */}
-        <div className="flex items-center p-1 rounded-xl bg-slate-100 dark:bg-slate-800 text-xs font-semibold">
+        <div className="grid grid-cols-3 sm:flex items-center p-1 rounded-xl bg-slate-100 dark:bg-slate-800 text-[11px] sm:text-xs font-semibold">
           <button
             type="button"
             onClick={() => setStatusFilter("ALL")}
-            className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer ${
+            className={`px-2 sm:px-3 py-1.5 rounded-lg transition-all cursor-pointer text-center ${
               statusFilter === "ALL"
                 ? "bg-white dark:bg-slate-700 text-navy-900 dark:text-white shadow-2xs font-bold"
                 : "text-slate-500 hover:text-navy-900 dark:hover:text-white"
@@ -340,7 +340,7 @@ export function AdminPetugasClient({
           <button
             type="button"
             onClick={() => setStatusFilter("ACTIVE")}
-            className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer ${
+            className={`px-2 sm:px-3 py-1.5 rounded-lg transition-all cursor-pointer text-center ${
               statusFilter === "ACTIVE"
                 ? "bg-white dark:bg-slate-700 text-emerald-600 dark:text-emerald-400 shadow-2xs font-bold"
                 : "text-slate-500 hover:text-navy-900 dark:hover:text-white"
@@ -351,7 +351,7 @@ export function AdminPetugasClient({
           <button
             type="button"
             onClick={() => setStatusFilter("INACTIVE")}
-            className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer ${
+            className={`px-2 sm:px-3 py-1.5 rounded-lg transition-all cursor-pointer text-center ${
               statusFilter === "INACTIVE"
                 ? "bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-200 shadow-2xs font-bold"
                 : "text-slate-500 hover:text-navy-900 dark:hover:text-white"
@@ -362,8 +362,168 @@ export function AdminPetugasClient({
         </div>
       </div>
 
-      {/* Master Data Petugas: Table Layout */}
-      <div className="rounded-3xl border border-slate-200/80 bg-white dark:border-slate-800 dark:bg-slate-900 overflow-hidden shadow-sm">
+      {/* Mobile Card List View (md:hidden) */}
+      <div className="md:hidden space-y-2.5">
+        {filteredList.map((petugas) => {
+          const isToggling = togglingId === petugas.id;
+          const waCleanNumber = petugas.telepon?.replace(/[^0-9]/g, "");
+          const waUrl = waCleanNumber
+            ? `https://wa.me/${waCleanNumber.startsWith("0") ? "62" + waCleanNumber.slice(1) : waCleanNumber}`
+            : null;
+
+          return (
+            <div
+              key={`mob-${petugas.id}`}
+              className="rounded-2xl border border-slate-200/80 bg-white dark:border-slate-800 dark:bg-slate-900 p-3.5 shadow-sm space-y-3"
+            >
+              {/* Header: Foto + Nama + NIP + Switch */}
+              <div className="flex items-start justify-between gap-2.5">
+                <div className="flex items-center gap-3 min-w-0">
+                  {petugas.fotoUrl ? (
+                    <div className="relative w-11 h-11 rounded-xl overflow-hidden shrink-0 border border-slate-200 dark:border-slate-700 shadow-2xs">
+                      <Image
+                        src={petugas.fotoUrl}
+                        alt={petugas.nama}
+                        fill
+                        className="object-cover"
+                      />
+                    </div>
+                  ) : (
+                    <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-slate-800 dark:to-slate-700 text-blue-700 dark:text-blue-300 font-black text-sm flex items-center justify-center shrink-0 border border-blue-200/60 dark:border-slate-600 shadow-2xs">
+                      {petugas.nama.charAt(0).toUpperCase()}
+                    </div>
+                  )}
+                  <div className="min-w-0">
+                    <h3 className="font-bold text-navy-900 dark:text-white text-sm truncate">
+                      {petugas.nama}
+                    </h3>
+                    <div className="font-mono text-[11px] text-slate-500 dark:text-slate-400 truncate mt-0.5">
+                      NIP: {petugas.nip}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Status Toggle Switch */}
+                <div className="flex flex-col items-end shrink-0">
+                  <button
+                    type="button"
+                    role="switch"
+                    aria-checked={petugas.isAktif}
+                    disabled={isToggling}
+                    onClick={() =>
+                      handleQuickToggle(petugas.id, petugas.isAktif, petugas.nama)
+                    }
+                    className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none disabled:opacity-50 ${
+                      petugas.isAktif
+                        ? "bg-emerald-500"
+                        : "bg-slate-300 dark:bg-slate-700"
+                    }`}
+                    title={
+                      petugas.isAktif
+                        ? "Petugas aktif (Klik untuk menonaktifkan)"
+                        : "Petugas nonaktif (Klik untuk mengaktifkan)"
+                    }
+                  >
+                    <span
+                      className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow-md ring-0 transition duration-200 ease-in-out ${
+                        petugas.isAktif ? "translate-x-4" : "translate-x-0"
+                      }`}
+                    />
+                  </button>
+                  <span
+                    className={`text-[10px] font-bold mt-0.5 ${
+                      petugas.isAktif
+                        ? "text-emerald-600 dark:text-emerald-400"
+                        : "text-slate-400"
+                    }`}
+                  >
+                    {petugas.isAktif ? "Aktif" : "Nonaktif"}
+                  </span>
+                </div>
+              </div>
+
+              {/* Body: Jabatan & Penugasan Layanan */}
+              <div className="space-y-1.5 text-xs">
+                {petugas.jabatan ? (
+                  <p className="text-slate-600 dark:text-slate-300 text-xs leading-relaxed font-medium">
+                    {petugas.jabatan}
+                  </p>
+                ) : (
+                  <p className="text-slate-400 italic text-[11px]">Petugas Ampera BBPOM</p>
+                )}
+
+                <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
+                  {petugas.layananKode ? (
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-bold bg-amber-50 text-amber-800 border border-amber-200/80 dark:bg-amber-950/40 dark:text-amber-300">
+                      <span className="font-mono uppercase">[{petugas.layananKode}]</span>
+                      <span className="truncate max-w-[170px]">{petugas.layananNama}</span>
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-semibold bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400 border border-slate-200/70">
+                      Semua Layanan
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              {/* Footer: Kontak WA & Aksi */}
+              <div className="flex items-center justify-between pt-2 border-t border-slate-100 dark:border-slate-800">
+                {petugas.telepon && waUrl ? (
+                  <a
+                    href={waUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex items-center gap-1.5 text-xs font-mono font-bold text-emerald-700 hover:text-emerald-800 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200/70 dark:border-emerald-800/60 px-2.5 py-1 rounded-lg"
+                  >
+                    <Phone className="w-3 h-3 shrink-0" />
+                    <span>{petugas.telepon}</span>
+                  </a>
+                ) : (
+                  <span className="text-[11px] text-slate-400 italic">No WhatsApp: -</span>
+                )}
+
+                <div className="flex items-center gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => handleOpenEdit(petugas)}
+                    className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs font-bold text-slate-700 dark:text-slate-200 hover:border-brand-orange hover:text-brand-orange transition-all shadow-2xs cursor-pointer"
+                  >
+                    <Edit2 className="w-3 h-3" />
+                    <span>Edit</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleOpenDelete(petugas)}
+                    className="inline-flex items-center justify-center w-7 h-7 rounded-xl border border-red-200 dark:border-red-900/60 bg-red-50/70 dark:bg-red-950/30 text-red-600 dark:text-red-400 hover:bg-red-600 hover:text-white transition-all shadow-2xs cursor-pointer"
+                    title="Hapus Petugas"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              </div>
+            </div>
+          );
+        })}
+
+        {filteredList.length === 0 && (
+          <div className="rounded-2xl border border-slate-200/80 bg-white dark:border-slate-800 dark:bg-slate-900 p-8 text-center shadow-sm">
+            <div className="w-10 h-10 rounded-2xl bg-orange-50 dark:bg-orange-500/15 text-brand-orange flex items-center justify-center mx-auto mb-2">
+              <Users className="w-5 h-5 stroke-1" />
+            </div>
+            <h3 className="text-xs font-bold text-navy-900 dark:text-white font-brand">
+              Tidak Ada Data Petugas
+            </h3>
+            <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1 max-w-xs mx-auto">
+              {searchQuery
+                ? `Tidak ada petugas cocok dengan "${searchQuery}".`
+                : "Belum ada data petugas di dalam sistem."}
+            </p>
+          </div>
+        )}
+      </div>
+
+      {/* Master Data Petugas: Table Layout (Desktop & Tablet) */}
+      <div className="hidden md:block rounded-3xl border border-slate-200/80 bg-white dark:border-slate-800 dark:bg-slate-900 overflow-hidden shadow-sm">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs sm:text-sm">
             <thead className="bg-slate-50/80 dark:bg-slate-800/60 border-b border-slate-200/80 dark:border-slate-800 text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">

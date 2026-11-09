@@ -120,6 +120,9 @@ model PengajuanLayanan {
   // Survei Kepuasan Masyarakat (IKM)
   survei              SurveiLayanan?
 
+  // Waktu aktual permohonan diselesaikan (bisa otomatis atau dikoreksi admin)
+  waktuSelesai        DateTime?
+
   createdAt           DateTime        @default(now())
   updatedAt           DateTime        @updatedAt
 
@@ -129,6 +132,7 @@ model PengajuanLayanan {
   @@index([status])
   @@index([createdAt])
   @@index([status, createdAt])
+  @@index([waktuSelesai])
 }
 
 // Bukti Lampiran Tindakan Petugas BBPOM (Foto Hasil Uji, Dokumen BAP, Tanggapan Resmi, dsb.)
@@ -201,16 +205,20 @@ model SurveiLayanan {
 
 // Akun Admin & Operator Petugas BBPOM
 model Admin {
-  id          Int                @id @default(autoincrement())
-  username    String             @unique
-  nama        String
-  password    String             // Hashed password (bcrypt)
-  role        RoleAdmin          @default(OPERATOR)
-  isAktif     Boolean            @default(true)
+  id               Int                @id @default(autoincrement())
+  username         String             @unique
+  nama             String
+  password         String             // Hashed password (bcrypt)
+  role             RoleAdmin          @default(OPERATOR)
+  isAktif          Boolean            @default(true)
+  telepon          String?            // Nomor WhatsApp petugas untuk kontak & verifikasi OTP
+  resetOtp         String?            // Hashed OTP untuk reset kata sandi mandiri
+  resetOtpExpiry   DateTime?          // Batas waktu kedaluwarsa kode OTP
+  resetOtpAttempts Int                @default(0) // Counter percobaan gagal OTP (max 5x)
   
-  verifikasi  PengajuanLayanan[]
-  createdAt   DateTime           @default(now())
-  updatedAt   DateTime           @updatedAt
+  verifikasi       PengajuanLayanan[]
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
 }
 
 // Master Data Petugas Pelayanan BBPOM di Palembang
@@ -265,13 +273,18 @@ model HeroSlide {
 
 // 2. Video Profil BBPOM
 model VideoProfil {
-  id         Int      @id @default(1)
+  id         Int      @id @default(autoincrement())
   eyebrow    String   @default("VIDEO PROFIL")
   judul      String   @db.Text
   deskripsi  String   @db.Text
   youtubeUrl String   @db.Text // URL asli dari YouTube
   youtubeId  String   // ID hasil ekstraksi untuk embed
+  urutan     Int      @default(0)
+  isActive   Boolean  @default(true)
+  createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
+
+  @@index([urutan])
 }
 
 // 3. Kontak & Lokasi Kantor (sesuai ContactSection)
@@ -301,17 +314,35 @@ model KontakKantor {
   updatedAt      DateTime @updatedAt
 }
 
-// 4. Konten Edukasi Konsumen
+// 4. Konten Materi Edukasi Konsumen
 model Edukasi {
   id          Int      @id @default(autoincrement())
   judul       String
-  kategori    String   // obat, pangan, kosmetik, cek_klik
-  ringkasan   String   @db.Text
-  konten      String?  @db.Text
+  komoditas   String   @default("Pangan") // "Pangan" | "Kosmetik" | "Obat" | "Obat Tradisional"
+  deskripsi   String   @default("") @db.Text
   imageUrl    String?  @db.Text
   imagePath   String?  @db.Text
+  pdfUrl      String?  @db.Text
+  pdfFilename String?  @db.Text
   isPublished Boolean  @default(true)
   urutan      Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([urutan])
+  @@index([komoditas])
+}
+
+// 5. Tautan Portal Eksternal BBPOM (Navbar Dropdown)
+model BbpomTautan {
+  id          Int      @id @default(autoincrement())
+  judul       String   // Misal: "Badan POM RI (Pusat)"
+  deskripsi   String   @db.Text // Misal: "Portal Resmi Badan Pengawas Obat dan Makanan RI"
+  url         String   @db.Text // Misal: "https://www.pom.go.id"
+  ikon        String   @default("globe") // "globe" | "landmark" | "building" | "link"
+  badge       String?  @default("") // Misal: "Pusat", "Sumsel"
+  urutan      Int      @default(0)
+  isActive    Boolean  @default(true)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 

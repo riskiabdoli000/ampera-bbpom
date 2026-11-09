@@ -363,16 +363,16 @@ export function AdminDataAmperaClient({
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       {/* Top Header Card (Matching Data Layanan Layout & Styling) */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 rounded-3xl border border-slate-200/80 bg-white p-6 sm:p-7 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3.5 sm:gap-4 rounded-2xl sm:rounded-3xl border border-slate-200/80 bg-white p-4 sm:p-6 lg:p-7 shadow-sm dark:border-slate-800 dark:bg-slate-900">
         <div>
           <div className="flex items-center gap-3">
-            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-orange-50 dark:bg-orange-500/15 text-brand-orange shadow-2xs">
-              <FileSpreadsheet className="h-6 w-6 stroke-[2.2]" />
+            <div className="flex h-10 w-10 sm:h-12 sm:w-12 items-center justify-center rounded-xl sm:rounded-2xl bg-orange-50 dark:bg-orange-500/15 text-brand-orange shadow-2xs shrink-0">
+              <FileSpreadsheet className="h-5 w-5 sm:h-6 sm:w-6 stroke-[2.2]" />
             </div>
             <div>
-              <h1 className="text-xl sm:text-2xl font-black tracking-tight text-navy-900 dark:text-white font-brand">
+              <h1 className="text-lg sm:text-xl md:text-2xl font-black tracking-tight text-navy-900 dark:text-white font-brand">
                 Data Pengguna & Layanan Ampera
               </h1>
               <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-0.5">
@@ -383,19 +383,19 @@ export function AdminDataAmperaClient({
         </div>
 
         {/* Action Buttons: Unduh Excel & PDF (Icon Only) */}
-        <div className="shrink-0 flex items-center gap-2">
+        <div className="shrink-0 flex items-center gap-2 self-end sm:self-auto">
           <button
             type="button"
             onClick={handleExportExcel}
             disabled={isExportingExcel}
             aria-label="Unduh Excel (.xlsx)"
             title="Unduh format spreadsheet Microsoft Excel (.xlsx)"
-            className="inline-flex h-11 w-11 sm:h-12 sm:w-12 items-center justify-center rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm hover:shadow-md transition-all hover:-translate-y-0.5 active:translate-y-0 cursor-pointer disabled:opacity-60 disabled:hover:translate-y-0"
+            className="inline-flex h-9 w-9 sm:h-11 sm:w-11 lg:h-12 lg:w-12 items-center justify-center rounded-xl sm:rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm hover:shadow-md transition-all hover:-translate-y-0.5 active:translate-y-0 cursor-pointer disabled:opacity-60 disabled:hover:translate-y-0"
           >
             {isExportingExcel ? (
               <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
             ) : (
-              <FileSpreadsheet className="h-5 w-5 stroke-[2.2]" />
+              <FileSpreadsheet className="h-4 w-4 sm:h-5 sm:w-5 stroke-[2.2]" />
             )}
           </button>
 
@@ -405,12 +405,12 @@ export function AdminDataAmperaClient({
             disabled={isExportingPdf}
             aria-label="Unduh Dokumen PDF"
             title="Unduh dokumen laporan resmi format PDF (A4 Landscape)"
-            className="inline-flex h-11 w-11 sm:h-12 sm:w-12 items-center justify-center rounded-2xl bg-gradient-to-r from-[#ff7a1a] to-[#f26a0f] text-white shadow-cta hover:brightness-110 transition-all hover:-translate-y-0.5 active:translate-y-0 cursor-pointer disabled:opacity-60 disabled:hover:translate-y-0"
+            className="inline-flex h-9 w-9 sm:h-11 sm:w-11 lg:h-12 lg:w-12 items-center justify-center rounded-xl sm:rounded-2xl bg-gradient-to-r from-[#ff7a1a] to-[#f26a0f] text-white shadow-cta hover:brightness-110 transition-all hover:-translate-y-0.5 active:translate-y-0 cursor-pointer disabled:opacity-60 disabled:hover:translate-y-0"
           >
             {isExportingPdf ? (
               <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
             ) : (
-              <Download className="h-5 w-5 stroke-[2.5]" />
+              <Download className="h-4 w-4 sm:h-5 sm:w-5 stroke-[2.5]" />
             )}
           </button>
         </div>
@@ -419,13 +419,13 @@ export function AdminDataAmperaClient({
       {/* Feedback Toast Banner */}
       {feedback && (
         <div
-          className={`flex items-center justify-between p-4 rounded-2xl border text-xs sm:text-sm font-medium animate-fade-in ${
+          className={`flex items-center justify-between p-3.5 sm:p-4 rounded-xl sm:rounded-2xl border text-xs sm:text-sm font-medium animate-fade-in ${
             feedback.type === "success"
               ? "bg-emerald-50 border-emerald-200 text-emerald-800 dark:bg-emerald-950/40 dark:border-emerald-800 dark:text-emerald-300"
               : "bg-red-50 border-red-200 text-red-800 dark:bg-red-950/40 dark:border-red-800 dark:text-red-300"
           }`}
         >
-          <div className="flex items-center gap-2.5">
+          <div className="flex items-center gap-2 sm:gap-2.5">
             {feedback.type === "success" ? (
               <Check className="w-4 h-4 shrink-0 text-emerald-600 dark:text-emerald-400" />
             ) : (
@@ -443,102 +443,105 @@ export function AdminDataAmperaClient({
         </div>
       )}
 
-      {/* Overview Stat Cards (Exact match with Data Layanan design) */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      {/* Overview Stat Cards (2 sejajar di mobile, 4 di layar besar) */}
+      <div className="grid grid-cols-2 gap-2.5 sm:gap-4 lg:grid-cols-4">
         {/* Card 1: Total Pengguna (Blue Squircle) */}
-        <div className="rounded-3xl border border-slate-100 dark:border-slate-800/80 bg-white dark:bg-slate-900 p-5 shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:shadow-none hover:shadow-md transition-all flex items-center gap-4">
-          <div className="w-14 h-14 rounded-2xl bg-[#1d68f6] text-white flex items-center justify-center shrink-0 shadow-lg shadow-blue-500/30">
-            <Users className="w-7 h-7 stroke-[2.2]" />
+        <div className="rounded-2xl sm:rounded-3xl border border-slate-100 dark:border-slate-800/80 bg-white dark:bg-slate-900 p-3 sm:p-5 shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:shadow-none hover:shadow-md transition-all flex items-center gap-2.5 sm:gap-4">
+          <div className="w-10 h-10 sm:w-12 sm:h-12 lg:w-14 lg:h-14 rounded-xl sm:rounded-2xl bg-[#1d68f6] text-white flex items-center justify-center shrink-0 shadow-md sm:shadow-lg shadow-blue-500/30">
+            <Users className="w-5 h-5 sm:w-6 sm:h-6 lg:w-7 lg:h-7 stroke-[2.2]" />
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-xs font-medium text-slate-500 dark:text-slate-400 truncate">
+            <p className="text-[11px] sm:text-xs font-medium text-slate-500 dark:text-slate-400 truncate">
               Total Pengguna (NIK)
             </p>
-            <p className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white font-brand mt-0.5 leading-tight">
+            <p className="text-xl sm:text-2xl lg:text-3xl font-extrabold text-slate-900 dark:text-white font-brand mt-0.5 leading-tight">
               {stats.totalPengguna}
             </p>
-            <div className="flex items-center gap-1.5 mt-1 text-[11px]">
+            <div className="flex items-center gap-1 sm:gap-1.5 mt-0.5 sm:mt-1 text-[10px] sm:text-[11px] truncate">
               <span className="font-bold text-[#1d68f6] dark:text-blue-400">Warga Terdaftar</span>
-              <span className="text-slate-400 dark:text-slate-500 font-medium">Buku Tamu</span>
+              <span className="text-slate-400 dark:text-slate-500 font-medium hidden sm:inline">Buku Tamu</span>
             </div>
           </div>
         </div>
 
         {/* Card 2: Menunggu Verifikasi (Orange Squircle) */}
-        <div className="rounded-3xl border border-slate-100 dark:border-slate-800/80 bg-white dark:bg-slate-900 p-5 shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:shadow-none hover:shadow-md transition-all flex items-center gap-4">
-          <div className="w-14 h-14 rounded-2xl bg-[#ff9500] text-white flex items-center justify-center shrink-0 shadow-lg shadow-orange-500/30">
-            <Clock className="w-7 h-7 stroke-[2.2]" />
+        <div className="rounded-2xl sm:rounded-3xl border border-slate-100 dark:border-slate-800/80 bg-white dark:bg-slate-900 p-3 sm:p-5 shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:shadow-none hover:shadow-md transition-all flex items-center gap-2.5 sm:gap-4">
+          <div className="w-10 h-10 sm:w-12 sm:h-12 lg:w-14 lg:h-14 rounded-xl sm:rounded-2xl bg-[#ff9500] text-white flex items-center justify-center shrink-0 shadow-md sm:shadow-lg shadow-orange-500/30">
+            <Clock className="w-5 h-5 sm:w-6 sm:h-6 lg:w-7 lg:h-7 stroke-[2.2]" />
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-xs font-medium text-slate-500 dark:text-slate-400 truncate">
+            <p className="text-[11px] sm:text-xs font-medium text-slate-500 dark:text-slate-400 truncate">
               Menunggu Verifikasi
             </p>
-            <p className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white font-brand mt-0.5 leading-tight">
+            <p className="text-xl sm:text-2xl lg:text-3xl font-extrabold text-slate-900 dark:text-white font-brand mt-0.5 leading-tight">
               {stats.menungguVerifikasi}
             </p>
-            <div className="flex items-center gap-1.5 mt-1 text-[11px]">
+            <div className="flex items-center gap-1 sm:gap-1.5 mt-0.5 sm:mt-1 text-[10px] sm:text-[11px] truncate">
               <span className="font-bold text-[#ff9500] dark:text-amber-400">Perlu Tindakan</span>
-              <span className="text-slate-400 dark:text-slate-500 font-medium">Prioritas</span>
+              <span className="text-slate-400 dark:text-slate-500 font-medium hidden sm:inline">Prioritas</span>
             </div>
           </div>
         </div>
 
         {/* Card 3: Total Pengajuan Masuk (Blue Squircle) */}
-        <div className="rounded-3xl border border-slate-100 dark:border-slate-800/80 bg-white dark:bg-slate-900 p-5 shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:shadow-none hover:shadow-md transition-all flex items-center gap-4">
-          <div className="w-14 h-14 rounded-2xl bg-[#2563eb] text-white flex items-center justify-center shrink-0 shadow-lg shadow-blue-500/30">
-            <ClipboardList className="w-7 h-7 stroke-[2.2]" />
+        <div className="rounded-2xl sm:rounded-3xl border border-slate-100 dark:border-slate-800/80 bg-white dark:bg-slate-900 p-3 sm:p-5 shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:shadow-none hover:shadow-md transition-all flex items-center gap-2.5 sm:gap-4">
+          <div className="w-10 h-10 sm:w-12 sm:h-12 lg:w-14 lg:h-14 rounded-xl sm:rounded-2xl bg-[#2563eb] text-white flex items-center justify-center shrink-0 shadow-md sm:shadow-lg shadow-blue-500/30">
+            <ClipboardList className="w-5 h-5 sm:w-6 sm:h-6 lg:w-7 lg:h-7 stroke-[2.2]" />
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-xs font-medium text-slate-500 dark:text-slate-400 truncate">
-              Total Pengajuan Masuk
+            <p className="text-[11px] sm:text-xs font-medium text-slate-500 dark:text-slate-400 truncate">
+              Total Pengajuan
             </p>
-            <p className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white font-brand mt-0.5 leading-tight">
+            <p className="text-xl sm:text-2xl lg:text-3xl font-extrabold text-slate-900 dark:text-white font-brand mt-0.5 leading-tight">
               {stats.totalPengajuan}
             </p>
-            <div className="flex items-center gap-1.5 mt-1 text-[11px]">
+            <div className="flex items-center gap-1 sm:gap-1.5 mt-0.5 sm:mt-1 text-[10px] sm:text-[11px] truncate">
               <span className="font-bold text-[#2563eb] dark:text-blue-400">4 Kanal Layanan</span>
-              <span className="text-slate-400 dark:text-slate-500 font-medium">Live Data</span>
+              <span className="text-slate-400 dark:text-slate-500 font-medium hidden sm:inline">Live Data</span>
             </div>
           </div>
         </div>
 
         {/* Card 4: Selesai Dilayani (Emerald Squircle) */}
-        <div className="rounded-3xl border border-slate-100 dark:border-slate-800/80 bg-white dark:bg-slate-900 p-5 shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:shadow-none hover:shadow-md transition-all flex items-center gap-4">
-          <div className="w-14 h-14 rounded-2xl bg-[#00c076] text-white flex items-center justify-center shrink-0 shadow-lg shadow-emerald-500/30">
-            <CheckCircle2 className="w-7 h-7 stroke-[2.2]" />
+        <div className="rounded-2xl sm:rounded-3xl border border-slate-100 dark:border-slate-800/80 bg-white dark:bg-slate-900 p-3 sm:p-5 shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:shadow-none hover:shadow-md transition-all flex items-center gap-2.5 sm:gap-4">
+          <div className="w-10 h-10 sm:w-12 sm:h-12 lg:w-14 lg:h-14 rounded-xl sm:rounded-2xl bg-[#00c076] text-white flex items-center justify-center shrink-0 shadow-md sm:shadow-lg shadow-emerald-500/30">
+            <CheckCircle2 className="w-5 h-5 sm:w-6 sm:h-6 lg:w-7 lg:h-7 stroke-[2.2]" />
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-xs font-medium text-slate-500 dark:text-slate-400 truncate">
+            <p className="text-[11px] sm:text-xs font-medium text-slate-500 dark:text-slate-400 truncate">
               Selesai Dilayani
             </p>
-            <p className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white font-brand mt-0.5 leading-tight">
+            <p className="text-xl sm:text-2xl lg:text-3xl font-extrabold text-slate-900 dark:text-white font-brand mt-0.5 leading-tight">
               {stats.selesai}
             </p>
-            <div className="flex items-center gap-1.5 mt-1 text-[11px]">
+            <div className="flex items-center gap-1 sm:gap-1.5 mt-0.5 sm:mt-1 text-[10px] sm:text-[11px] truncate">
               <span className="font-bold text-[#00c076] dark:text-emerald-400">Tuntas</span>
-              <span className="text-slate-400 dark:text-slate-500 font-medium">Terverifikasi</span>
+              <span className="text-slate-400 dark:text-slate-500 font-medium hidden sm:inline">Terverifikasi</span>
             </div>
           </div>
         </div>
       </div>
 
       {/* Main Container */}
-      <div className="rounded-3xl border border-slate-200/80 bg-white p-5 sm:p-7 shadow-sm dark:border-slate-800 dark:bg-slate-900 space-y-6">
+      <div className="rounded-2xl sm:rounded-3xl border border-slate-200/80 bg-white p-3.5 sm:p-5 lg:p-7 shadow-sm dark:border-slate-800 dark:bg-slate-900 space-y-4 sm:space-y-6">
         {/* Navigation Tabs (With Orange Accent & Badges) */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 pb-5 dark:border-slate-800">
-          <div className="flex items-center gap-2.5">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 border-b border-slate-100 pb-4 sm:pb-5 dark:border-slate-800">
+          <div className="grid grid-cols-2 gap-2 sm:flex sm:items-center sm:gap-2.5 w-full sm:w-auto">
             <button
               onClick={() => setActiveTab("PENGAJUAN")}
-              className={`inline-flex items-center gap-2 rounded-2xl px-5 py-3 text-xs sm:text-sm font-bold transition-all cursor-pointer ${
+              className={`inline-flex items-center justify-center sm:justify-start gap-1.5 sm:gap-2 rounded-xl sm:rounded-2xl px-2.5 sm:px-5 py-2.5 sm:py-3 text-xs sm:text-sm font-bold transition-all cursor-pointer ${
                 activeTab === "PENGAJUAN"
                   ? "bg-gradient-to-r from-[#ff7a1a] to-[#f26a0f] text-white shadow-cta hover:brightness-110"
                   : "bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300"
               }`}
             >
-              <ClipboardList className="h-4 w-4" />
-              <span>Semua Pengajuan Layanan</span>
+              <ClipboardList className="h-3.5 w-3.5 sm:h-4 sm:w-4 shrink-0" />
+              <span className="truncate">
+                <span className="sm:hidden">Pengajuan</span>
+                <span className="hidden sm:inline">Semua Pengajuan Layanan</span>
+              </span>
               <span
-                className={`ml-1 rounded-full px-2.5 py-0.5 text-xs font-extrabold ${
+                className={`ml-0.5 sm:ml-1 rounded-full px-1.5 sm:px-2.5 py-0.5 text-[10px] sm:text-xs font-extrabold shrink-0 ${
                   activeTab === "PENGAJUAN"
                     ? "bg-white/25 text-white"
                     : "bg-slate-200 text-slate-700 dark:bg-slate-700 dark:text-slate-200"
@@ -550,16 +553,19 @@ export function AdminDataAmperaClient({
 
             <button
               onClick={() => setActiveTab("PENGGUNA")}
-              className={`inline-flex items-center gap-2 rounded-2xl px-5 py-3 text-xs sm:text-sm font-bold transition-all cursor-pointer ${
+              className={`inline-flex items-center justify-center sm:justify-start gap-1.5 sm:gap-2 rounded-xl sm:rounded-2xl px-2.5 sm:px-5 py-2.5 sm:py-3 text-xs sm:text-sm font-bold transition-all cursor-pointer ${
                 activeTab === "PENGGUNA"
                   ? "bg-gradient-to-r from-[#ff7a1a] to-[#f26a0f] text-white shadow-cta hover:brightness-110"
                   : "bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300"
               }`}
             >
-              <Users className="h-4 w-4" />
-              <span>Direktori Pengguna (Data Tamu)</span>
+              <Users className="h-3.5 w-3.5 sm:h-4 sm:w-4 shrink-0" />
+              <span className="truncate">
+                <span className="sm:hidden">Data Tamu</span>
+                <span className="hidden sm:inline">Direktori Pengguna (Data Tamu)</span>
+              </span>
               <span
-                className={`ml-1 rounded-full px-2.5 py-0.5 text-xs font-extrabold ${
+                className={`ml-0.5 sm:ml-1 rounded-full px-1.5 sm:px-2.5 py-0.5 text-[10px] sm:text-xs font-extrabold shrink-0 ${
                   activeTab === "PENGGUNA"
                     ? "bg-white/25 text-white"
                     : "bg-slate-200 text-slate-700 dark:bg-slate-700 dark:text-slate-200"
@@ -572,8 +578,8 @@ export function AdminDataAmperaClient({
         </div>
 
         {/* Filter and Search Bar */}
-        <div className="flex flex-col gap-3.5 md:flex-row md:items-center md:justify-between">
-          <div className="relative flex-1 max-w-lg">
+        <div className="flex flex-col gap-2.5 sm:gap-3.5 md:flex-row md:items-center md:justify-between">
+          <div className="relative flex-1 max-w-full md:max-w-lg">
             <Search className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
             <input
               type="text"
@@ -581,15 +587,15 @@ export function AdminDataAmperaClient({
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder={
                 activeTab === "PENGAJUAN"
-                  ? "Cari Nama pemohon, NIK, No. HP/WA, Kode Tiket..."
-                  : "Cari Nama tamu, NIK, No. Telepon, Alamat domisili, Instansi..."
+                  ? "Cari nama, NIK, No. HP, kode tiket..."
+                  : "Cari nama tamu, NIK, instansi..."
               }
-              className="w-full rounded-2xl border border-slate-200 bg-slate-50 pl-10 pr-4 py-3 text-xs sm:text-sm text-navy-900 placeholder-slate-400 focus:border-brand-orange focus:bg-white focus:outline-none dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+              className="w-full rounded-xl sm:rounded-2xl border border-slate-200 bg-slate-50 pl-10 pr-4 py-2.5 sm:py-3 text-xs sm:text-sm text-navy-900 placeholder-slate-400 focus:border-brand-orange focus:bg-white focus:outline-none dark:border-slate-700 dark:bg-slate-800 dark:text-white"
             />
             {searchQuery && (
               <button
                 onClick={() => setSearchQuery("")}
-                className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 text-xs font-bold"
+                className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 text-xs font-bold cursor-pointer"
               >
                 &times;
               </button>
@@ -597,30 +603,30 @@ export function AdminDataAmperaClient({
           </div>
 
           {activeTab === "PENGAJUAN" && (
-            <div className="flex flex-wrap items-center gap-2.5">
+            <div className="grid grid-cols-2 gap-2 sm:flex sm:items-center sm:gap-2.5">
               {/* Filter Layanan */}
               <select
                 value={layananFilter}
                 onChange={(e) => setLayananFilter(e.target.value)}
-                className="rounded-2xl border border-slate-200 bg-white px-3.5 py-2.5 text-xs sm:text-sm font-semibold text-navy-900 focus:border-brand-orange focus:outline-none dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                className="w-full sm:w-auto rounded-xl sm:rounded-2xl border border-slate-200 bg-white px-2.5 sm:px-3.5 py-2 sm:py-2.5 text-xs sm:text-sm font-semibold text-navy-900 focus:border-brand-orange focus:outline-none dark:border-slate-700 dark:bg-slate-800 dark:text-white truncate"
               >
                 <option value="ALL">Semua Layanan</option>
-                <option value="INFO">Permintaan Informasi</option>
-                <option value="UJI_CEPAT">Pengujian Cepat</option>
-                <option value="ADUAN">Pengaduan Masyarakat</option>
-                <option value="KIP">Keterbukaan Informasi (KIP)</option>
+                <option value="INFO">Informasi</option>
+                <option value="UJI_CEPAT">Uji Cepat</option>
+                <option value="ADUAN">Pengaduan</option>
+                <option value="KIP">KIP</option>
               </select>
 
               {/* Filter Status */}
               <select
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value)}
-                className="rounded-2xl border border-slate-200 bg-white px-3.5 py-2.5 text-xs sm:text-sm font-semibold text-navy-900 focus:border-brand-orange focus:outline-none dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                className="w-full sm:w-auto rounded-xl sm:rounded-2xl border border-slate-200 bg-white px-2.5 sm:px-3.5 py-2 sm:py-2.5 text-xs sm:text-sm font-semibold text-navy-900 focus:border-brand-orange focus:outline-none dark:border-slate-700 dark:bg-slate-800 dark:text-white truncate"
               >
                 <option value="ALL">Semua Status</option>
-                <option value="MENUNGGU_VERIFIKASI">Menunggu Verifikasi</option>
-                <option value="DIPROSES">Sedang Diproses</option>
-                <option value="SELESAI">Selesai Dilayani</option>
+                <option value="MENUNGGU_VERIFIKASI">Menunggu</option>
+                <option value="DIPROSES">Diproses</option>
+                <option value="SELESAI">Selesai</option>
                 <option value="DITOLAK">Ditolak</option>
               </select>
             </div>
@@ -629,8 +635,112 @@ export function AdminDataAmperaClient({
 
         {/* TAB 1: DATA PENGAJUAN LAYANAN */}
         {activeTab === "PENGAJUAN" && (
-          <div className="rounded-3xl border border-slate-200/80 bg-white dark:border-slate-800 dark:bg-slate-900 overflow-hidden shadow-sm">
-            <div className="overflow-x-auto">
+          <div className="rounded-2xl sm:rounded-3xl border border-slate-200/80 bg-white dark:border-slate-800 dark:bg-slate-900 overflow-hidden shadow-sm">
+            {/* Tampilan Mobile: Kartu Daftar Pengajuan (md:hidden) */}
+            <div className="divide-y divide-slate-100 dark:divide-slate-800 md:hidden p-3 space-y-3">
+              {filteredPengajuan.length === 0 ? (
+                <div className="py-12 text-center text-xs text-slate-400 dark:text-slate-500">
+                  <Inbox className="mx-auto h-8 w-8 text-slate-300 dark:text-slate-600 mb-2" />
+                  Tidak ada data pengajuan layanan yang cocok.
+                </div>
+              ) : (
+                paginatedPengajuan.map((item) => {
+                  const cleanPhone = (item.tamu.telepon || "").replace(/\D/g, "");
+                  const waNum = cleanPhone.startsWith("0") ? "62" + cleanPhone.slice(1) : cleanPhone;
+                  const badgeStatus = getStatusBadgeStyle(item.status);
+
+                  return (
+                    <div key={item.id} className="pt-3 first:pt-0 space-y-2.5">
+                      {/* Baris Atas: Tanggal & Status Badge */}
+                      <div className="flex items-start justify-between gap-2">
+                        <div>
+                          <span className="text-xs font-bold text-slate-800 dark:text-slate-200">
+                            {new Date(item.createdAt).toLocaleDateString("id-ID", {
+                              day: "numeric",
+                              month: "short",
+                              year: "numeric",
+                            })}
+                          </span>
+                          <span className="text-[10px] text-slate-400 dark:text-slate-500 ml-1.5">
+                            {new Date(item.createdAt).toLocaleTimeString("id-ID", {
+                              hour: "2-digit",
+                              minute: "2-digit",
+                            })} WIB
+                          </span>
+                        </div>
+                        <span className={`inline-block px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${badgeStatus.badge}`}>
+                          {badgeStatus.label}
+                        </span>
+                      </div>
+
+                      {/* Info Pemohon */}
+                      <div>
+                        <p className="text-xs font-extrabold text-navy-900 dark:text-white">
+                          {item.tamu.nama}
+                        </p>
+                        <div className="flex flex-wrap items-center gap-2 mt-0.5 text-[11px] text-slate-500 dark:text-slate-400">
+                          <span className="font-mono">NIK: {item.tamu.nik}</span>
+                          {item.tamu.umur && <span>• {item.tamu.umur} Thn</span>}
+                        </div>
+                      </div>
+
+                      {/* Kotak Rincian Layanan */}
+                      <div className="rounded-xl bg-[#f8fbff] dark:bg-slate-800/40 p-2.5 text-xs space-y-1">
+                        <div className="flex items-center justify-between gap-1.5">
+                          <span className={`inline-block px-2 py-0.5 rounded-lg text-[10px] font-bold border ${getServiceBadgeStyle(item.layanan.kode)}`}>
+                            {item.layanan.nama}
+                          </span>
+                          {item.status === "SELESAI" && (
+                            <span className="text-[10px] font-semibold text-emerald-700 dark:text-emerald-400">
+                              {formatDurasiPenyelesaian(item.createdAt, item.waktuSelesai || item.updatedAt)}
+                            </span>
+                          )}
+                        </div>
+                        {item.tamu.alamat && (
+                          <p className="line-clamp-1 text-[11px] text-slate-600 dark:text-slate-300">
+                            <MapPin className="inline h-3 w-3 text-slate-400 mr-1" />
+                            {item.tamu.alamat}
+                          </p>
+                        )}
+                        {item.lampiranTindakan && item.lampiranTindakan.length > 0 && (
+                          <div className="flex items-center gap-1 text-[10px] font-bold text-emerald-600 dark:text-emerald-400">
+                            <FileCheck className="h-3 w-3 shrink-0" />
+                            <span>{item.lampiranTindakan.length} Lampiran Bukti</span>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Tombol Aksi */}
+                      <div className="flex items-center justify-end gap-2 pt-0.5">
+                        {waNum && (
+                          <a
+                            href={`https://wa.me/${waNum}?text=${encodeURIComponent(
+                              `Halo Bapak/Ibu ${item.tamu.nama}, kami dari Balai Besar POM di Palembang terkait permohonan layanan ${item.kodePengajuan}.`
+                            )}`}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="flex h-8 w-8 items-center justify-center rounded-lg border border-emerald-200 bg-emerald-50 text-emerald-600 hover:bg-emerald-100 transition dark:border-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-400"
+                            title="Chat WhatsApp"
+                          >
+                            <MessageSquare className="h-3.5 w-3.5" />
+                          </a>
+                        )}
+                        <button
+                          onClick={() => handleOpenDetail(item)}
+                          className="inline-flex items-center gap-1.5 rounded-lg bg-orange-50 hover:bg-orange-100 text-[#ff7a1a] dark:bg-orange-950/40 dark:text-orange-400 border border-orange-200/80 px-3 py-1.5 text-xs font-bold transition"
+                        >
+                          <Eye className="h-3.5 w-3.5" />
+                          <span>Detail</span>
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+
+            {/* Tampilan Desktop: Tabel Lengkap (hidden md:block) */}
+            <div className="hidden md:block overflow-x-auto">
               <table className="w-full text-left text-xs sm:text-sm">
                 <thead className="bg-slate-50/80 dark:bg-slate-800/60 border-b border-slate-200/80 dark:border-slate-800 text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
                   <tr>
@@ -748,7 +858,7 @@ export function AdminDataAmperaClient({
                             {item.status === "SELESAI" && (
                               <div className="flex items-center gap-1 text-[11px] font-semibold text-emerald-700 dark:text-emerald-400 mt-1">
                                 <Clock className="h-3 w-3 shrink-0" />
-                                <span>Selesai dalam {formatDurasiPenyelesaian(item.createdAt, item.updatedAt)}</span>
+                                <span>Selesai dalam {formatDurasiPenyelesaian(item.createdAt, item.waktuSelesai || item.updatedAt)}</span>
                               </div>
                             )}
                             {item.lampiranTindakan && item.lampiranTindakan.length > 0 && (
@@ -805,8 +915,101 @@ export function AdminDataAmperaClient({
 
         {/* TAB 2: DIREKTORI PENGGUNA (DATA TAMU TERDAFTAR) */}
         {activeTab === "PENGGUNA" && (
-          <div className="rounded-3xl border border-slate-200/80 bg-white dark:border-slate-800 dark:bg-slate-900 overflow-hidden shadow-sm">
-            <div className="overflow-x-auto">
+          <div className="rounded-2xl sm:rounded-3xl border border-slate-200/80 bg-white dark:border-slate-800 dark:bg-slate-900 overflow-hidden shadow-sm">
+            {/* Tampilan Mobile: Kartu Daftar Pengguna (md:hidden) */}
+            <div className="divide-y divide-slate-100 dark:divide-slate-800 md:hidden p-3 space-y-3">
+              {filteredPengguna.length === 0 ? (
+                <div className="py-12 text-center text-xs text-slate-400 dark:text-slate-500">
+                  <Inbox className="mx-auto h-8 w-8 text-slate-300 dark:text-slate-600 mb-2" />
+                  Tidak ada data pengguna/tamu yang cocok dengan pencarian.
+                </div>
+              ) : (
+                paginatedPengguna.map((user) => {
+                  const cleanPhone = (user.telepon || "").replace(/\D/g, "");
+                  const waNum = cleanPhone.startsWith("0") ? "62" + cleanPhone.slice(1) : cleanPhone;
+
+                  return (
+                    <div key={user.id} className="pt-3 first:pt-0 space-y-2.5">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-orange-100 dark:bg-orange-500/15 text-brand-orange text-sm font-black shadow-2xs">
+                            {user.nama.charAt(0).toUpperCase()}
+                          </div>
+                          <div className="min-w-0">
+                            <p className="text-xs font-bold text-navy-900 dark:text-white truncate">
+                              {user.nama}
+                            </p>
+                            <span className="font-mono text-[10px] font-semibold text-slate-600 dark:text-slate-300">
+                              NIK: {user.nik}
+                            </span>
+                          </div>
+                        </div>
+                        <span className="inline-flex items-center gap-1 rounded-full bg-blue-50 dark:bg-blue-950/40 border border-blue-200/80 px-2 py-0.5 text-[10px] font-bold text-[#1d68f6] shrink-0">
+                          <FileText className="w-3 h-3" />
+                          {user.totalPengajuan} Layanan
+                        </span>
+                      </div>
+
+                      <div className="rounded-xl bg-[#f8fbff] dark:bg-slate-800/40 p-2 text-xs space-y-1">
+                        {user.telepon && (
+                          <div className="flex items-center gap-1.5 text-[11px] text-slate-700 dark:text-slate-300">
+                            <Phone className="h-3 w-3 text-emerald-600" />
+                            <span>{user.telepon}</span>
+                          </div>
+                        )}
+                        {user.email && (
+                          <div className="flex items-center gap-1.5 text-[11px] text-slate-600 dark:text-slate-400">
+                            <Mail className="h-3 w-3 text-blue-500" />
+                            <span className="truncate">{user.email}</span>
+                          </div>
+                        )}
+                        {(user.asalInstansi || user.alamat) && (
+                          <div className="flex items-center gap-1.5 text-[11px] text-slate-600 dark:text-slate-400">
+                            <MapPin className="h-3 w-3 text-slate-400 shrink-0" />
+                            <span className="line-clamp-1">{user.asalInstansi || user.alamat}</span>
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="flex items-center justify-between text-[10px] text-slate-400 pt-0.5">
+                        <span>
+                          Terdaftar: {new Date(user.createdAt).toLocaleDateString("id-ID", {
+                            day: "numeric",
+                            month: "short",
+                            year: "numeric",
+                          })}
+                        </span>
+                        <div className="flex items-center gap-2">
+                          {waNum && (
+                            <a
+                              href={`https://wa.me/${waNum}?text=${encodeURIComponent(
+                                `Halo Bapak/Ibu ${user.nama}, kami dari Balai Besar POM di Palembang.`
+                              )}`}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="flex h-8 w-8 items-center justify-center rounded-lg border border-emerald-200 bg-emerald-50 text-emerald-600 hover:bg-emerald-100 transition dark:border-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-400"
+                              title="Chat WhatsApp"
+                            >
+                              <MessageSquare className="h-3.5 w-3.5" />
+                            </a>
+                          )}
+                          <button
+                            onClick={() => handleOpenPengguna(user)}
+                            className="inline-flex items-center gap-1 rounded-lg bg-orange-50 hover:bg-orange-100 text-[#ff7a1a] dark:bg-orange-950/40 dark:text-orange-400 border border-orange-200/80 px-2.5 py-1 text-xs font-bold transition cursor-pointer"
+                          >
+                            <UserCheck className="h-3.5 w-3.5" />
+                            <span>Riwayat</span>
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+
+            {/* Tampilan Desktop: Tabel Lengkap (hidden md:block) */}
+            <div className="hidden md:block overflow-x-auto">
               <table className="w-full text-left text-xs sm:text-sm">
                 <thead className="bg-slate-50/80 dark:bg-slate-800/60 border-b border-slate-200/80 dark:border-slate-800 text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
                   <tr>

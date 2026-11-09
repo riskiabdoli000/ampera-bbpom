@@ -10,6 +10,7 @@ import {
   AlertCircle,
 } from "lucide-react";
 import { deleteAccountAction, AdminAccountItem } from "@/app/actions/admin-account";
+import { AdminLoadingOverlay } from "@/components/admin/AdminLoadingOverlay";
 
 interface DeleteAccountModalProps {
   isOpen: boolean;
@@ -143,6 +144,13 @@ export function DeleteAccountModal({
           </button>
         </div>
       </div>
+
+      <AdminLoadingOverlay
+        isOpen={loading}
+        actionType="delete"
+        title="Menghapus Akun Operator..."
+        description={`Sedang menghapus akun (${targetAccount.username}) dari database BBPOM...`}
+      />
     </div>,
     document.body
   );

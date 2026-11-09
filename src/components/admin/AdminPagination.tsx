@@ -49,8 +49,8 @@ export function AdminPagination({
   };
 
   return (
-    <div className="flex flex-col sm:flex-row items-center justify-between gap-3 px-6 py-4 border-t border-slate-100 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-800/40">
-      <p className="text-xs text-slate-500 dark:text-slate-400">
+    <div className="flex flex-col sm:flex-row items-center justify-between gap-2.5 sm:gap-3 px-3.5 sm:px-6 py-3 sm:py-4 border-t border-slate-100 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-800/40">
+      <p className="text-[11px] sm:text-xs text-slate-500 dark:text-slate-400 text-center sm:text-left">
         Menampilkan{" "}
         <span className="font-semibold text-slate-700 dark:text-slate-200">{startItem}</span> -{" "}
         <span className="font-semibold text-slate-700 dark:text-slate-200">{endItem}</span> dari{" "}
@@ -58,15 +58,15 @@ export function AdminPagination({
       </p>
 
       {totalPages > 1 && (
-        <div className="flex items-center gap-1.5">
+        <div className="flex flex-wrap items-center justify-center gap-1 sm:gap-1.5">
           <button
             type="button"
             disabled={currentPage <= 1}
             onClick={() => onPageChange(currentPage - 1)}
-            className="flex h-8 w-8 items-center justify-center rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 disabled:opacity-35 disabled:cursor-not-allowed transition shadow-2xs cursor-pointer"
+            className="flex h-7.5 w-7.5 sm:h-8 sm:w-8 items-center justify-center rounded-lg sm:rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 disabled:opacity-35 disabled:cursor-not-allowed transition shadow-2xs cursor-pointer"
             title="Halaman Sebelumnya"
           >
-            <ChevronLeft className="h-4 w-4" />
+            <ChevronLeft className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
           </button>
 
           {getPageNumbers().map((p, idx) =>
@@ -75,7 +75,7 @@ export function AdminPagination({
                 key={idx}
                 type="button"
                 onClick={() => onPageChange(p)}
-                className={`flex h-8 min-w-[32px] px-2 items-center justify-center rounded-xl text-xs font-bold transition shadow-2xs cursor-pointer ${
+                className={`flex h-7.5 min-w-[28px] sm:h-8 sm:min-w-[32px] px-1.5 sm:px-2 items-center justify-center rounded-lg sm:rounded-xl text-[11px] sm:text-xs font-bold transition shadow-2xs cursor-pointer ${
                   currentPage === p
                     ? "bg-gradient-to-r from-[#ff7a1a] to-[#f26a0f] text-white shadow-cta hover:brightness-110"
                     : "border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700"
@@ -84,7 +84,7 @@ export function AdminPagination({
                 {p}
               </button>
             ) : (
-              <span key={idx} className="px-1 text-xs text-slate-400 font-bold select-none">
+              <span key={idx} className="px-0.5 sm:px-1 text-[11px] sm:text-xs text-slate-400 font-bold select-none">
                 ...
               </span>
             )
@@ -94,10 +94,10 @@ export function AdminPagination({
             type="button"
             disabled={currentPage >= totalPages}
             onClick={() => onPageChange(currentPage + 1)}
-            className="flex h-8 w-8 items-center justify-center rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 disabled:opacity-35 disabled:cursor-not-allowed transition shadow-2xs cursor-pointer"
+            className="flex h-7.5 w-7.5 sm:h-8 sm:w-8 items-center justify-center rounded-lg sm:rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 disabled:opacity-35 disabled:cursor-not-allowed transition shadow-2xs cursor-pointer"
             title="Halaman Selanjutnya"
           >
-            <ChevronRight className="h-4 w-4" />
+            <ChevronRight className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
           </button>
         </div>
       )}

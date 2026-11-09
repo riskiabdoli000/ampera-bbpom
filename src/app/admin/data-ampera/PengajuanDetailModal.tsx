@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useTransition, useRef, useEffect } from "react";
+import { createPortal } from "react-dom";
 import Image from "next/image";
 import {
   X,
@@ -29,6 +30,7 @@ import {
   Check,
   Star,
   Image as ImageIcon,
+  Pencil,
 } from "lucide-react";
 import {
   PengajuanItem,
@@ -40,6 +42,7 @@ import {
   resendPengajuanWaNotificationAction,
   sendManualPengajuanWaNotificationAction,
 } from "@/app/actions/data-ampera";
+import { AdminLoadingOverlay } from "@/components/admin/AdminLoadingOverlay";
 
 interface PengajuanDetailModalProps {
   pengajuan: PengajuanItem | null;
@@ -84,6 +87,19 @@ export function formatDurasiPenyelesaian(
   return parts.join(" ");
 }
 
+export function toDatetimeLocal(d: Date | string | null | undefined): string {
+  if (!d) return "";
+  const date = new Date(d);
+  if (isNaN(date.getTime())) return "";
+  const pad = (n: number) => String(n).padStart(2, "0");
+  const year = date.getFullYear();
+  const month = pad(date.getMonth() + 1);
+  const day = pad(date.getDate());
+  const hours = pad(date.getHours());
+  const minutes = pad(date.getMinutes());
+  return `${year}-${month}-${day}T${hours}:${minutes}`;
+}
+
 export function PengajuanDetailModal({
   pengajuan,
   isOpen,
@@ -92,6 +108,7 @@ export function PengajuanDetailModal({
   onDeleted,
   onNotify,
 }: PengajuanDetailModalProps) {
+  const [mounted, setMounted] = useState(false);
   const [selectedStatus, setSelectedStatus] = useState<StatusPengajuan>(
     pengajuan?.status || "MENUNGGU_VERIFIKASI"
   );
@@ -109,6 +126,10 @@ export function PengajuanDetailModal({
   const [isResendingWa, setIsResendingWa] = useState<number | null>(null);
   const [isSendingManualWa, setIsSendingManualWa] = useState(false);
 
+  // State untuk koreksi waktu selesai (backdate/penyesuaian waktu riil)
+  const [isCustomWaktuSelesai, setIsCustomWaktuSelesai] = useState(false);
+  const [customWaktuSelesai, setCustomWaktuSelesai] = useState<string>("");
+
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const formatFileSize = (bytes?: number | null) => {
@@ -117,6 +138,10 @@ export function PengajuanDetailModal({
     if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`;
     return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
   };
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   // Sync state saat modal dibuka dengan pengajuan baru
   useEffect(() => {
@@ -129,6 +154,17 @@ export function PengajuanDetailModal({
       setValidationError(null);
       setIsDragging(false);
       setWaLogs(pengajuan.notifikasiWa || []);
+
+      const initialDate =
+        pengajuan.waktuSelesai ||
+        (pengajuan.status === "SELESAI" ? pengajuan.updatedAt : null);
+      if (initialDate) {
+        setCustomWaktuSelesai(toDatetimeLocal(initialDate));
+        setIsCustomWaktuSelesai(Boolean(pengajuan.waktuSelesai));
+      } else {
+        setCustomWaktuSelesai(toDatetimeLocal(new Date()));
+        setIsCustomWaktuSelesai(false);
+      }
     }
   }, [pengajuan]);
 
@@ -142,6 +178,46 @@ export function PengajuanDetailModal({
   }, [newFiles]);
 
   if (!isOpen || !pengajuan) return null;
+
+  // Hitung tanggal/jam efektif untuk pratinjau durasi penyelesaian
+  const effectiveEndDate = (() => {
+    if (selectedStatus !== "SELESAI") return null;
+    if (isCustomWaktuSelesai && customWaktuSelesai) {
+      const d = new Date(customWaktuSelesai);
+      return isNaN(d.getTime()) ? new Date() : d;
+    }
+    if (pengajuan?.waktuSelesai) {
+      return new Date(pengajuan.waktuSelesai);
+    }
+    if (pengajuan?.status === "SELESAI") {
+      return new Date(pengajuan.updatedAt);
+    }
+    return new Date();
+  })();
+
+  const applyPresetMinutes = (minutes: number) => {
+    if (!pengajuan) return;
+    const start = new Date(pengajuan.createdAt).getTime();
+    const target = new Date(start + minutes * 60 * 1000);
+    const finalDate = target.getTime() > Date.now() ? new Date() : target;
+    setCustomWaktuSelesai(toDatetimeLocal(finalDate));
+    setIsCustomWaktuSelesai(true);
+  };
+
+  const applyPresetYesterday = () => {
+    const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000);
+    if (pengajuan && yesterday.getTime() < new Date(pengajuan.createdAt).getTime()) {
+      applyPresetMinutes(30);
+      return;
+    }
+    setCustomWaktuSelesai(toDatetimeLocal(yesterday));
+    setIsCustomWaktuSelesai(true);
+  };
+
+  const applyNow = () => {
+    setCustomWaktuSelesai(toDatetimeLocal(new Date()));
+    setIsCustomWaktuSelesai(false);
+  };
 
   // Hitung jumlah lampiran aktif
   const remainingExisting = existingLampiran.filter((l) => !deletedLampiranIds.includes(l.id));
@@ -204,12 +280,34 @@ export function PengajuanDetailModal({
   const handleUpdateStatus = () => {
     setValidationError(null);
 
+    // Validasi waktu selesai jika status SELESAI
+    let waktuSelesaiPayload: string | null = null;
+    if (selectedStatus === "SELESAI") {
+      if (isCustomWaktuSelesai && customWaktuSelesai) {
+        const chosenDate = new Date(customWaktuSelesai);
+        if (chosenDate.getTime() < new Date(pengajuan.createdAt).getTime()) {
+          setValidationError("Waktu selesai tidak boleh lebih awal dari waktu permohonan masuk.");
+          return;
+        }
+        waktuSelesaiPayload = chosenDate.toISOString();
+      } else if (pengajuan.waktuSelesai && !isCustomWaktuSelesai) {
+        // Admin sengaja mereset ke waktu sekarang
+        waktuSelesaiPayload = new Date().toISOString();
+      } else if (!pengajuan.waktuSelesai) {
+        waktuSelesaiPayload = new Date().toISOString();
+      }
+    }
+
     startTransition(async () => {
       const formData = new FormData();
       formData.append("id", String(pengajuan.id));
       formData.append("status", selectedStatus);
       formData.append("catatanPetugas", catatanPetugas);
       formData.append("deletedLampiranIds", JSON.stringify(deletedLampiranIds));
+
+      if (waktuSelesaiPayload) {
+        formData.append("waktuSelesai", waktuSelesaiPayload);
+      }
 
       for (const item of newFiles) {
         formData.append("lampiranFiles", item.file);
@@ -324,9 +422,11 @@ export function PengajuanDetailModal({
       )}`
     : null;
 
-  return (
+  if (!mounted) return null;
+
+  return createPortal(
     <>
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5">
+      <div className="fixed inset-0 z-[9999] flex items-center justify-center p-3 sm:p-5">
         {/* Backdrop */}
         <div
           className="fixed inset-0 bg-[#06132f]/60 backdrop-blur-xs transition-opacity"
@@ -334,43 +434,43 @@ export function PengajuanDetailModal({
         />
 
         {/* Modal Dialog */}
-        <div className="relative z-10 flex flex-col max-h-[92vh] w-full max-w-3xl rounded-3xl border border-slate-200/80 bg-white shadow-2xl dark:border-slate-800 dark:bg-slate-900 overflow-hidden">
+        <div className="relative z-10 flex flex-col max-h-[92vh] w-full max-w-3xl rounded-2xl sm:rounded-3xl border border-slate-200/80 bg-white shadow-2xl dark:border-slate-800 dark:bg-slate-900 overflow-hidden">
           {/* Header */}
-          <div className="flex items-center justify-between border-b border-slate-100 px-6 sm:px-7 py-5 dark:border-slate-800 bg-white dark:bg-slate-900">
+          <div className="flex items-center justify-between border-b border-slate-100 px-4 sm:px-7 py-3.5 sm:py-5 dark:border-slate-800 bg-white dark:bg-slate-900">
             <div>
-              <div className="flex flex-wrap items-center gap-2.5">
-                <span className="font-mono text-sm sm:text-base font-extrabold text-[#ff7a1a] dark:text-orange-400">
+              <div className="flex flex-wrap items-center gap-1.5 sm:gap-2.5">
+                <span className="font-mono text-xs sm:text-base font-extrabold text-[#ff7a1a] dark:text-orange-400">
                   {pengajuan.kodePengajuan}
                 </span>
                 <span
-                  className={`inline-block rounded-full border px-3 py-1 text-xs font-bold ${badge.bg}`}
+                  className={`inline-block rounded-full border px-2.5 sm:px-3 py-0.5 sm:py-1 text-[10px] sm:text-xs font-bold ${badge.bg}`}
                 >
                   {badge.label}
                 </span>
                 {pengajuan.status === "SELESAI" && (
-                  <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100/80 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800 px-2.5 py-1 text-[11px] font-bold text-emerald-800 dark:text-emerald-300">
+                  <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100/80 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800 px-2 sm:px-2.5 py-0.5 sm:py-1 text-[10px] sm:text-[11px] font-bold text-emerald-800 dark:text-emerald-300">
                     <Clock className="h-3 w-3" />
-                    Selesai dalam {formatDurasiPenyelesaian(pengajuan.createdAt, pengajuan.updatedAt)}
+                    Selesai dalam {formatDurasiPenyelesaian(pengajuan.createdAt, pengajuan.waktuSelesai || pengajuan.updatedAt)}
                   </span>
                 )}
               </div>
-              <h2 className="mt-1 text-lg sm:text-xl font-black text-navy-900 dark:text-white font-brand">
+              <h2 className="mt-1 text-base sm:text-xl font-black text-navy-900 dark:text-white font-brand">
                 {pengajuan.layanan.nama}
               </h2>
             </div>
             <button
               onClick={onClose}
-              className="flex h-10 w-10 items-center justify-center rounded-2xl text-slate-400 hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-slate-800 dark:hover:text-slate-200 transition cursor-pointer"
+              className="flex h-9 w-9 sm:h-10 sm:w-10 items-center justify-center rounded-xl sm:rounded-2xl text-slate-400 hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-slate-800 dark:hover:text-slate-200 transition cursor-pointer shrink-0 ml-2"
             >
-              <X className="h-5 w-5" />
+              <X className="h-4 w-4 sm:h-5 sm:w-5" />
             </button>
           </div>
 
           {/* Modal Body Scrollable */}
-          <div className="flex-1 overflow-y-auto p-6 sm:p-7 space-y-6">
+          <div className="flex-1 overflow-y-auto p-3.5 sm:p-7 space-y-4 sm:space-y-6">
             {/* 1. Profil Pemohon / Tamu (Clear & Legible) */}
-            <div className="rounded-3xl border border-slate-200/80 bg-slate-50/70 p-5 sm:p-6 dark:border-slate-800 dark:bg-slate-800/40">
-              <div className="flex items-center justify-between mb-4">
+            <div className="rounded-2xl sm:rounded-3xl border border-slate-200/80 bg-slate-50/70 p-3.5 sm:p-6 dark:border-slate-800 dark:bg-slate-800/40">
+              <div className="flex items-center justify-between gap-2 mb-3 sm:mb-4">
                 <h3 className="flex items-center gap-2 text-xs font-extrabold uppercase tracking-wider text-slate-500 dark:text-slate-400">
                   <User className="h-4 w-4 text-[#ff7a1a]" /> Profil Pemohon Layanan
                 </h3>
@@ -379,41 +479,41 @@ export function PengajuanDetailModal({
                     href={waUrl}
                     target="_blank"
                     rel="noreferrer"
-                    className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 px-3.5 py-2 text-xs font-bold text-white transition shadow-xs"
+                    className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 px-2.5 sm:px-3.5 py-1.5 sm:py-2 text-[11px] sm:text-xs font-bold text-white transition shadow-xs shrink-0"
                   >
-                    <MessageSquare className="h-4 w-4" /> Chat WhatsApp
+                    <MessageSquare className="h-3.5 w-3.5" /> Chat WhatsApp
                   </a>
                 )}
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 text-xs sm:text-sm">
                 <div>
-                  <span className="text-xs text-slate-400 block font-medium">Nama Lengkap Pemohon:</span>
-                  <p className="font-bold text-navy-900 dark:text-white text-base mt-0.5 font-brand">
+                  <span className="text-[11px] text-slate-400 block font-medium">Nama Lengkap Pemohon:</span>
+                  <p className="font-bold text-navy-900 dark:text-white text-sm sm:text-base mt-0.5 font-brand">
                     {pengajuan.tamu.nama}
                   </p>
                 </div>
                 <div>
-                  <span className="text-xs text-slate-400 block font-medium">NIK (KTP):</span>
-                  <p className="font-mono font-bold text-slate-800 dark:text-white text-sm sm:text-base mt-0.5">
+                  <span className="text-[11px] text-slate-400 block font-medium">NIK (KTP):</span>
+                  <p className="font-mono font-bold text-slate-800 dark:text-white text-xs sm:text-base mt-0.5">
                     {pengajuan.tamu.nik}
                   </p>
                 </div>
                 <div>
-                  <span className="text-xs text-slate-400 block font-medium">Nomor WhatsApp:</span>
-                  <p className="font-bold text-navy-900 dark:text-white text-sm sm:text-base mt-0.5">
+                  <span className="text-[11px] text-slate-400 block font-medium">Nomor WhatsApp:</span>
+                  <p className="font-bold text-navy-900 dark:text-white text-xs sm:text-base mt-0.5">
                     {pengajuan.tamu.telepon || "-"}
                   </p>
                 </div>
                 <div>
-                  <span className="text-xs text-slate-400 block font-medium">Alamat Email:</span>
-                  <p className="font-semibold text-navy-900 dark:text-white text-sm mt-0.5">
+                  <span className="text-[11px] text-slate-400 block font-medium">Alamat Email:</span>
+                  <p className="font-semibold text-navy-900 dark:text-white text-xs sm:text-sm mt-0.5 truncate">
                     {pengajuan.tamu.email || "-"}
                   </p>
                 </div>
                 <div className="sm:col-span-2">
-                  <span className="text-xs text-slate-400 block font-medium">Alamat Domisili / Instansi:</span>
-                  <p className="font-medium text-navy-900 dark:text-white text-sm sm:text-[15px] mt-0.5 leading-relaxed">
+                  <span className="text-[11px] text-slate-400 block font-medium">Alamat Domisili / Instansi:</span>
+                  <p className="font-medium text-navy-900 dark:text-white text-xs sm:text-[15px] mt-0.5 leading-relaxed">
                     {pengajuan.tamu.alamat || pengajuan.tamu.asalInstansi || "-"}
                   </p>
                 </div>
@@ -421,23 +521,23 @@ export function PengajuanDetailModal({
             </div>
 
             {/* 2. Rincian Isian Formulir Layanan */}
-            <div className="space-y-4">
+            <div className="space-y-3 sm:space-y-4">
               <h3 className="flex items-center gap-2 text-xs font-extrabold uppercase tracking-wider text-slate-500 dark:text-slate-400">
                 <FileText className="h-4 w-4 text-[#ff7a1a]" /> Rincian Formulir Pengajuan
               </h3>
 
               {/* Layanan 1: Permintaan Informasi */}
               {pengajuan.layanan.kode === "INFO" && (
-                <div className="rounded-3xl border border-slate-200/80 bg-white p-5 sm:p-6 dark:border-slate-800 dark:bg-slate-900 space-y-3.5 text-sm">
+                <div className="rounded-2xl sm:rounded-3xl border border-slate-200/80 bg-white p-3.5 sm:p-6 dark:border-slate-800 dark:bg-slate-900 space-y-3 sm:space-y-3.5 text-xs sm:text-sm">
                   <div>
-                    <span className="text-xs text-slate-400 block font-medium">Kategori Informasi:</span>
+                    <span className="text-[11px] text-slate-400 block font-medium">Kategori Informasi:</span>
                     <p className="font-bold text-navy-900 dark:text-white text-sm sm:text-base mt-0.5">
                       {pengajuan.kategoriInformasi || "Regulasi / Informasi Umum"}
                     </p>
                   </div>
                   <div>
-                    <span className="text-xs text-slate-400 block font-medium">Informasi yang Dibutuhkan:</span>
-                    <p className="mt-1.5 rounded-2xl bg-slate-50 p-4 text-sm text-navy-900 dark:bg-slate-800 dark:text-slate-200 whitespace-pre-wrap leading-relaxed border border-slate-200/60 dark:border-slate-700/60 font-medium">
+                    <span className="text-[11px] text-slate-400 block font-medium">Informasi yang Dibutuhkan:</span>
+                    <p className="mt-1.5 rounded-xl sm:rounded-2xl bg-slate-50 p-3 sm:p-4 text-xs sm:text-sm text-navy-900 dark:bg-slate-800 dark:text-slate-200 whitespace-pre-wrap leading-relaxed border border-slate-200/60 dark:border-slate-700/60 font-medium">
                       {pengajuan.informasiDibutuhkan || "-"}
                     </p>
                   </div>
@@ -446,22 +546,22 @@ export function PengajuanDetailModal({
 
               {/* Layanan 2: Pengujian Cepat */}
               {pengajuan.layanan.kode === "UJI_CEPAT" && (
-                <div className="rounded-3xl border border-slate-200/80 bg-white p-5 sm:p-6 dark:border-slate-800 dark:bg-slate-900 space-y-3.5 text-sm">
+                <div className="rounded-2xl sm:rounded-3xl border border-slate-200/80 bg-white p-3.5 sm:p-6 dark:border-slate-800 dark:bg-slate-900 space-y-3 sm:space-y-3.5 text-xs sm:text-sm">
                   <div>
-                    <span className="text-xs text-slate-400 block font-medium">Produk yang Dicurigai:</span>
-                    <p className="font-bold text-navy-900 dark:text-white text-base mt-0.5 font-brand">
+                    <span className="text-[11px] text-slate-400 block font-medium">Produk yang Dicurigai:</span>
+                    <p className="font-bold text-navy-900 dark:text-white text-sm sm:text-base mt-0.5 font-brand">
                       {pengajuan.produkDicurigai || pengajuan.produkLainnya || "-"}
                     </p>
                   </div>
                   <div>
-                    <span className="text-xs text-slate-400 block font-medium">Alasan Kecurigaan:</span>
-                    <p className="font-semibold text-navy-900 dark:text-white text-sm sm:text-base mt-0.5">
+                    <span className="text-[11px] text-slate-400 block font-medium">Alasan Kecurigaan:</span>
+                    <p className="font-semibold text-navy-900 dark:text-white text-xs sm:text-base mt-0.5">
                       {pengajuan.alasanKecurigaan || pengajuan.alasanLainnya || "-"}
                     </p>
                   </div>
                   <div>
-                    <span className="text-xs text-slate-400 block font-medium">Rincian Pembelian / Keterangan Sampel:</span>
-                    <p className="mt-1.5 rounded-2xl bg-slate-50 p-4 text-sm text-navy-900 dark:bg-slate-800 dark:text-slate-200 whitespace-pre-wrap leading-relaxed border border-slate-200/60 dark:border-slate-700/60 font-medium">
+                    <span className="text-[11px] text-slate-400 block font-medium">Rincian Pembelian / Keterangan Sampel:</span>
+                    <p className="mt-1.5 rounded-xl sm:rounded-2xl bg-slate-50 p-3 sm:p-4 text-xs sm:text-sm text-navy-900 dark:bg-slate-800 dark:text-slate-200 whitespace-pre-wrap leading-relaxed border border-slate-200/60 dark:border-slate-700/60 font-medium">
                       {pengajuan.rincianProduk || "-"}
                     </p>
                   </div>
@@ -470,10 +570,10 @@ export function PengajuanDetailModal({
 
               {/* Layanan 3: Pengaduan */}
               {pengajuan.layanan.kode === "ADUAN" && (
-                <div className="rounded-3xl border border-slate-200/80 bg-white p-5 sm:p-6 dark:border-slate-800 dark:bg-slate-900 space-y-3.5 text-sm">
+                <div className="rounded-2xl sm:rounded-3xl border border-slate-200/80 bg-white p-3.5 sm:p-6 dark:border-slate-800 dark:bg-slate-900 space-y-3 sm:space-y-3.5 text-xs sm:text-sm">
                   <div>
-                    <span className="text-xs text-slate-400 block font-medium">Isi / Uraian Laporan Pengaduan:</span>
-                    <p className="mt-1.5 rounded-2xl bg-slate-50 p-4 text-sm text-navy-900 dark:bg-slate-800 dark:text-slate-200 whitespace-pre-wrap leading-relaxed border border-slate-200/60 dark:border-slate-700/60 font-medium">
+                    <span className="text-[11px] text-slate-400 block font-medium">Isi / Uraian Laporan Pengaduan:</span>
+                    <p className="mt-1.5 rounded-xl sm:rounded-2xl bg-slate-50 p-3 sm:p-4 text-xs sm:text-sm text-navy-900 dark:bg-slate-800 dark:text-slate-200 whitespace-pre-wrap leading-relaxed border border-slate-200/60 dark:border-slate-700/60 font-medium">
                       {pengajuan.isiPengaduan || "-"}
                     </p>
                   </div>
@@ -482,17 +582,17 @@ export function PengajuanDetailModal({
 
               {/* Layanan 4: Keterbukaan Informasi Publik (KIP) */}
               {pengajuan.layanan.kode === "KIP" && (
-                <div className="rounded-3xl border border-slate-200/80 bg-white p-5 sm:p-6 dark:border-slate-800 dark:bg-slate-900 space-y-3.5 text-sm">
+                <div className="rounded-2xl sm:rounded-3xl border border-slate-200/80 bg-white p-3.5 sm:p-6 dark:border-slate-800 dark:bg-slate-900 space-y-3 sm:space-y-3.5 text-xs sm:text-sm">
                   <div>
-                    <span className="text-xs text-slate-400 block font-medium">Rincian Informasi Publik yang Dimohon:</span>
-                    <p className="mt-1.5 rounded-2xl bg-slate-50 p-4 text-sm text-navy-900 dark:bg-slate-800 dark:text-slate-200 whitespace-pre-wrap leading-relaxed border border-slate-200/60 dark:border-slate-700/60 font-medium">
+                    <span className="text-[11px] text-slate-400 block font-medium">Rincian Informasi Publik yang Dimohon:</span>
+                    <p className="mt-1.5 rounded-xl sm:rounded-2xl bg-slate-50 p-3 sm:p-4 text-xs sm:text-sm text-navy-900 dark:bg-slate-800 dark:text-slate-200 whitespace-pre-wrap leading-relaxed border border-slate-200/60 dark:border-slate-700/60 font-medium">
                       {pengajuan.rincianInformasiKip || "-"}
                     </p>
                   </div>
                   {pengajuan.tujuanPenggunaanKip && (
                     <div>
-                      <span className="text-xs text-slate-400 block font-medium">Tujuan Penggunaan Informasi:</span>
-                      <p className="font-semibold text-navy-900 dark:text-white text-sm sm:text-base mt-0.5">
+                      <span className="text-[11px] text-slate-400 block font-medium">Tujuan Penggunaan Informasi:</span>
+                      <p className="font-semibold text-navy-900 dark:text-white text-xs sm:text-base mt-0.5">
                         {pengajuan.tujuanPenggunaanKip}
                       </p>
                     </div>
@@ -503,17 +603,17 @@ export function PengajuanDetailModal({
 
             {/* 3. Lampiran Berkas (Foto Bukti, Scan KTP, Dokumen PDF) */}
             {(pengajuan.buktiFotoUrl || pengajuan.ktpUrl || pengajuan.dokumenPendukungUrl) && (
-              <div className="space-y-3.5">
+              <div className="space-y-3 sm:space-y-3.5">
                 <h3 className="flex items-center gap-2 text-xs font-extrabold uppercase tracking-wider text-slate-500 dark:text-slate-400">
                   <FileCheck className="h-4 w-4 text-[#ff7a1a]" /> Lampiran Dokumen & Bukti
                 </h3>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 sm:gap-3.5">
                   {/* Foto Bukti Aduan */}
                   {pengajuan.buktiFotoUrl && (
-                    <div className="flex items-center justify-between rounded-2xl border border-slate-200/80 bg-white p-3.5 dark:border-slate-800 dark:bg-slate-900">
-                      <div className="flex items-center gap-3">
-                        <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-xl bg-slate-100 dark:bg-slate-800 border">
+                    <div className="flex items-center justify-between rounded-xl sm:rounded-2xl border border-slate-200/80 bg-white p-3 sm:p-3.5 dark:border-slate-800 dark:bg-slate-900">
+                      <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
+                        <div className="relative h-10 w-10 sm:h-12 sm:w-12 shrink-0 overflow-hidden rounded-lg sm:rounded-xl bg-slate-100 dark:bg-slate-800 border">
                           <Image
                             src={pengajuan.buktiFotoUrl}
                             alt="Bukti Foto"
@@ -521,17 +621,17 @@ export function PengajuanDetailModal({
                             className="object-cover"
                           />
                         </div>
-                        <div>
-                          <div className="text-sm font-bold text-navy-900 dark:text-white">
+                        <div className="min-w-0">
+                          <div className="text-xs sm:text-sm font-bold text-navy-900 dark:text-white truncate">
                             Foto Bukti Laporan
                           </div>
-                          <div className="text-xs text-slate-400">Lampiran Bukti</div>
+                          <div className="text-[10px] sm:text-xs text-slate-400">Lampiran Bukti</div>
                         </div>
                       </div>
-                      <div className="flex items-center gap-1.5">
+                      <div className="flex items-center gap-1.5 shrink-0">
                         <button
                           onClick={() => setPreviewImage(pengajuan.buktiFotoUrl)}
-                          className="flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 cursor-pointer"
+                          className="flex h-8 w-8 sm:h-9 sm:w-9 items-center justify-center rounded-lg sm:rounded-xl border border-slate-200 text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 cursor-pointer"
                           title="Lihat Gambar"
                         >
                           <Eye className="h-4 w-4" />
@@ -540,7 +640,7 @@ export function PengajuanDetailModal({
                           href={pengajuan.buktiFotoUrl}
                           target="_blank"
                           rel="noreferrer"
-                          className="flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300"
+                          className="flex h-8 w-8 sm:h-9 sm:w-9 items-center justify-center rounded-lg sm:rounded-xl border border-slate-200 text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300"
                           title="Buka di Tab Baru"
                         >
                           <ExternalLink className="h-4 w-4" />
@@ -551,9 +651,9 @@ export function PengajuanDetailModal({
 
                   {/* Foto KTP Pemohon */}
                   {pengajuan.ktpUrl && (
-                    <div className="flex items-center justify-between rounded-2xl border border-slate-200/80 bg-white p-3.5 dark:border-slate-800 dark:bg-slate-900">
-                      <div className="flex items-center gap-3">
-                        <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-xl bg-slate-100 dark:bg-slate-800 border">
+                    <div className="flex items-center justify-between rounded-xl sm:rounded-2xl border border-slate-200/80 bg-white p-3 sm:p-3.5 dark:border-slate-800 dark:bg-slate-900">
+                      <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
+                        <div className="relative h-10 w-10 sm:h-12 sm:w-12 shrink-0 overflow-hidden rounded-lg sm:rounded-xl bg-slate-100 dark:bg-slate-800 border">
                           <Image
                             src={pengajuan.ktpUrl}
                             alt="Identitas KTP"
@@ -561,17 +661,17 @@ export function PengajuanDetailModal({
                             className="object-cover"
                           />
                         </div>
-                        <div>
-                          <div className="text-sm font-bold text-navy-900 dark:text-white">
+                        <div className="min-w-0">
+                          <div className="text-xs sm:text-sm font-bold text-navy-900 dark:text-white truncate">
                             Identitas KTP
                           </div>
-                          <div className="text-xs text-slate-400">Verifikasi Pemohon</div>
+                          <div className="text-[10px] sm:text-xs text-slate-400">Verifikasi Pemohon</div>
                         </div>
                       </div>
-                      <div className="flex items-center gap-1.5">
+                      <div className="flex items-center gap-1.5 shrink-0">
                         <button
                           onClick={() => setPreviewImage(pengajuan.ktpUrl)}
-                          className="flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 cursor-pointer"
+                          className="flex h-8 w-8 sm:h-9 sm:w-9 items-center justify-center rounded-lg sm:rounded-xl border border-slate-200 text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 cursor-pointer"
                           title="Lihat Gambar"
                         >
                           <Eye className="h-4 w-4" />
@@ -580,7 +680,7 @@ export function PengajuanDetailModal({
                           href={pengajuan.ktpUrl}
                           target="_blank"
                           rel="noreferrer"
-                          className="flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300"
+                          className="flex h-8 w-8 sm:h-9 sm:w-9 items-center justify-center rounded-lg sm:rounded-xl border border-slate-200 text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300"
                           title="Buka di Tab Baru"
                         >
                           <ExternalLink className="h-4 w-4" />
@@ -591,17 +691,17 @@ export function PengajuanDetailModal({
 
                   {/* Dokumen PDF Formulir KIP */}
                   {pengajuan.dokumenPendukungUrl && (
-                    <div className="sm:col-span-2 flex items-center justify-between rounded-2xl border border-sky-200 bg-sky-50/50 p-4 dark:border-sky-900 dark:bg-sky-950/30">
-                      <div className="flex items-center gap-3.5">
-                        <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-sky-100 text-sky-700 dark:bg-sky-900/60 dark:text-sky-300 font-extrabold text-sm">
+                    <div className="sm:col-span-2 flex items-center justify-between rounded-xl sm:rounded-2xl border border-sky-200 bg-sky-50/50 p-3 sm:p-4 dark:border-sky-900 dark:bg-sky-950/30">
+                      <div className="flex items-center gap-2.5 sm:gap-3.5 min-w-0">
+                        <div className="flex h-10 w-10 sm:h-12 sm:w-12 shrink-0 items-center justify-center rounded-lg sm:rounded-xl bg-sky-100 text-sky-700 dark:bg-sky-900/60 dark:text-sky-300 font-extrabold text-xs sm:text-sm">
                           PDF
                         </div>
-                        <div>
-                          <div className="text-sm font-bold text-navy-900 dark:text-white">
+                        <div className="min-w-0">
+                          <div className="text-xs sm:text-sm font-bold text-navy-900 dark:text-white truncate">
                             Formulir Permohonan KIP Resmi
                           </div>
-                          <div className="text-xs text-slate-500 dark:text-slate-400">
-                            Dokumen formulir format PDF yang diunggah pemohon
+                          <div className="text-[10px] sm:text-xs text-slate-500 dark:text-slate-400 truncate">
+                            Dokumen format PDF yang diunggah pemohon
                           </div>
                         </div>
                       </div>
@@ -609,9 +709,9 @@ export function PengajuanDetailModal({
                         href={pengajuan.dokumenPendukungUrl}
                         target="_blank"
                         rel="noreferrer"
-                        className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-[#ff7a1a] to-[#f26a0f] px-4 py-2.5 text-xs font-bold text-white shadow-cta hover:brightness-110 transition"
+                        className="inline-flex items-center gap-1.5 rounded-lg sm:rounded-xl bg-gradient-to-r from-[#ff7a1a] to-[#f26a0f] px-3 sm:px-4 py-2 sm:py-2.5 text-xs font-bold text-white shadow-cta hover:brightness-110 transition shrink-0 ml-2"
                       >
-                        <Download className="h-4 w-4" /> Buka PDF
+                        <Download className="h-3.5 w-3.5 sm:h-4 sm:w-4" /> Buka PDF
                       </a>
                     </div>
                   )}
@@ -620,7 +720,7 @@ export function PengajuanDetailModal({
             )}
 
             {/* 4. Tindakan Petugas & Perubahan Status */}
-            <div className="rounded-3xl border border-slate-200/80 bg-slate-50/70 p-5 sm:p-6 dark:border-slate-800 dark:bg-slate-800/40 space-y-5">
+            <div className="rounded-2xl sm:rounded-3xl border border-slate-200/80 bg-slate-50/70 p-3.5 sm:p-6 dark:border-slate-800 dark:bg-slate-800/40 space-y-4 sm:space-y-5">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <h3 className="flex items-center gap-2 text-xs font-extrabold uppercase tracking-wider text-navy-900 dark:text-white">
                   <ShieldCheck className="h-4 w-4 text-[#ff7a1a]" /> Tindakan Petugas BBPOM
@@ -628,57 +728,150 @@ export function PengajuanDetailModal({
 
                 {/* Indikator Lampiran Opsional */}
                 {totalLampiran > 0 ? (
-                  <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-bold text-emerald-700 dark:border-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300">
-                    <CheckCircle2 className="h-3.5 w-3.5" /> {totalLampiran} Lampiran Bukti Terlampir
+                  <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-2.5 sm:px-3 py-0.5 sm:py-1 text-[11px] sm:text-xs font-bold text-emerald-700 dark:border-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300">
+                    <CheckCircle2 className="h-3.5 w-3.5" /> {totalLampiran} Lampiran Terlampir
                   </span>
                 ) : (
-                  <span className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300">
-                    Lampiran Bukti Opsional
+                  <span className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-2.5 sm:px-3 py-0.5 sm:py-1 text-[11px] sm:text-xs font-semibold text-slate-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300">
+                    Lampiran Opsional
                   </span>
                 )}
               </div>
 
               {validationError && (
-                <div className="rounded-2xl border border-rose-200 bg-rose-50 p-4 text-xs font-semibold text-rose-800 dark:border-rose-900/60 dark:bg-rose-950/40 dark:text-rose-300 flex items-start gap-2.5">
+                <div className="rounded-xl sm:rounded-2xl border border-rose-200 bg-rose-50 p-3 sm:p-4 text-xs font-semibold text-rose-800 dark:border-rose-900/60 dark:bg-rose-950/40 dark:text-rose-300 flex items-start gap-2.5">
                   <AlertCircle className="h-4 w-4 shrink-0 mt-0.5 text-rose-600 dark:text-rose-400" />
                   <span>{validationError}</span>
                 </div>
               )}
 
-              {/* Informasi Waktu Penyelesaian Jika Status SELESAI */}
-              {(pengajuan.status === "SELESAI" || selectedStatus === "SELESAI") && (
-                <div className="rounded-2xl border border-emerald-200 bg-emerald-50/80 p-4 dark:border-emerald-800/70 dark:bg-emerald-950/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                  <div className="flex items-start gap-3">
-                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-emerald-600 text-white shadow-xs mt-0.5">
-                      <Clock className="h-4 w-4" />
-                    </div>
-                    <div>
-                      <span className="text-xs font-extrabold uppercase tracking-wider text-emerald-800 dark:text-emerald-300 block">
-                        Waktu Penyelesaian Laporan Layanan
-                      </span>
-                      <p className="text-xs sm:text-sm font-bold text-navy-900 dark:text-white mt-0.5">
-                        Diselesaikan dalam{" "}
-                        <span className="text-emerald-700 dark:text-emerald-400 underline decoration-emerald-400/60">
-                          {formatDurasiPenyelesaian(
-                            pengajuan.createdAt,
-                            pengajuan.status === "SELESAI" ? pengajuan.updatedAt : new Date()
+              {/* Informasi & Pengaturan Koreksi Waktu Penyelesaian Jika Status SELESAI */}
+              {(pengajuan.status === "SELESAI" || selectedStatus === "SELESAI") && effectiveEndDate && (
+                <div className="rounded-xl sm:rounded-2xl border border-emerald-200 bg-emerald-50/70 p-3 sm:p-5 dark:border-emerald-800/70 dark:bg-emerald-950/30 space-y-3 sm:space-y-3.5">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 sm:gap-3">
+                    <div className="flex items-start gap-2.5 sm:gap-3">
+                      <div className="flex h-8 w-8 sm:h-9 sm:w-9 shrink-0 items-center justify-center rounded-lg sm:rounded-xl bg-emerald-600 text-white shadow-xs mt-0.5">
+                        <Clock className="h-4 w-4" />
+                      </div>
+                      <div>
+                        <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
+                          <span className="text-[11px] sm:text-xs font-extrabold uppercase tracking-wider text-emerald-800 dark:text-emerald-300 block">
+                            Waktu Penyelesaian Layanan
+                          </span>
+                          {isCustomWaktuSelesai && (
+                            <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300">
+                              Waktu Dikoreksi
+                            </span>
                           )}
-                        </span>
-                      </p>
-                      <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
-                        {pengajuan.status === "SELESAI"
-                          ? `Ditandai selesai pada ${new Date(pengajuan.updatedAt).toLocaleString("id-ID", {
-                              dateStyle: "long",
+                        </div>
+                        <p className="text-xs sm:text-sm font-bold text-navy-900 dark:text-white mt-0.5">
+                          Diselesaikan dalam{" "}
+                          <span className="text-emerald-700 dark:text-emerald-400 font-extrabold underline decoration-emerald-400/60">
+                            {formatDurasiPenyelesaian(pengajuan.createdAt, effectiveEndDate)}
+                          </span>
+                        </p>
+                        <p className="text-[10px] sm:text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+                          Tercatat selesai pada{" "}
+                          <strong>
+                            {effectiveEndDate.toLocaleString("id-ID", {
+                              dateStyle: "full",
                               timeStyle: "short",
-                            })} WIB`
-                          : "Estimasi waktu penyelesaian jika disimpan sekarang"}
-                      </p>
+                            })}{" "}
+                            WIB
+                          </strong>
+                        </p>
+                      </div>
                     </div>
+
+                    <button
+                      type="button"
+                      onClick={() => setIsCustomWaktuSelesai((prev) => !prev)}
+                      className="w-full sm:w-auto inline-flex items-center justify-center gap-1.5 px-3 py-2 sm:py-1.5 rounded-lg sm:rounded-xl border border-emerald-300 dark:border-emerald-700 bg-white dark:bg-slate-800 text-xs font-bold text-emerald-700 dark:text-emerald-300 hover:bg-emerald-50 dark:hover:bg-slate-700 transition shadow-2xs cursor-pointer"
+                    >
+                      <Pencil className="w-3.5 h-3.5" />
+                      <span>{isCustomWaktuSelesai ? "Tutup Koreksi" : "Koreksi Waktu Selesai"}</span>
+                    </button>
                   </div>
+
+                  {/* Panel Form Koreksi Tanggal & Jam Selesai */}
+                  {isCustomWaktuSelesai && (
+                    <div className="pt-3 border-t border-emerald-200/80 dark:border-emerald-800/60 space-y-2.5 sm:space-y-3 animate-fade-up">
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5 sm:gap-2">
+                        <label className="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+                          <Calendar className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                          <span>Pilih Tanggal & Jam Riil Penyelesaian:</span>
+                        </label>
+                        <button
+                          type="button"
+                          onClick={applyNow}
+                          className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-emerald-100/80 hover:bg-emerald-200/80 text-[11px] font-bold text-emerald-800 dark:bg-emerald-950/70 dark:text-emerald-300 transition cursor-pointer self-start sm:self-auto"
+                        >
+                          <Clock className="w-3 h-3" />
+                          <span>Gunakan Waktu Sekarang</span>
+                        </button>
+                      </div>
+
+                      <div className="w-full">
+                        <input
+                          type="datetime-local"
+                          value={customWaktuSelesai}
+                          max={toDatetimeLocal(new Date())}
+                          min={toDatetimeLocal(pengajuan.createdAt)}
+                          onChange={(e) => setCustomWaktuSelesai(e.target.value)}
+                          className="w-full rounded-xl border border-emerald-300/80 bg-white px-3.5 py-2.5 text-xs sm:text-sm font-semibold text-navy-900 focus:border-brand-orange focus:outline-none dark:border-emerald-700 dark:bg-slate-800 dark:text-white shadow-2xs"
+                        />
+                      </div>
+
+                      {/* Tombol Pintas Preset Cepat */}
+                      <div>
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 block mb-1.5">
+                          Preset Pintas Waktu Selesai:
+                        </span>
+                        <div className="flex flex-wrap items-center gap-1.5">
+                          <button
+                            type="button"
+                            onClick={() => applyPresetMinutes(15)}
+                            className="px-2.5 py-1.5 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-[11px] font-semibold text-slate-700 dark:text-slate-300 hover:bg-emerald-50 hover:border-emerald-300 hover:text-emerald-700 dark:hover:bg-slate-700 transition cursor-pointer"
+                          >
+                            +15 Menit
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => applyPresetMinutes(30)}
+                            className="px-2.5 py-1.5 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-[11px] font-semibold text-slate-700 dark:text-slate-300 hover:bg-emerald-50 hover:border-emerald-300 hover:text-emerald-700 dark:hover:bg-slate-700 transition cursor-pointer"
+                          >
+                            +30 Menit
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => applyPresetMinutes(60)}
+                            className="px-2.5 py-1.5 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-[11px] font-semibold text-slate-700 dark:text-slate-300 hover:bg-emerald-50 hover:border-emerald-300 hover:text-emerald-700 dark:hover:bg-slate-700 transition cursor-pointer"
+                          >
+                            +1 Jam
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => applyPresetMinutes(120)}
+                            className="px-2.5 py-1.5 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-[11px] font-semibold text-slate-700 dark:text-slate-300 hover:bg-emerald-50 hover:border-emerald-300 hover:text-emerald-700 dark:hover:bg-slate-700 transition cursor-pointer"
+                          >
+                            +2 Jam
+                          </button>
+                          <button
+                            type="button"
+                            onClick={applyPresetYesterday}
+                            className="px-2.5 py-1.5 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-[11px] font-semibold text-slate-700 dark:text-slate-300 hover:bg-emerald-50 hover:border-emerald-300 hover:text-emerald-700 dark:hover:bg-slate-700 transition cursor-pointer"
+                          >
+                            <span className="sm:hidden">Kemarin (+30m)</span>
+                            <span className="hidden sm:inline">Kemarin (Waktu Masuk +30 Menit)</span>
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                 <div>
                   <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
                     Ubah Status Pengajuan
@@ -686,7 +879,7 @@ export function PengajuanDetailModal({
                   <select
                     value={selectedStatus}
                     onChange={(e) => setSelectedStatus(e.target.value as StatusPengajuan)}
-                    className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-xs sm:text-sm font-bold text-navy-900 focus:border-brand-orange focus:outline-none dark:border-slate-700 dark:bg-slate-800 dark:text-white shadow-2xs"
+                    className="w-full rounded-xl sm:rounded-2xl border border-slate-200 bg-white px-3.5 py-2.5 sm:py-3 text-xs sm:text-sm font-bold text-navy-900 focus:border-brand-orange focus:outline-none dark:border-slate-700 dark:bg-slate-800 dark:text-white shadow-2xs"
                   >
                     <option value="MENUNGGU_VERIFIKASI">Menunggu Verifikasi (Pending)</option>
                     <option value="DIPROSES">Sedang Diproses (Uji Laboratorium/Tindak Lanjut)</option>
@@ -699,7 +892,7 @@ export function PengajuanDetailModal({
                   <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
                     Waktu Masuk
                   </label>
-                  <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-xs sm:text-sm text-slate-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300">
+                  <div className="rounded-xl sm:rounded-2xl border border-slate-200 bg-white px-3.5 py-2.5 sm:py-3 text-xs sm:text-sm text-slate-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300">
                     {new Date(pengajuan.createdAt).toLocaleString("id-ID", {
                       dateStyle: "full",
                       timeStyle: "short",
@@ -719,14 +912,14 @@ export function PengajuanDetailModal({
                       if (validationError) setValidationError(null);
                     }}
                     placeholder="Contoh: Sampel telah diuji dengan test kit Rapid Boraks/Formalin dengan hasil Negatif. Atau tanggapan resmi jawaban informasi."
-                    className="w-full rounded-2xl border border-slate-200 bg-white p-4 text-xs sm:text-sm text-navy-900 placeholder-slate-400 focus:border-brand-orange focus:outline-none dark:border-slate-700 dark:bg-slate-800 dark:text-white leading-relaxed"
+                    className="w-full rounded-xl sm:rounded-2xl border border-slate-200 bg-white p-3 sm:p-4 text-xs sm:text-sm text-navy-900 placeholder-slate-400 focus:border-brand-orange focus:outline-none dark:border-slate-700 dark:bg-slate-800 dark:text-white leading-relaxed"
                   />
                 </div>
               </div>
 
               {/* Area Upload Bukti Lampiran Tindakan Petugas */}
               <div className="space-y-3 pt-3 border-t border-slate-200/80 dark:border-slate-700/80">
-                <div className="flex items-center justify-between">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                   <div>
                     <span className="text-xs font-extrabold uppercase tracking-wider text-slate-700 dark:text-slate-300 block">
                       Bukti Lampiran Tindakan (Opsional • Foto Hasil Uji Lab / Berita Acara / LHU)
@@ -738,7 +931,7 @@ export function PengajuanDetailModal({
                   <button
                     type="button"
                     onClick={() => fileInputRef.current?.click()}
-                    className="inline-flex items-center gap-1.5 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:border-brand-orange px-3 py-1.5 text-xs font-bold text-navy-900 dark:text-white transition shadow-2xs cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-700"
+                    className="self-start sm:self-auto inline-flex items-center gap-1.5 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:border-brand-orange px-3 py-1.5 text-xs font-bold text-navy-900 dark:text-white transition shadow-2xs cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-700"
                   >
                     <Plus className="h-3.5 w-3.5 text-[#ff7a1a]" /> Tambah Berkas
                   </button>
@@ -982,10 +1175,10 @@ export function PengajuanDetailModal({
             </div>
 
             {/* 5. Notifikasi Otomatis WhatsApp (Dual-Recipient: Tamu & Petugas) */}
-            <div className="rounded-3xl border border-slate-200/80 bg-slate-50/70 p-5 sm:p-6 dark:border-slate-800 dark:bg-slate-800/40 space-y-4">
-              <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="rounded-2xl sm:rounded-3xl border border-slate-200/80 bg-slate-50/70 p-3.5 sm:p-6 dark:border-slate-800 dark:bg-slate-800/40 space-y-3.5 sm:space-y-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 sm:gap-3">
                 <div className="flex items-center gap-2.5">
-                  <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-400">
+                  <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-400 shrink-0">
                     <MessageSquare className="h-4 w-4" />
                   </div>
                   <div>
@@ -1003,7 +1196,7 @@ export function PengajuanDetailModal({
                     type="button"
                     onClick={handleSendManualWa}
                     disabled={isSendingManualWa}
-                    className="inline-flex items-center gap-1.5 rounded-xl border border-emerald-300 bg-white dark:bg-slate-800 px-3 py-1.5 text-xs font-bold text-emerald-700 dark:text-emerald-300 hover:bg-emerald-50 dark:hover:bg-slate-700 transition shadow-2xs disabled:opacity-50 cursor-pointer"
+                    className="w-full sm:w-auto inline-flex items-center justify-center gap-1.5 rounded-xl border border-emerald-300 bg-white dark:bg-slate-800 px-3 py-1.5 text-xs font-bold text-emerald-700 dark:text-emerald-300 hover:bg-emerald-50 dark:hover:bg-slate-700 transition shadow-2xs disabled:opacity-50 cursor-pointer"
                     title="Kirim pesan status terbaru ke nomor WhatsApp pemohon"
                   >
                     <Send className={`h-3.5 w-3.5 ${isSendingManualWa ? "animate-pulse" : ""}`} />
@@ -1107,31 +1300,31 @@ export function PengajuanDetailModal({
             </div>
 
             {/* 6. Hasil Survei Kepuasan Masyarakat (IKM) */}
-            <div className="rounded-3xl border border-slate-200/80 bg-slate-50/70 p-5 sm:p-6 dark:border-slate-800 dark:bg-slate-800/40 space-y-4">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2.5">
-                  <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-amber-500/10 text-amber-500 dark:bg-amber-500/20">
+            <div className="rounded-2xl sm:rounded-3xl border border-slate-200/80 bg-slate-50/70 p-3.5 sm:p-6 dark:border-slate-800 dark:bg-slate-800/40 space-y-3 sm:space-y-4">
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2 sm:gap-2.5">
+                  <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-amber-500/10 text-amber-500 dark:bg-amber-500/20 shrink-0">
                     <Star className="h-4 w-4 fill-amber-500 text-amber-500" />
                   </div>
                   <div>
                     <h3 className="text-xs font-extrabold uppercase tracking-wider text-navy-900 dark:text-white">
                       Survei Kepuasan Masyarakat (IKM)
                     </h3>
-                    <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                    <p className="text-[10px] sm:text-[11px] text-slate-500 dark:text-slate-400">
                       Ulasan dan penilaian langsung dari pemohon layanan
                     </p>
                   </div>
                 </div>
 
                 {pengajuan.survei && (
-                  <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-3 py-1 text-xs font-black text-amber-800 dark:bg-amber-950/60 dark:text-amber-300 border border-amber-300">
+                  <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2.5 sm:px-3 py-0.5 sm:py-1 text-[11px] sm:text-xs font-black text-amber-800 dark:bg-amber-950/60 dark:text-amber-300 border border-amber-300 shrink-0">
                     ⭐ {pengajuan.survei.ratingBintang}/5 Bintang
                   </span>
                 )}
               </div>
 
               {pengajuan.survei ? (
-                <div className="space-y-3.5 rounded-2xl border border-amber-200/80 bg-amber-50/30 p-4 dark:border-amber-900/40 dark:bg-amber-950/10">
+                <div className="space-y-3 sm:space-y-3.5 rounded-xl sm:rounded-2xl border border-amber-200/80 bg-amber-50/30 p-3 sm:p-4 dark:border-amber-900/40 dark:bg-amber-950/10">
                   {/* Rating Bintang */}
                   <div className="flex items-center gap-2">
                     <span className="text-xs text-slate-500 dark:text-slate-400 font-medium">
@@ -1244,22 +1437,22 @@ export function PengajuanDetailModal({
           </div>
 
           {/* Footer Action (Orange Button CTA!) */}
-          <div className="flex items-center justify-between border-t border-slate-100 px-6 sm:px-7 py-4.5 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900">
+          <div className="flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-between gap-2 sm:gap-2.5 border-t border-slate-100 px-4 sm:px-7 py-3 sm:py-4.5 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900">
             <button
               type="button"
               onClick={handleDelete}
               disabled={isDeleting}
-              className="inline-flex items-center gap-1.5 rounded-2xl border border-rose-200 px-4 py-2.5 text-xs sm:text-sm font-bold text-rose-600 hover:bg-rose-50 dark:border-rose-900 dark:text-rose-400 dark:hover:bg-rose-950/40 transition disabled:opacity-50 cursor-pointer"
+              className="inline-flex items-center justify-center gap-1.5 rounded-xl sm:rounded-2xl border border-rose-200 px-3.5 sm:px-4 py-2 sm:py-2.5 text-xs sm:text-sm font-bold text-rose-600 hover:bg-rose-50 dark:border-rose-900 dark:text-rose-400 dark:hover:bg-rose-950/40 transition disabled:opacity-50 cursor-pointer"
             >
               <Trash2 className="h-4 w-4" />
               {isDeleting ? "Menghapus..." : "Hapus Pengajuan"}
             </button>
 
-            <div className="flex items-center gap-2.5">
+            <div className="flex items-center gap-2">
               <button
                 type="button"
                 onClick={onClose}
-                className="rounded-2xl border border-slate-200 bg-white px-5 py-2.5 text-xs sm:text-sm font-bold text-slate-600 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 transition cursor-pointer"
+                className="flex-1 sm:flex-none rounded-xl sm:rounded-2xl border border-slate-200 bg-white px-4 sm:px-5 py-2 sm:py-2.5 text-xs sm:text-sm font-bold text-slate-600 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 transition cursor-pointer"
               >
                 Tutup
               </button>
@@ -1267,7 +1460,7 @@ export function PengajuanDetailModal({
                 type="button"
                 onClick={handleUpdateStatus}
                 disabled={isPending}
-                className="inline-flex items-center gap-2 rounded-2xl bg-gradient-to-r from-[#ff7a1a] to-[#f26a0f] px-6 py-2.5 text-xs sm:text-sm font-bold text-white shadow-cta hover:brightness-110 transition disabled:opacity-60 cursor-pointer"
+                className="flex-1 sm:flex-none inline-flex items-center justify-center gap-1.5 sm:gap-2 rounded-xl sm:rounded-2xl bg-gradient-to-r from-[#ff7a1a] to-[#f26a0f] px-4 sm:px-6 py-2 sm:py-2.5 text-xs sm:text-sm font-bold text-white shadow-cta hover:brightness-110 transition disabled:opacity-60 cursor-pointer"
               >
                 {isPending ? (
                   <>
@@ -1289,26 +1482,40 @@ export function PengajuanDetailModal({
       {/* Lightbox Preview Gambar */}
       {previewImage && (
         <div
-          className="fixed inset-0 z-60 flex items-center justify-center bg-black/85 p-4"
+          className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/85 p-3 sm:p-4"
           onClick={() => setPreviewImage(null)}
         >
-          <div className="relative max-h-[85vh] max-w-[85vw] overflow-hidden rounded-3xl bg-white shadow-2xl">
+          <div className="relative max-h-[90vh] max-w-[95vw] sm:max-h-[85vh] sm:max-w-[85vw] overflow-hidden rounded-2xl sm:rounded-3xl bg-white shadow-2xl">
             <button
               onClick={() => setPreviewImage(null)}
-              className="absolute top-4 right-4 z-10 flex h-9 w-9 items-center justify-center rounded-full bg-black/60 text-white hover:bg-black transition cursor-pointer"
+              className="absolute top-3 right-3 sm:top-4 sm:right-4 z-10 flex h-8 w-8 sm:h-9 sm:w-9 items-center justify-center rounded-full bg-black/60 text-white hover:bg-black transition cursor-pointer"
             >
-              <X className="h-5 w-5" />
+              <X className="h-4 w-4 sm:h-5 sm:w-5" />
             </button>
-            <div className="relative h-[72vh] w-[72vw] max-w-4xl flex items-center justify-center p-2">
+            <div className="relative h-[65vh] w-[90vw] sm:h-[72vh] sm:w-[72vw] max-w-4xl flex items-center justify-center p-2">
               <img
                 src={previewImage}
                 alt="Preview Bukti"
-                className="max-h-full max-w-full object-contain rounded-2xl"
+                className="max-h-full max-w-full object-contain rounded-xl sm:rounded-2xl"
               />
             </div>
           </div>
         </div>
       )}
-    </>
+
+      <AdminLoadingOverlay
+        isOpen={isPending || isDeleting}
+        actionType={isDeleting ? "delete" : newFiles.length > 0 ? "upload" : "process"}
+        title={isDeleting ? "Menghapus Pengajuan..." : "Menyimpan Status Pengajuan..."}
+        description={
+          isDeleting
+            ? `Sedang menghapus berkas pengajuan #${pengajuan.kodePengajuan} dari database BBPOM...`
+            : newFiles.length > 0
+            ? "Sedang mengunggah berkas lampiran hasil dan memperbarui status layanan..."
+            : `Sedang memperbarui status layanan #${pengajuan.kodePengajuan} ke ${selectedStatus}...`
+        }
+      />
+    </>,
+    document.body
   );
 }

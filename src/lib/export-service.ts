@@ -114,19 +114,19 @@ export async function exportToExcelProfessional({
     });
 
     // 1. Judul & Kop Dokumen Excel
-    worksheet.mergeCells("A1:N1");
+    worksheet.mergeCells("A1:P1");
     const titleCell = worksheet.getCell("A1");
     titleCell.value = "BADAN PENGAWAS OBAT DAN MAKANAN - BALAI BESAR POM DI PALEMBANG";
     titleCell.font = { name: "Segoe UI", size: 14, bold: true, color: { argb: "FF06132F" } };
     titleCell.alignment = { vertical: "middle", horizontal: "center" };
 
-    worksheet.mergeCells("A2:N2");
+    worksheet.mergeCells("A2:P2");
     const subTitleCell = worksheet.getCell("A2");
     subTitleCell.value = `REKAPITULASI LAPORAN LAYANAN PUBLIK (${serviceTitle.toUpperCase()})`;
     subTitleCell.font = { name: "Segoe UI", size: 11, bold: true, color: { argb: "FFFF7A1A" } };
     subTitleCell.alignment = { vertical: "middle", horizontal: "center" };
 
-    worksheet.mergeCells("A3:N3");
+    worksheet.mergeCells("A3:P3");
     const metaCell = worksheet.getCell("A3");
     metaCell.value = `Waktu Ekspor: ${nowFormatted} | Total Pengajuan: ${pengajuanList.length} berkas | Terverifikasi Selesai: ${stats.selesai} | Sedang Diproses: ${stats.sedangDiproses} | Menunggu: ${stats.menungguVerifikasi} | Ditolak: ${stats.ditolak}`;
     metaCell.font = { name: "Segoe UI", size: 9, italic: true, color: { argb: "FF64748B" } };
@@ -168,12 +168,14 @@ export async function exportToExcelProfessional({
       "Tanggal Masuk",
       "Status",
       "Durasi Penyelesaian",
+      "Petugas Penyelesai",
       "Layanan BBPOM",
       "Nama Pemohon",
       "NIK (KTP)",
       "No. WhatsApp",
       "Email",
-      "Domisili / Instansi",
+      "Alamat Domisili",
+      "Asal Instansi",
       "Rincian / Kebutuhan",
       "Catatan Petugas BBPOM",
       "Bukti Lampiran Tindakan",
@@ -207,7 +209,7 @@ export async function exportToExcelProfessional({
 
       const durasiStr =
         p.status === "SELESAI"
-          ? `Selesai dalam ${formatDurasiPenyelesaian(p.createdAt, p.updatedAt)}`
+          ? `Selesai dalam ${formatDurasiPenyelesaian(p.createdAt, p.waktuSelesai || p.updatedAt)}`
           : "-";
 
       const row = worksheet.addRow([
@@ -216,12 +218,14 @@ export async function exportToExcelProfessional({
         formatTanggalPendek(p.createdAt),
         p.status.replace("_", " "),
         durasiStr,
+        "Dita",
         p.layanan.nama,
         p.tamu.nama,
         String(p.tamu.nik), // Text mode for NIK
         p.tamu.telepon || "-",
         p.tamu.email || "-",
-        p.tamu.alamat || p.tamu.asalInstansi || "-",
+        p.tamu.alamat || "-",
+        p.tamu.asalInstansi || "-",
         ringkasan,
         p.catatanPetugas || "-",
         p.lampiranTindakan && p.lampiranTindakan.length > 0
@@ -252,12 +256,23 @@ export async function exportToExcelProfessional({
         }
 
         // Alignments khusus
-        if (colNumber === 1 || colNumber === 3 || colNumber === 5 || colNumber === 14) {
+        if (
+          colNumber === 1 ||
+          colNumber === 3 ||
+          colNumber === 5 ||
+          colNumber === 6 ||
+          colNumber === 16
+        ) {
           cell.alignment = { vertical: "middle", horizontal: "center" };
         }
 
+        // Petugas Penyelesai (Kolom 6) font tebal
+        if (colNumber === 6) {
+          cell.font = { name: "Segoe UI", size: 9, bold: true };
+        }
+
         // Format Text untuk NIK dan Telepon (Mencegah scientific notation 1.671E+15)
-        if (colNumber === 8 || colNumber === 9) {
+        if (colNumber === 9 || colNumber === 10) {
           cell.numFmt = "@";
           cell.alignment = { vertical: "middle", horizontal: "center" };
         }
@@ -302,7 +317,7 @@ export async function exportToExcelProfessional({
     // Aktifkan AutoFilter Excel
     worksheet.autoFilter = {
       from: { row: 7, column: 1 },
-      to: { row: 7, column: 14 },
+      to: { row: 7, column: 16 },
     };
   } else {
     // TAB PENGGUNA (DATA TAMU)
@@ -467,7 +482,7 @@ export async function exportToPdfOfficial({
   // 1. Gambar Kop Surat Resmi: Logo BBPOM (Kiri) & Logo AMPERA (Kanan)
   const [logoBpomBase64, logoAmperaBase64] = await Promise.all([
     getImageBase64("/assets-landingpage/logo-bpom.png"),
-    getImageBase64("/assets-landingpage/am.png"),
+    getImageBase64("/assets-landingpage/ampera-new.png"),
   ]);
 
   // Logo BBPOM di Kiri
@@ -591,7 +606,7 @@ export async function exportToPdfOfficial({
 
       const statusWithDurasi =
         p.status === "SELESAI"
-          ? `SELESAI\n(${formatDurasiPenyelesaian(p.createdAt, p.updatedAt)})`
+          ? `SELESAI\n(${formatDurasiPenyelesaian(p.createdAt, p.waktuSelesai || p.updatedAt)})`
           : p.status.replace("_", " ");
 
       return [
@@ -599,10 +614,13 @@ export async function exportToPdfOfficial({
         p.kodePengajuan,
         formatTanggalPendek(p.createdAt),
         `${p.tamu.nama}\nNIK: ${p.tamu.nik}\nWA: ${p.tamu.telepon || "-"}`,
+        p.tamu.alamat || "-",
+        p.tamu.asalInstansi || "-",
         p.layanan.nama,
         ringkasan,
         p.catatanPetugas || "-",
         statusWithDurasi,
+        "Dita",
         p.lampiranTindakan && p.lampiranTindakan.length > 0
           ? `${p.lampiranTindakan.length} File`
           : "-",
@@ -619,10 +637,13 @@ export async function exportToPdfOfficial({
           "Kode Tiket",
           "Tgl Masuk",
           "Pemohon & Kontak",
+          "Domisili",
+          "Instansi",
           "Layanan",
           "Rincian / Kebutuhan",
           "Catatan Petugas BBPOM",
           "Status & Durasi",
+          "Petugas",
           "Bukti",
         ],
       ],
@@ -630,8 +651,8 @@ export async function exportToPdfOfficial({
       theme: "grid",
       styles: {
         font: "helvetica",
-        fontSize: 7,
-        cellPadding: 2,
+        fontSize: 6.8,
+        cellPadding: 1.5,
         valign: "middle",
         overflow: "linebreak",
         lineColor: [226, 232, 240],
@@ -642,25 +663,28 @@ export async function exportToPdfOfficial({
         textColor: [255, 255, 255],
         fontStyle: "bold",
         halign: "center",
-        fontSize: 7.5,
+        fontSize: 7.2,
       },
       alternateRowStyles: {
         fillColor: [248, 250, 252],
       },
       columnStyles: {
-        0: { cellWidth: 8, halign: "center" },
-        1: { cellWidth: 29, fontStyle: "bold" },
-        2: { cellWidth: 18, halign: "center" },
-        3: { cellWidth: 44 },
-        4: { cellWidth: 28 },
-        5: { cellWidth: 52 },
-        6: { cellWidth: 48 },
-        7: { cellWidth: 32, halign: "center", fontStyle: "bold" },
-        8: { cellWidth: 14, halign: "center", fontStyle: "bold" },
+        0: { cellWidth: 7, halign: "center" },
+        1: { cellWidth: 24, fontStyle: "bold" },
+        2: { cellWidth: 15, halign: "center" },
+        3: { cellWidth: 30 },
+        4: { cellWidth: 24 },
+        5: { cellWidth: 20 },
+        6: { cellWidth: 22 },
+        7: { cellWidth: 38 },
+        8: { cellWidth: 36 },
+        9: { cellWidth: 26, halign: "center", fontStyle: "bold" },
+        10: { cellWidth: 16, halign: "center", fontStyle: "bold" },
+        11: { cellWidth: 15, halign: "center", fontStyle: "bold" },
       },
       didParseCell: (data) => {
         // Warnai sel status agar profesional
-        if (data.section === "body" && data.column.index === 7) {
+        if (data.section === "body" && data.column.index === 9) {
           const val = String(data.cell.raw);
           if (val.startsWith("SELESAI")) {
             data.cell.styles.textColor = [6, 95, 70];

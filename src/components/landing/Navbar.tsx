@@ -4,10 +4,14 @@ import React, { useState, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { Sun, Moon, Menu, X, Globe, ArrowRight } from "lucide-react";
+import { PanduanDropdown, PanduanMobileMenu } from "@/components/common/PanduanMenu";
+import { BbpomDropdown, BbpomMobileMenu } from "@/components/common/BbpomMenu";
 
 interface NavItem {
   label: string;
   href: string;
+  /** Item berupa dropdown (menu Panduan) */
+  dropdown?: "panduan" | "bbpom";
 }
 
 const NAV_ITEMS: NavItem[] = [
@@ -16,6 +20,8 @@ const NAV_ITEMS: NavItem[] = [
   { label: "Edukasi", href: "#edukasi" },
   { label: "Video", href: "#video" },
   { label: "Kontak", href: "#kontak" },
+  { label: "Panduan", href: "/panduan", dropdown: "panduan" },
+  { label: "Website", href: "#bbpom", dropdown: "bbpom" },
 ];
 
 export function Navbar() {
@@ -133,7 +139,7 @@ export function Navbar() {
                 AMPERA
               </span>
               <span className="font-brand font-medium text-[11px] sm:text-xs text-brand-orange dark:text-orange-400 tracking-wide mt-0.5">
-                Amankan Produk, Edukasi Masyarakat
+                Amankan Produk Edukasi Masyarakat
               </span>
             </div>
           </Link>
@@ -144,6 +150,12 @@ export function Navbar() {
             aria-label="Navigasi utama"
           >
             {NAV_ITEMS.map((item) => {
+              if (item.dropdown === "panduan") {
+                return <PanduanDropdown key={item.label} />;
+              }
+              if (item.dropdown === "bbpom") {
+                return <BbpomDropdown key={item.label} label={item.label} />;
+              }
               const isActive = activeSection === item.href;
               return (
                 <a
@@ -151,7 +163,7 @@ export function Navbar() {
                   href={item.href}
                   onClick={() => setActiveSection(item.href)}
                   aria-current={isActive ? "page" : undefined}
-                  className={`font-brand rounded-full px-5 py-2 text-[13px] transition-colors duration-200 focus-visible:outline-2 focus-visible:outline-brand-orange ${
+                  className={`font-brand rounded-full px-4 xl:px-5 py-2 text-[13px] transition-colors duration-200 focus-visible:outline-2 focus-visible:outline-brand-orange ${
                     isActive
                       ? "bg-orange-tint text-brand-orange-600 font-bold dark:bg-orange-500/20 dark:text-orange-300 shadow-xs"
                       : "text-navy-900 dark:text-slate-200 font-semibold hover:text-brand-orange"
@@ -169,7 +181,7 @@ export function Navbar() {
             <button
               type="button"
               onClick={toggleTheme}
-              className="w-11 h-11 rounded-full bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-700 text-navy-900 dark:text-white flex items-center justify-center shadow-xs hover:border-brand-orange hover:scale-105 active:scale-95 transition-all duration-200 cursor-pointer focus-visible:outline-2 focus-visible:outline-brand-orange"
+              className="w-11 h-11 rounded-full bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-700 text-navy-900 dark:text-white flex items-center justify-center shadow-xs hover:scale-105 active:scale-95 transition-all duration-200 cursor-pointer focus-visible:outline-2 focus-visible:outline-brand-orange"
               aria-label={isDark ? "Beralih ke mode terang" : "Beralih ke mode gelap"}
               title={isDark ? "Beralih ke mode terang" : "Beralih ke mode gelap"}
             >
@@ -206,6 +218,23 @@ export function Navbar() {
           <div className="mt-3 lg:hidden rounded-3xl border border-slate-200/80 dark:border-slate-800 bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl p-5 shadow-2xl animate-fade-up relative z-50">
             <nav className="flex flex-col gap-1" aria-label="Navigasi mobile">
               {NAV_ITEMS.map((item) => {
+                if (item.dropdown === "panduan") {
+                  return (
+                    <PanduanMobileMenu
+                      key={item.label}
+                      onNavigate={() => setMobileMenuOpen(false)}
+                    />
+                  );
+                }
+                if (item.dropdown === "bbpom") {
+                  return (
+                    <BbpomMobileMenu
+                      key={item.label}
+                      label={item.label}
+                      onNavigate={() => setMobileMenuOpen(false)}
+                    />
+                  );
+                }
                 const isActive = activeSection === item.href;
                 return (
                   <a
