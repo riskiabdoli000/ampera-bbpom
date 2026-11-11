@@ -120,3 +120,27 @@ body {
   font-family: var(--font-geist-sans), system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   transition: background-color 0.3s ease, color 0.3s ease;
 }
+
+/* ========================================================= */
+/* PENGATURAN MENU AKSESIBILITAS (AMPERA)                    */
+/* ========================================================= */
+
+/* 1. Garis Bawahi Tautan */
+html.a11y-underline-links body a:not([data-a11y-widget] *) {
+  text-decoration: underline !important;
+  text-underline-offset: 4px !important;
+  text-decoration-thickness: 2px !important;
+}
+
+/* 2. Pertegas Teks (Bold) */
+html.a11y-bold-text body :is(p, span, a, li, label, h1, h2, h3, h4, h5, h6, button, input, textarea, select, td, th):not([data-a11y-widget] *) {
+  font-weight: 700 !important;
+}
+
+/* 3. Spasi Teks */
+html.a11y-text-spacing body :is(p, span, a, li, label, h1, h2, h3, h4, h5, h6, button, td, th):not([data-a11y-widget] *) {
+  letter-spacing: 0.06em !important;
+  word-spacing: 0.14em !important;
+  line-height: 1.75 !important;
+}
+
