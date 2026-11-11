@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { Star } from "lucide-react";
 import { LandingPenilaianData } from "@/app/actions/landing-penilaian";
 
@@ -33,7 +33,34 @@ export function PenilaianSection({ initialData }: PenilaianSectionProps) {
   ];
 
   const displayTotal = totalSurvei > 0 ? totalSurvei : 9;
-  const totalPengunjungWebsite = 476;
+
+  // Nilai dasar pengunjung 476, bertambah 6 otomatis setiap 5 menit
+  const BASE_PENGUNJUNG = 476;
+  const INTERVAL_MS = 5 * 60 * 1000; // 5 menit
+  const INCREMENT_STEP = 6;
+
+  const [totalPengunjungWebsite, setTotalPengunjungWebsite] = useState(BASE_PENGUNJUNG);
+
+  useEffect(() => {
+    const STORAGE_KEY = "ampera_visitor_start_time";
+    let startTime = Number(localStorage.getItem(STORAGE_KEY));
+
+    if (!startTime || Number.isNaN(startTime)) {
+      startTime = Date.now();
+      localStorage.setItem(STORAGE_KEY, String(startTime));
+    }
+
+    const updateVisitorCount = () => {
+      const elapsedMs = Math.max(0, Date.now() - startTime);
+      const intervalsPassed = Math.floor(elapsedMs / INTERVAL_MS);
+      setTotalPengunjungWebsite(BASE_PENGUNJUNG + intervalsPassed * INCREMENT_STEP);
+    };
+
+    updateVisitorCount();
+
+    const timer = setInterval(updateVisitorCount, 10000);
+    return () => clearInterval(timer);
+  }, []);
 
   return (
     <section
