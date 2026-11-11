@@ -19,7 +19,7 @@ const NAV_ITEMS: NavItem[] = [
   { label: "Layanan", href: "#layanan" },
   { label: "Edukasi", href: "#edukasi" },
   { label: "Video", href: "#video" },
-  { label: "Kontak", href: "#kontak" },
+  // { label: "Kontak", href: "#kontak" },
   { label: "Panduan", href: "/panduan", dropdown: "panduan" },
   { label: "Website", href: "#bbpom", dropdown: "bbpom" },
 ];
@@ -131,6 +131,16 @@ export function Navbar() {
                 width={48}
                 height={48}
                 className="w-full h-full object-contain"
+                priority
+              />
+            </div>
+            <div className="relative h-10 sm:h-12 w-auto shrink-0 transition-transform duration-300 group-hover:scale-105">
+              <Image
+                src="/assets-landingpage/ampera-new.png"
+                alt="Logo AMPERA"
+                width={68}
+                height={48}
+                className="h-full w-auto object-contain"
                 priority
               />
             </div>

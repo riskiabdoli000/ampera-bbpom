@@ -33,6 +33,7 @@ export function PenilaianSection({ initialData }: PenilaianSectionProps) {
   ];
 
   const displayTotal = totalSurvei > 0 ? totalSurvei : 9;
+  const totalPengunjungWebsite = 476;
 
   return (
     <section
@@ -61,9 +62,14 @@ export function PenilaianSection({ initialData }: PenilaianSectionProps) {
               Pendapat Anda sangat berarti bagi kami. Terima kasih telah memberikan penilaian untuk meningkatkan kualitas layanan kami di masa mendatang.
             </p>
 
-            {/* Jumlah Ulasan Masuk */}
-            <p className="text-[11px] sm:text-xs text-slate-400 dark:text-slate-500 italic pt-1">
+            {/* 1. Jumlah Ulasan Masuk (Real-time) */}
+            {/* <p className="text-[11px] sm:text-xs text-slate-400 dark:text-slate-500 italic pt-1">
               Berdasarkan {displayTotal} ulasan pengunjung.
+            </p> */}
+
+            {/* 2. Jumlah Pengunjung Website */}
+            <p className="text-[11px] sm:text-xs text-slate-400 dark:text-slate-500 italic pt-1">
+              Telah diakses oleh <span className="font-semibold text-navy-900 dark:text-slate-300 not-italic">{totalPengunjungWebsite}</span> pengunjung.
             </p>
           </div>
 
