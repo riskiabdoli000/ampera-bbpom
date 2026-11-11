@@ -23,8 +23,8 @@ const DEVELOPERS: DeveloperProfile[] = [
     fullName: "Fatreisya Ayu Miranda",
     role: "Frontend Developer",
     imageSrc: "/assets-developer/fototea.jpg",
-    instagramUrl: "https://www.instagram.com/fatreisyaa/", // Kosongkan dulu, siap diisi URL akun Instagram
-    linkedinUrl: "https://www.linkedin.com/in/fatreisya/", // Kosongkan dulu, siap diisi URL akun LinkedIn
+    instagramUrl: "https://www.instagram.com/fatreisyaa/",
+    linkedinUrl: "https://www.linkedin.com/in/fatreisya/",
   },
   {
     id: "rizki",
@@ -32,9 +32,9 @@ const DEVELOPERS: DeveloperProfile[] = [
     alias: "Riski Abdoli",
     fullName: "Riski Abdoli",
     role: "Backend Developer",
-    imageSrc: "", // Kosongkan dulu sesuai instruksi, siap ditambahkan foto nanti
-    instagramUrl: "https://www.instagram.com/riskiabdoli/", // Kosongkan dulu, siap diisi URL akun Instagram
-    linkedinUrl: "https://www.linkedin.com/in/riski-abdoli/", // Kosongkan dulu, siap diisi URL akun LinkedIn
+    imageSrc: "",
+    instagramUrl: "https://www.instagram.com/riskiabdoli/", 
+    linkedinUrl: "https://www.linkedin.com/in/riski-abdoli/", 
   },
 ];
 
