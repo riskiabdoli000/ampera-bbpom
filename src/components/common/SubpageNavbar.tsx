@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { Sun, Moon, Menu, X, HelpCircle, ArrowRight } from "lucide-react";
+import { Sun, Moon, Menu, X, HelpCircle, ArrowRight, ArrowLeft } from "lucide-react";
 import { PanduanDropdown, PanduanMobileMenu } from "@/components/common/PanduanMenu";
 import { BbpomDropdown, BbpomMobileMenu } from "@/components/common/BbpomMenu";
 
@@ -11,9 +11,18 @@ interface SubpageNavbarProps {
   activePage?: "beranda" | "layanan" | "edukasi" | "panduan" | "video" | "kontak";
   /** Slug panduan yang sedang dibuka (khusus halaman /panduan) */
   activePanduanSlug?: string;
+  /** Sembunyikan deretan menu pilihan tengah (misal di halaman khusus developer) */
+  showNavLinks?: boolean;
+  /** Ganti tombol Garda Ampera dengan tombol Kembali ke Beranda */
+  showBackToHome?: boolean;
 }
 
-export function SubpageNavbar({ activePage = "layanan", activePanduanSlug }: SubpageNavbarProps) {
+export function SubpageNavbar({
+  activePage = "layanan",
+  activePanduanSlug,
+  showNavLinks = true,
+  showBackToHome = false,
+}: SubpageNavbarProps) {
   const [isScrolled, setIsScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [isDark, setIsDark] = useState(false);
@@ -97,77 +106,95 @@ export function SubpageNavbar({ activePage = "layanan", activePanduanSlug }: Sub
             </div>
           </Link>
 
-          {/* Navigasi Utama */}
-          <nav
-            className="hidden lg:flex items-center gap-1.5 absolute left-1/2 -translate-x-1/2 z-10"
-            aria-label="Navigasi halaman"
-          >
-            {navItems.map((item) => {
-              const isActive = activePage === item.key;
-              if (item.key === "panduan") {
+          {/* Navigasi Utama (Hanya jika showNavLinks = true) */}
+          {showNavLinks && (
+            <nav
+              className="hidden lg:flex items-center gap-1.5 absolute left-1/2 -translate-x-1/2 z-10"
+              aria-label="Navigasi halaman"
+            >
+              {navItems.map((item) => {
+                const isActive = activePage === item.key;
+                if (item.key === "panduan") {
+                  return (
+                    <PanduanDropdown
+                      key={item.label}
+                      isActive={isActive}
+                      activeSlug={activePanduanSlug}
+                    />
+                  );
+                }
+                if (item.key === "bbpom") {
+                  return <BbpomDropdown key={item.label} label={item.label} />;
+                }
                 return (
-                  <PanduanDropdown
+                  <Link
                     key={item.label}
-                    isActive={isActive}
-                    activeSlug={activePanduanSlug}
-                  />
+                    href={item.href}
+                    className={`font-brand rounded-full px-4 xl:px-5 py-2 text-[13px] transition-all duration-200 focus-visible:outline-2 focus-visible:outline-brand-orange ${
+                      isActive
+                        ? "bg-[#fff0e5] text-[#f26a0f] font-bold dark:bg-orange-500/20 dark:text-orange-300 shadow-xs"
+                        : "text-navy-900 dark:text-slate-200 font-semibold hover:text-brand-orange hover:bg-slate-50 dark:hover:bg-slate-800/50"
+                    }`}
+                  >
+                    {item.label}
+                  </Link>
                 );
-              }
-              if (item.key === "bbpom") {
-                return <BbpomDropdown key={item.label} label={item.label} />;
-              }
-              return (
-                <Link
-                  key={item.label}
-                  href={item.href}
-                  className={`font-brand rounded-full px-4 xl:px-5 py-2 text-[13px] transition-all duration-200 focus-visible:outline-2 focus-visible:outline-brand-orange ${
-                    isActive
-                      ? "bg-[#fff0e5] text-[#f26a0f] font-bold dark:bg-orange-500/20 dark:text-orange-300 shadow-xs"
-                      : "text-navy-900 dark:text-slate-200 font-semibold hover:text-brand-orange hover:bg-slate-50 dark:hover:bg-slate-800/50"
-                  }`}
-                >
-                  {item.label}
-                </Link>
-              );
-            })}
-          </nav>
+              })}
+            </nav>
+          )}
 
-          {/* Action Kanan: Theme Toggle (Desktop) & Menu (Mobile) */}
+          {/* Action Kanan: Theme Toggle (Mode Siang/Malam) & Tombol Aksi */}
           <div className="flex items-center gap-2.5 sm:gap-3 z-20">
-            {/* Theme Toggle Button (Desktop) */}
+            {/* Theme Toggle Button (Mode Siang/Malam) */}
             <button
               type="button"
               onClick={toggleTheme}
-              className="hidden lg:flex w-10 h-10 sm:w-11 sm:h-11 rounded-full bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 text-navy-900 dark:text-yellow-400 items-center justify-center shadow-xs hover:border-brand-orange hover:scale-105 active:scale-95 transition-all cursor-pointer focus-visible:outline-2 focus-visible:outline-brand-orange"
+              className={`${
+                showNavLinks ? "hidden lg:flex" : "flex"
+              } w-10 h-10 sm:w-11 sm:h-11 rounded-full bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 text-navy-900 dark:text-yellow-400 items-center justify-center shadow-xs hover:border-brand-orange hover:scale-105 active:scale-95 transition-all cursor-pointer focus-visible:outline-2 focus-visible:outline-brand-orange`}
               aria-label={isDark ? "Ganti ke tema terang" : "Ganti ke tema gelap"}
             >
               {isDark ? <Sun className="w-5 h-5 text-amber-400" /> : <Moon className="w-5 h-5 text-slate-700 dark:text-slate-200" />}
             </button>
 
-            {/* Tombol CTA Garda Ampera (Desktop) */}
-            <Link
-              href="/garda-ampera"
-              className="hidden lg:inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-[#ff8a1f] to-[#f26a0f] px-4 xl:px-5 py-2 text-xs font-bold text-white shadow-cta hover:shadow-orange-500/25 hover:scale-105 active:scale-95 transition-all duration-200 cursor-pointer"
-            >
-              <span>Garda Ampera</span>
-              <ArrowRight className="w-3.5 h-3.5 transition-transform duration-200 hover:translate-x-0.5" />
-            </Link>
+            {/* Tombol Aksi Kanan: Kembali ke Beranda ATAU Garda Ampera */}
+            {showBackToHome ? (
+              <Link
+                href="/"
+                className="inline-flex items-center gap-1.5 sm:gap-2 rounded-full bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 px-3.5 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm font-bold text-navy-900 dark:text-slate-100 shadow-xs hover:text-brand-orange hover:border-brand-orange/40 hover:-translate-x-0.5 active:scale-95 transition-all duration-200 cursor-pointer"
+              >
+                <ArrowLeft className="w-4 h-4 text-brand-orange stroke-[2.5]" />
+                <span>Kembali ke Beranda</span>
+              </Link>
+            ) : (
+              <Link
+                href="/garda-ampera"
+                className={`${
+                  showNavLinks ? "hidden lg:inline-flex" : "inline-flex"
+                } items-center gap-1.5 rounded-full bg-gradient-to-r from-[#ff8a1f] to-[#f26a0f] px-3.5 sm:px-4 xl:px-5 py-2 text-xs font-bold text-white shadow-cta hover:shadow-orange-500/25 hover:scale-105 active:scale-95 transition-all duration-200 cursor-pointer`}
+              >
+                <span>Garda Ampera</span>
+                <ArrowRight className="w-3.5 h-3.5 transition-transform duration-200 hover:translate-x-0.5" />
+              </Link>
+            )}
 
-            {/* Mobile Menu Button */}
-            <button
-              type="button"
-              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="lg:hidden w-10 h-10 sm:w-11 sm:h-11 rounded-full bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-700 text-navy-900 dark:text-white flex items-center justify-center shadow-sm active:scale-95 cursor-pointer focus-visible:outline-2 focus-visible:outline-brand-orange"
-              aria-label="Buka menu navigasi"
-              aria-expanded={mobileMenuOpen}
-            >
-              {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5 stroke-[2.2]" />}
-            </button>
+            {/* Mobile Menu Button (hanya jika ada navItems yang perlu dibuka) */}
+            {showNavLinks && (
+              <button
+                type="button"
+                onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+                className="lg:hidden w-10 h-10 sm:w-11 sm:h-11 rounded-full bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-700 text-navy-900 dark:text-white flex items-center justify-center shadow-sm active:scale-95 cursor-pointer focus-visible:outline-2 focus-visible:outline-brand-orange"
+                aria-label="Buka menu navigasi"
+                aria-expanded={mobileMenuOpen}
+              >
+                {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5 stroke-[2.2]" />}
+              </button>
+            )}
           </div>
         </div>
 
-        {/* Mobile Navigation Drawer */}
-        {mobileMenuOpen && (
+        {/* Mobile Navigation Drawer (hanya aktif jika showNavLinks = true) */}
+        {showNavLinks && mobileMenuOpen && (
           <div className="mt-3 lg:hidden rounded-3xl border border-slate-200/80 dark:border-slate-800 bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl p-5 shadow-2xl animate-fade-up relative z-50">
             <nav className="flex flex-col gap-1.5" aria-label="Navigasi mobile">
               {navItems.map((item) => {

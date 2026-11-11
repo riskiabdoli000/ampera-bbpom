@@ -245,21 +245,29 @@ export function Footer({ contactData }: FooterProps) {
         </div>
 
         {/* ========================================================= */}
-        {/* BARIS BAWAH: Copyright & Tombol Kembali ke Atas           */}
+        {/* BARIS BAWAH: Copyright, Attribution & Tombol Kembali ke Atas */}
         {/* ========================================================= */}
-        <div className="mt-12 sm:mt-16 pt-8 border-t border-white/10 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-400">
-          <p className="text-center sm:text-left">
+        <div className="mt-12 sm:mt-16 pt-8 border-t border-white/10 flex flex-col lg:flex-row items-center justify-between gap-4 text-xs text-slate-400">
+          <p className="text-center lg:text-left">
             &copy; {new Date().getFullYear()} Balai Besar Pengawas Obat dan Makanan di Palembang. Hak Cipta Dilindungi.
           </p>
 
-          <button
-            type="button"
-            onClick={scrollToTop}
-            className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-slate-300 hover:text-white text-xs font-medium transition-all active:scale-95 cursor-pointer"
-          >
-            <span>Kembali ke Atas</span>
-            <ArrowUp className="w-3.5 h-3.5 text-brand-orange" />
-          </button>
+          <div className="flex flex-col sm:flex-row items-center gap-3 sm:gap-4">
+            <Link
+              href="/developer"
+              className="text-xs text-slate-400 hover:text-brand-orange transition-colors duration-200 text-center sm:text-right hover:underline underline-offset-4"
+            >
+              Create By Riski Abdoli &amp; Fatreisya Ayu Miranda
+            </Link>
+            <button
+              type="button"
+              onClick={scrollToTop}
+              className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-slate-300 hover:text-white text-xs font-medium transition-all active:scale-95 cursor-pointer"
+            >
+              <span>Kembali ke Atas</span>
+              <ArrowUp className="w-3.5 h-3.5 text-brand-orange" />
+            </button>
+          </div>
         </div>
       </div>
     </footer>
